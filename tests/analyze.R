@@ -1,0 +1,135 @@
+#!/usr/bin/Rscript --vanilla
+#
+# Copyright 2014 Google Inc. All rights reserved.
+# 
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+# 
+#     http://www.apache.org/licenses/LICENSE-2.0
+# 
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# Simple tool that wraps the analysis/R library.
+#
+# To run this you need:
+# - ggplot
+# - optparse
+# - glmnet -- dependency of analysis library
+
+library(optparse)
+
+# Do command line parsing first to catch errors.  Loading libraries in R is
+# slow.
+if (!interactive()) {
+  option_list <- list(
+     make_option(c("-t", "--title"), help="Plot Title")
+     )
+  parsed <- parse_args(OptionParser(option_list = option_list),
+                       positional_arguments = 2)  # input and output
+}
+
+library(ggplot2)
+
+source("analysis/R/analysis_lib.R")
+source("analysis/R/read_input.R")
+source("analysis/R/decode.R")
+
+Log <- function(...) {
+  cat('analyze.R: ')
+  cat(sprintf(...))
+  cat('\n')
+}
+
+LoadInputs <- function(prefix, ctx) {
+  # prefix: path prefix, e.g. '_tmp/exp'
+  p <- paste0(prefix, '_params.csv')
+  c <- paste0(prefix, '_out.csv')
+  m <- paste0(prefix, '_map.csv')
+  h <- paste0(prefix, '_hist.csv')
+
+  # Calls AnalyzeRAPPOR to run the analysis code
+  # Date(s) are some dummy dates
+  ctx$rappor <- AnalyzeRAPPOR(ReadParameterFile(p),
+                              ReadCountsFile(c),
+                              ReadMapFile(m)$map, "FDR", 0.05, 1,
+                              date="01/01/01", date_num="100001")
+  if (is.null(ctx$rappor)) {
+    stop("RAPPOR analysis failed.")
+  }
+  ctx$actual <- read.csv(h)
+}
+
+# Prepare input data to be plotted.
+ProcessAll = function(ctx) {
+  actual <- ctx$actual
+  rappor <- ctx$rappor
+
+  # "s12" -> 12, for graphing
+  StringToInt <- function(x) as.integer(substring(x, 2))
+
+  total <- sum(actual$count)
+  a <- data.frame(index = StringToInt(actual$string),
+                  # Calculate the true proportion
+                  proportion = actual$count / total,
+                  dist = "actual")
+
+  r <- data.frame(index = StringToInt(rappor$strings),
+                  proportion = rappor$proportion,
+                  dist = "rappor")
+
+  # Fill in zeros for values missing in RAPPOR.  It makes the ggplot bar plot
+  # look better.
+  fill <- setdiff(actual$string, rappor$strings)
+  if (length(fill) > 0) {
+    z <- data.frame(index = StringToInt(fill),
+                    proportion = 0.0,
+                    dist = "rappor")
+  } else {
+    z <- data.frame()
+  }
+
+  rbind(r, a, z)
+}
+
+PlotAll <- function(d, title) {
+  # NOTE: geom_bar makes a histogram by default; need stat = "identity"
+  g <- ggplot(d, aes(x = index, y = proportion, fill = factor(dist)))
+  b <- geom_bar(stat = "identity", position = "dodge")
+  t <- ggtitle(title)
+  g + b + t
+}
+
+WritePlot<- function(p, outdir, width = 800, height = 600) {
+  filename <- file.path(outdir, 'dist.png')
+  png(filename, width=width, height=height)
+  plot(p)
+  dev.off()
+  Log('Wrote %s', filename)
+}
+
+main <- function(parsed) {
+  args <- parsed$args
+  options <- parsed$options
+
+  input_prefix <- args[[1]]
+  output_dir <- args[[2]]
+
+  # increase ggplot font size globally
+  theme_set(theme_grey(base_size = 16))
+
+  ctx <- new.env()
+
+  LoadInputs(input_prefix, ctx)
+  d <- ProcessAll(ctx)
+  p <- PlotAll(d, options$title)
+  WritePlot(p, output_dir)
+}
+
+if (!interactive()) {
+  main(parsed)
+}
