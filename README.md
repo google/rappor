@@ -9,6 +9,9 @@ This repository contains simulation and analysis code in Python and R.
 For a detailed description of the algorithms, see the
 [paper](http://arxiv.org/abs/1407.6981) and links below.
 
+Feel free to send feedback to
+[rappor-discuss@googlegroups.com](https://groups.google.com/forum/#!forum/rappor-discuss).
+
 <!-- TODO: We should have a more user friendly non-mathematical explanation?
 -->
 
@@ -131,4 +134,6 @@ Links
     production quality, but supports experimentation with different parameters
     and data sets.  Of course, anyone is free to implement RAPPOR independently
     as well.
+- Mailing list:
+  [rappor-discuss@googlegroups.com](https://groups.google.com/forum/#!forum/rappor-discuss).
 
