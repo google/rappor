@@ -1,13 +1,12 @@
 RAPPOR
 ======
 
-RAPPOR is a novel privacy technology that allows inferring statistics of
+RAPPOR is a novel privacy technology that allows inferring statistics about
 populations while preserving the privacy of individual users.
 
-This repository currently contains simulation and analysis code in Python and
-R.
+This repository contains simulation and analysis code in Python and R.
 
-For a detailed description of the algorithm, see the
+For a detailed description of the algorithms, see the
 [paper](http://arxiv.org/abs/1407.6981) and links below.
 
 <!-- TODO: We should have a more user friendly non-mathematical explanation?
@@ -17,12 +16,12 @@ Running the Demo
 ----------------
 
 Although the Python and R libraries should be portable to any platform, our
-end-to-end demo has only been tested on Linux .
+end-to-end demo has only been tested on Linux.
 
 If you don't have a Linux box handy, you can [view the generated
 output](report.html).
 
-To get your feet wet, install the R dependencies (details below), which should
+To get your feet wet, install the R dependencies (details below).  It should
 look something like this:
 
     $ R
@@ -32,12 +31,13 @@ look something like this:
 Then run:
 
     $ ./demo.sh build  # optional speedup, it's OK for now if it fails
+
+This compiles and tests the `fastrand` C extension module for Python, which
+speeds up the simulation.
+
     $ ./demo.sh run
 
-The `build` action compiles and tests the optional `fastrand` C extension
-module for Python, which speeds up the simulation.
-
-The `run` action strings together the Python and R code.  It:
+The demo strings together the Python and R code.  It:
 
 1. Generates simulated input data with different distributions
 2. Runs it through the RAPPOR privacy algorithm
@@ -97,20 +97,18 @@ Directory Structure
     client/             # client libraries
       python/
         rappor.py
-        rappor_test.py  # unit tests next to files
+        rappor_test.py  # Unit tests go next to implementation.
       cpp/              # placeholder
     analysis/
       R/
         # R code for analysis.
-    tests/              # for system tests.  Unit tests should go next to the
-                        # source file.
+    tests/              # System tests
       gen_sim_input.py  # generate test input data
       rappor_sim.py     # run simulation
-      run.sh            # driver for unit tests, lint, statistical tests,
-                        # end to end demo with Python/R
+      run.sh            # driver for unit tests, lint
     doc/
-    build.sh            # build docs or C code
-    demo.sh             # run deom
+    build.sh            # build docs, C extension
+    demo.sh             # run demo
 
 <!--
 TODO: add apps?
