@@ -222,8 +222,7 @@ def print_params(params, csv_out, html_out):
       params.num_cohorts,
       params.prob_p,
       params.prob_q,
-      params.prob_f
-      )
+      params.prob_f)
   print >>csv_out, "k,h,m,p,q,f\n"  # CSV header
   print >>csv_out, "%s,%s,%s,%s,%s,%s\n" % row
 

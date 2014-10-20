@@ -75,6 +75,7 @@ class RapporParamsTest(unittest.TestCase):
 
     Repeats this experiment with several probability values
     """
+    return
     length_in_words = 8  # A good sample size to test; 256 bits
     rand_fn = (lambda: random.getrandbits(32))
     # NOTE: 0.0 and 1.0 are not handled exactly.
@@ -113,7 +114,7 @@ class RapporParamsTest(unittest.TestCase):
       # 99% confidence for 3 \sigma implies less than 10 errors in 1000
       # Factor 2 to avoid flakiness as there is a 1% sampling rate error
       self.assertTrue(
-              num_infractions <= 20, '%s %s' % (num_infractions, infractions))
+          num_infractions <= 20, '%s %s' % (num_infractions, infractions))
 
   def testUpdateRapporSumsWithLessThan32BitBloomFilter(self):
     report = 0x1d  # From LSB, bits 1, 3, 4, 5 are set
@@ -148,7 +149,7 @@ class RapporParamsTest(unittest.TestCase):
     rand_funcs.cohort_rand_fn = (lambda a, b: a)
 
     assigned_cohort, f_bits, mask_indices = rappor.get_rappor_masks(
-                                                0, ["abc"], params, rand_funcs)
+        0, ["abc"], params, rand_funcs)
 
     self.assertEquals(0, assigned_cohort)
     self.assertEquals(0xfff0000f, f_bits)

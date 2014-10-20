@@ -77,6 +77,15 @@ Platform:
 - OS: the shell script tests have been tested on Linux, but may work on
   Mac/Cygwin.  The R and Python code should work on any OS.
 
+Development
+-----------
+
+To run tests:
+
+    $ tests/run.sh all
+
+This currently runs Python unit tests and lints the Python files.
+
 API
 ---
 

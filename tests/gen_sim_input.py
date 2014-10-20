@@ -112,7 +112,7 @@ def rand_sample_exp():
   rand_in_cf = random.random()
   # Val sampled from exp distr in [0,1] is CDF^{-1}(unif in [0,1))
   rand_sample_in_01 = (
-          -math.log(1 - rand_in_cf * ONE_MINUS_EXP_LAMBDA) / DIST_PARAM)
+      -math.log(1 - rand_in_cf * ONE_MINUS_EXP_LAMBDA) / DIST_PARAM)
   # Scale up to NUM_UNIQUE_VALUES and floor to integer
   rand_val = int((rand_sample_in_01 * NUM_UNIQUE_VALUES) + 1)
   return rand_val
@@ -141,8 +141,8 @@ def WriteParamsHtml(num_values, f):
   d = {
       'num_clients': NUM_CLIENTS,
       'num_unique_values': NUM_UNIQUE_VALUES,
-      'num_values': num_values,
-      }
+      'num_values': num_values
+  }
   # NOTE: No HTML escaping since we're writing numbers
   print >>f, PARAMS_HTML.format(**d)
 
