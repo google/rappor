@@ -7,14 +7,13 @@
 #
 # End to end demo for 3 distributions:
 #
-#   $ tests/run.sh end-to-end-all
+#   $ ./demo.sh run
+#
+# Run demo for just one distribution (no HTML output):
+#
+#   $ ./demo.sh run-dist [exp|gauss|unif]
 #
 # (This takes a minute or so)
-#
-# To use a different R interpreter, set R_PREFIX: e.g.
-#
-#   $ export R_PREFIX=/usr/local/bin/Rscript
-#   $ ./run.sh end-to-end-all
 
 set -o nounset
 set -o pipefail
@@ -108,19 +107,10 @@ analyze() {
   local title=$2
   local prefix=_tmp/$dist
 
-  # Workaround use a different R interpreter.  'env' is a noop.
-  local r_prefix=${R_PREFIX:-env}
-
   local out_dir=_tmp/${dist}_report
   mkdir -p $out_dir
 
-  time $r_prefix tests/analyze.R -t "$title" $prefix $out_dir
-}
-
-# Use locally compiled R.  This is useful for Google computers, i.e. instead of
-# using the Google R build.
-analyze2() {
-  R_PREFIX=/usr/local/bin/Rscript analyze "$@"
+  time tests/analyze.R -t "$title" $prefix $out_dir
 }
 
 # Run end to end for one distribution.
