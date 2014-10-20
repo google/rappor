@@ -135,6 +135,7 @@ expand-html() {
 
   pushd $out_dir >/dev/null
 
+  # Add simulation parameters and RAPPOR parameters.
   # NOTE: We're arbitrarily using the "exp" values since params are all
   # independent of distribution.
 
@@ -159,12 +160,8 @@ _run() {
   for dist in exp gauss unif; do
     run-dist $dist $num_clients
   done
-  # Link the HTML skeleton
-  #
-  # TODO:
-  # - gen_sim_input output sim_params.html
-  # - read params rappor_params.html
 
+  # Expand the HTML skeleton
   expand-html ../tests/report.html _tmp
 
   wc -l _tmp/*.csv
