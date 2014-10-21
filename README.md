@@ -22,7 +22,7 @@ Although the Python and R libraries should be portable to any platform, our
 end-to-end demo has only been tested on Linux.
 
 If you don't have a Linux box handy, you can [view the generated
-output](report.html).
+output](http://google.github.io/rappor/examples/report.html).
 
 To get your feet wet, install the R dependencies (details below).  It should
 look something like this:
@@ -47,8 +47,6 @@ The demo strings together the Python and R code.  It:
 3. Analyzes and plots the obfuscated reports against the true input
 
 The output is written to `_tmp/report.html`, and can be opened with a browser.
-
-<!-- TODO: Link to Github pages version of report.html. -->
 
 Dependencies
 ------------
