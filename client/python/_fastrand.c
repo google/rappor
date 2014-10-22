@@ -36,10 +36,10 @@ limitations under the License.
 
 uint64_t randbits(float p1, int num_bits) {
   uint64_t result = 0;
+  int threshold = (int)(p1 * RAND_MAX);
   int i;
   for (i = 0; i < num_bits; ++i) {
-    float r = (float)rand() / RAND_MAX;
-    uint64_t bit = (r < p1);
+    uint64_t bit = (rand() < threshold);
     result |= (bit << i);
   }
   return result;
@@ -73,11 +73,11 @@ func_randbits(PyObject *self, PyObject *args) {
 
 PyMethodDef methods[] = {
   {"randbits", func_randbits, METH_VARARGS,
-   "Get a 64 bit number where each bit is 1 with probability p."},
+   "Return a number with N bits, where each bit is 1 with probability p."},
   {NULL, NULL},
 };
 
-void init_fastrand() {
+void init_fastrand(void) {
   Py_InitModule("_fastrand", methods);
 
   // Just seed it here; we don't give the application any control.
