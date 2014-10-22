@@ -205,12 +205,11 @@ def get_rappor_masks(user_id, word, params, rand_funcs):
 
 
 def get_bf_bit(input_word, cohort, hash_no, num_bloombits):
-  """Compute Bloom Filter bits to set."""
+  """Returns the bit to set in the Bloom filter."""
   h = '%s%s%s' % (cohort, hash_no, input_word)
   sha1 = hashlib.sha1(h).digest()
-  # Use last two bytes to get a bloom filter output.  NOTE: This is only valid
-  # for 16 bits (default num_bloombits).  Should use struct module to get
-  # arbitrary numbers of bits.
+  # Use last two bytes as the hash.  We to allow want more than 2^8 = 256 bits,
+  # but 2^16 = 65536 is more than enough.  Default is 16 bits.
   a, b = sha1[0], sha1[1]
   return (ord(a) + ord(b) * 256) % num_bloombits
 
