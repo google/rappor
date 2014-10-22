@@ -12,9 +12,6 @@ For a detailed description of the algorithms, see the
 Feel free to send feedback to
 [rappor-discuss@googlegroups.com](https://groups.google.com/forum/#!forum/rappor-discuss).
 
-<!-- TODO: We should have a more user friendly non-mathematical explanation?
--->
-
 Running the Demo
 ----------------
 
@@ -43,8 +40,8 @@ speeds up the simulation.
 The demo strings together the Python and R code.  It:
 
 1. Generates simulated input data with different distributions
-2. Runs it through the RAPPOR privacy algorithm
-3. Analyzes and plots the obfuscated reports against the true input
+2. Runs it through the RAPPOR privacy-preserving reporting mechanisms
+3. Analyzes and plots the aggregated reports against the true input
 
 The output is written to `_tmp/report.html`, and can be opened with a browser.
 
@@ -110,8 +107,7 @@ Directory Structure
         rappor_test.py  # Unit tests go next to implementation.
       cpp/              # placeholder
     analysis/
-      R/
-        # R code for analysis.
+      R/                # R code for analysis.
     tests/              # System tests
       gen_sim_input.py  # generate test input data
       rappor_sim.py     # run simulation
