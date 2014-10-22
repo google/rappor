@@ -128,7 +128,7 @@ Links
 
 <!-- TODO: link back to blog post -->
 
-- [Tutorial](doc/tutorial.html) - More details about the tools here.
+- [Tutorial](doc/tutorial.md) - More details about the tools here.
 - [RAPPOR paper](http://arxiv.org/abs/1407.6981)
 - [RAPPOR implementation in Chrome](http://www.chromium.org/developers/design-documents/rappor)
   - This is a production quality C++ implementation, but it's somewhat tied to
