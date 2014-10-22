@@ -73,7 +73,7 @@ class RapporInstance(object):
                                  # For debugging purposes only
 
     # TODO: Add orthogonal flag for crytographic randomness.
-    self.random_mode = 'fast'    # simple/approx/fast.
+    self.random_mode = 'fast'    # simple/fast.
 
   # For testing
   def __eq__(self, other):
@@ -120,7 +120,7 @@ def parse_args(argv):
       inst.params.flag_oneprr = True
 
     elif opt == "-r":
-      VALID = ('simple', 'approx', 'fast')
+      VALID = ('simple', 'fast')
       arg = arg.strip()
       if arg not in VALID:
         raise RuntimeError('random most must be one of: %s' % ' '.join(VALID))
@@ -163,7 +163,7 @@ def usage(script_name):
   sys.stdout.write("""
 
   -o or --output        Output file name
-  -r simple/approx/fast Random algorithm
+  -r simple/fast        Random algorithm
   -c or --cohorts       Number of cohorts
   -nh or --hashes       Number of hashes
   -p                    Probability p
@@ -327,8 +327,6 @@ def main(argv):
 
   if inst.random_mode == 'simple':
     rand_funcs = rappor.SimpleRandFuncs(params, rand)
-  elif inst.random_mode == 'approx':
-    rand_funcs = rappor.ApproxRandFuncs(params, rand)
   elif inst.random_mode == 'fast':
     if fastrand:
       log('Using fastrand extension')

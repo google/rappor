@@ -65,78 +65,6 @@ class SimpleRandom(object):
     return r
 
 
-# NOTE: This doesn't seem faster.
-
-class ApproxRandom(object):
-  """Like SimpleRandom, but tries to make fewer random calls.
-
-  Represent prob_one in base 2 repr (up to 6 bits = 2^-6 accuracy)
-  If X is a random bit with             Pr[b=1] = p
-    X & uniform is a random bit with    Pr[b=1] = p/2
-    X | uniform is a random bit with    Pr[b=1] = p/2+1/2
-  Read prob_one from LSB and do & or | operations depending on
-  whether the bit is set or not a la repeated-squaring.
-  #
-  Eg. 0.3 = (0.010011...)_2 ~
-        unif & (unif | (unif & (unif & (unif | unif))))
-             0       1       0       0       1  1
-
-  Takes as input Pr[b=1], length of random bits, and a randomness
-  function that outputs 32 bits. When not debugging, set rand_fn
-  to random.getrandbits(32)
-  """
-
-  def __init__(self, prob_one, num_bits, rand=None):
-    """
-    Args:
-      rand: object satisfying Python random.Random() interface.
-    """
-    if not isinstance(prob_one, float):
-      raise RuntimeError('Probability must be a float')
-
-    if not (0 <= prob_one <= 1):
-      raise RuntimeError('Probability not in [0,1]: %s' % prob_one)
-
-    self.num_bits = num_bits
-    self.rand = rand or random.Random()
-
-    # This calculation depends on prob_one, but not the actual randomness.
-    self.bits_in_prob_one = [0] * 6  # Store prob_one in bits
-    for i in xrange(0, 6):  # Loop at most six times
-      if prob_one < 0.5:
-        self.bits_in_prob_one[i] = 0
-        prob_one *= 2
-      else:
-        self.bits_in_prob_one[i] = 1
-        prob_one = prob_one * 2 - 1
-
-      if prob_one <= 0.01:  # Finish loop early if less than 1% already
-        break
-
-  def __call__(self):
-    num_bits = self.num_bits
-    rand_fn = lambda: self.rand.getrandbits(self.num_bits)
-
-    # We could special case these to be exact, but we're not using them for f,
-    # p, q.  Better to use the non-approximate method.
-
-    #if self.prob_one == 0:
-    #  return [0] * self.num_bits
-    #if self.prob_one == 1:
-    #  return [0xffffffff] * self.num_bits
-
-    rand_bits = 0
-    and_or = self.bits_in_prob_one
-
-    for i in xrange(5, -1, -1):  # Count down from 5 to 0
-      if and_or[i] == 0:  # Corresponds to X & uniform
-        rand_bits &= rand_fn()
-      else:
-        rand_bits |= rand_fn()
-
-    return rand_bits
-
-
 class _RandFuncs(object):
   """Base class for randomness."""
 
@@ -160,18 +88,6 @@ class SimpleRandFuncs(_RandFuncs):
     self.p_gen = SimpleRandom(params.prob_p, self.num_bits, rand)
     self.q_gen = SimpleRandom(params.prob_q, self.num_bits, rand)
     self.uniform_gen = SimpleRandom(0.5, self.num_bits, rand)
-
-
-class ApproxRandFuncs(_RandFuncs):
-
-  def __init__(self, params, rand):
-    _RandFuncs.__init__(self, params, rand)
-
-    self.f_gen = ApproxRandom(params.prob_f, self.num_bits, rand)
-    self.p_gen = ApproxRandom(params.prob_p, self.num_bits, rand)
-    self.q_gen = ApproxRandom(params.prob_q, self.num_bits, rand)
-    # uniform generator (NOTE: could special case this)
-    self.uniform_gen = ApproxRandom(0.5, self.num_bits, rand)
 
 
 # Compute masks for rappor's Permanent Randomized Response
@@ -254,7 +170,6 @@ class Encoder(object):
     # f_bits if mask_indices = 1
     # bloom_bits_array if mask_indices = 0
 
-    # TODO: change 0xffff ^ to ~
     prr = (f_bits & mask_indices) | (bloom_bits_array & ~mask_indices)
     #print 'prr', bin(prr)
 

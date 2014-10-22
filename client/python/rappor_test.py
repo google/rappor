@@ -48,74 +48,6 @@ class RapporParamsTest(unittest.TestCase):
   def tearDown(self):
     pass
 
-  def testApproxRandom(self):
-    get_rand_bits = rappor.ApproxRandom(0.1, 2)
-    r = get_rand_bits()
-    print r, bin(r)
-
-  def testSimpleRandom(self):
-    # TODO: measure speed of naive implementation
-    return
-    for i in xrange(100000):
-      r = rappor.get_rand_bits2(0.1, 2, lambda: random.getrandbits(32))
-      if i % 10000 == 0:
-        print i
-      #print r, [bin(a) for a in r]
-
-  def testProbFailureWeakStatisticalTestForGetRandBits(self):
-    """Tests whether get_rand_bits outputs correctly biased random bits.
-
-    NOTE! This is a test with a small failure probability.
-    The test succeeds with very very high probability and should only fail
-    1 in 10,000 times or less.
-
-    Samples 256 bits of randomness 1000 times and checks to see that the
-    cumulative number of bits set in each of the 256 positions is within
-    3 \sigma of the mean
-
-    Repeats this experiment with several probability values
-    """
-    return
-    length_in_words = 8  # A good sample size to test; 256 bits
-    rand_fn = (lambda: random.getrandbits(32))
-    # NOTE: 0.0 and 1.0 are not handled exactly.
-    p_values = [0.5, 0.36, 0.9]
-
-    # Trials with different probabilities from p[]
-    for p in p_values:
-      get_rand_bits = rappor.ApproxRandom(p, length_in_words)
-
-      set_bit_count = [0] * 256
-      for _ in xrange(1000):
-        rand_sample = get_rand_bits()
-
-        bin_str = bin(rand_sample)[2:]   # i^th word in binary as a str
-                                            # +2 for the 0b prefix
-        #print bin_str
-
-        # Prefix with leading zeroes
-        bin_str = "0" * (32 - len(bin_str)) + bin_str
-        for j in xrange(32):
-          if bin_str[j] == "1":
-            set_bit_count[32 + j] += 1
-
-      mean = int(1000 * p)
-      # variance of N samples = Np(1-p)
-      stddev = math.sqrt(1000 * p * (1 - p))
-      num_infractions = 0  # Number of values over 3 \sigma
-      infractions = []
-      for i in xrange(length_in_words):
-        for j in xrange(32):
-          s = set_bit_count[i * 32 + j]
-          if s > (mean + 3 * stddev) or s < (mean - 3 * stddev):
-            num_infractions += 1
-            infractions.append(s)
-
-      # 99% confidence for 3 \sigma implies less than 10 errors in 1000
-      # Factor 2 to avoid flakiness as there is a 1% sampling rate error
-      self.assertTrue(
-          num_infractions <= 20, '%s %s' % (num_infractions, infractions))
-
   def testUpdateRapporSumsWithLessThan32BitBloomFilter(self):
     report = 0x1d  # From LSB, bits 1, 3, 4, 5 are set
     # Empty rappor_sum
@@ -143,17 +75,15 @@ class RapporParamsTest(unittest.TestCase):
 
     num_words = params.num_bloombits // 32 + 1
     rand = MockRandom()
-    uniform_gen = rappor.ApproxRandom(0.5, num_words, rand=rand)
-    f_gen = rappor.ApproxRandom(params.prob_f, num_words, rand=rand)
-    rand_funcs = rappor.ApproxRandFuncs(params, rand)
+    rand_funcs = rappor.SimpleRandFuncs(params, rand)
     rand_funcs.cohort_rand_fn = (lambda a, b: a)
 
     assigned_cohort, f_bits, mask_indices = rappor.get_rappor_masks(
         0, ["abc"], params, rand_funcs)
 
     self.assertEquals(0, assigned_cohort)
-    self.assertEquals(0xfff0000f, f_bits)
-    self.assertEquals(0x0ffff000, mask_indices)
+    self.assertEquals(0x000db6d, f_bits)  # dependent on 3 MockRandom values
+    self.assertEquals(0x0006db6, mask_indices)
 
   def testGetBFBit(self):
     cohort = 0
@@ -185,7 +115,7 @@ class RapporParamsTest(unittest.TestCase):
 
     num_words = params.num_bloombits // 32 + 1
     rand = MockRandom()
-    rand_funcs = rappor.ApproxRandFuncs(params, rand)
+    rand_funcs = rappor.SimpleRandFuncs(params, rand)
 
     # First two calls to get_rappor_masks for identical inputs
     # Third call for a different input
@@ -241,31 +171,33 @@ class RapporParamsTest(unittest.TestCase):
     params.prob_p = 0.5
     params.prob_q = 0.75
 
-    rand_funcs = rappor.ApproxRandFuncs(params, MockRandom())
+    rand_funcs = rappor.SimpleRandFuncs(params, MockRandom())
     rand_funcs.cohort_rand_fn = lambda a, b: a
     e = rappor.Encoder(params, 0, rand_funcs=rand_funcs)
 
     cohort, bloom_bits_irr = e.encode("abc")
 
     self.assertEquals(0, cohort)
-    self.assertEquals(0x0ffffff8, bloom_bits_irr)
+    self.assertEquals(0x000ffff, bloom_bits_irr)
 
 
 class MockRandom(object):
-  """Returns one of eight random strings in a cyclic manner.
+  """Returns one of three random values in a cyclic manner.
 
-  Mock random function that involves *some* state, as needed for tests
-  that call randomness several times. This makes it difficult to deal
-  exclusively with stubs for testing purposes.
+  Mock random function that involves *some* state, as needed for tests that
+  call randomness several times. This makes it difficult to deal exclusively
+  with stubs for testing purposes.
   """
 
   def __init__(self):
     self.counter = 0
-    self.randomness = [0x0000ffff, 0x000ffff0, 0x00ffff00, 0x0ffff000,
-                       0xfff000f0, 0xfff0000f, 0xf0f0f0f0, 0xff0f00ff]
+    # SimpleRandom will call self.random() below for each bit, which will
+    # return these 3 values in sequence.
+    self.randomness = [0.0, 0.6, 0.0]
+    self.n = len(self.randomness)
 
   def seed(self, seed):
-    self.counter = hash(seed) % 8
+    self.counter = hash(seed) % self.n
     #print 'SEED', self.counter
 
   def getstate(self):
@@ -276,14 +208,13 @@ class MockRandom(object):
     #print 'SET STATE', state
     self.counter = state
 
-  def getrandbits(self, unused_num_bits):
-    #print 'GETRAND', self.counter
-    rand_val = self.randomness[self.counter]
-    self.counter = (self.counter + 1) % 8
-    return rand_val
-
   def randint(self, a, b):
     return a + self.counter
+
+  def random(self):
+    rand_val = self.randomness[self.counter]
+    self.counter = (self.counter + 1) % self.n
+    return rand_val
 
 
 if __name__ == "__main__":
