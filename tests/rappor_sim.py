@@ -266,13 +266,10 @@ def print_histogram(word_hist, histfile):
 
 
 def rappor_encode(params, rand_funcs, infile):
-  # Initializing array to capture sums of rappors.
-  rappor_sums = [[0] * (params.num_bloombits + 1)
-                 for _ in xrange(params.num_cohorts)]
-
   start_time = time.time()
   for i, line in enumerate(infile):
-    user_id, words = line.strip().split(",")
+    user_id, words_str = line.strip().split(",")
+    words = words_str.split()
 
     if i % 1000 == 0:
       elapsed = time.time() - start_time
@@ -280,11 +277,7 @@ def rappor_encode(params, rand_funcs, infile):
 
     # New encoder instance for each user.
     e = rappor.Encoder(params, user_id, rand_funcs=rand_funcs)
-    for word in words.split():
-      cohort, r = e.encode(word)
-      # Sum rappors.  TODO: move this to separate tool.
-      rappor.update_rappor_sums(rappor_sums, r, cohort, params)
-  return rappor_sums
+    yield user_id, [e.encode(w) for w in words]
 
 
 def main(argv):
@@ -340,15 +333,30 @@ def main(argv):
     raise AssertionError
 
   # Do RAPPOR transformation.
-  with open(inst.infile) as f:
-    rappor_sums = rappor_encode(params, rand_funcs, f)
+  with open(inst.infile) as inf, open(inst.outfile, 'w') as outf:
+    for user_id, encoded in rappor_encode(params, rand_funcs, inf):
+      # encoded is a list of (cohort, rappor) pairs
+      outf.write('%s,' % user_id)
+      for cohort, irr in encoded:
+        outf.write('%s %s,' % (cohort, bin(irr)[2:]))  # strip off leading '0b'
+      outf.write('\n')
 
+
+def dummy():
   # Print sums of all rappor bits into output file
   with open(inst.outfile, 'w') as f:
     for row in xrange(params.num_cohorts):
       for col in xrange(params.num_bloombits):
         f.write(str(rappor_sums[row][col]) + ",")
       f.write(str(rappor_sums[row][params.num_bloombits]) + "\n")
+
+  # Initializing array to capture sums of rappors.
+  rappor_sums = [[0] * (params.num_bloombits + 1)
+                 for _ in xrange(params.num_cohorts)]
+
+      # Sum rappors.  TODO: move this to separate tool.
+  rappor.update_rappor_sums(rappor_sums, r, cohort, params)
+  return rappor_sums
 
 
 if __name__ == "__main__":
