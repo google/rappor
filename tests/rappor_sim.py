@@ -32,6 +32,7 @@ We output 4 files:
     the RAPPOR analysis infers from the first 3 values.
 """
 
+import csv
 import collections
 import getopt
 import os
@@ -265,21 +266,6 @@ def print_histogram(word_hist, histfile):
     print >>histfile, fmt % pair
 
 
-def rappor_encode(params, rand_funcs, infile):
-  start_time = time.time()
-  for i, line in enumerate(infile):
-    user_id, words_str = line.strip().split(",")
-    words = words_str.split()
-
-    if i % 1000 == 0:
-      elapsed = time.time() - start_time
-      log('Processed %d inputs in %.2f seconds', i, elapsed)
-
-    # New encoder instance for each user.
-    e = rappor.Encoder(params, user_id, rand_funcs=rand_funcs)
-    yield user_id, [e.encode(w) for w in words]
-
-
 def bit_string(irr, num_bloombits):
   """Like bin(), but uses leading zeroes, and no '0b'."""
   s = ''
@@ -345,13 +331,35 @@ def main(argv):
     raise AssertionError
 
   # Do RAPPOR transformation.
-  with open(inst.infile) as inf, open(inst.outfile, 'w') as outf:
-    for user_id, encoded in rappor_encode(params, rand_funcs, inf):
+  with open(inst.infile) as f_in, open(inst.outfile, 'w') as f_out:
+    csv_in = csv.reader(f_in)
+    csv_out = csv.writer(f_out)
+
+    header = ('client', 'cohort', 'rappor')
+    csv_out.writerow(header)
+
+    cur_client = None  # current client
+
+    start_time = time.time()
+
+    for i, (client, true_value) in enumerate(csv_in):
+      if i == 0:
+        continue  # skip header line
+
+      if i % 10000 == 0:
+        elapsed = time.time() - start_time
+        log('Processed %d inputs in %.2f seconds', i, elapsed)
+
+      # New encoder instance for each client.
+      if client != cur_client:
+        cur_client = client
+        e = rappor.Encoder(params, cur_client, rand_funcs=rand_funcs)
+
+      cohort, irr = e.encode(true_value)
+
       # encoded is a list of (cohort, rappor) pairs
-      row = [user_id]
-      for cohort, irr in encoded:
-        row.append('%s %s' % (cohort, bit_string(irr, params.num_bloombits)))
-      print >>outf, ','.join(row)
+      out_row = (client, cohort, bit_string(irr, params.num_bloombits))
+      csv_out.writerow(out_row)
 
 
 if __name__ == "__main__":
