@@ -186,10 +186,3 @@ class Encoder(object):
 
     return cohort, irr  # irr is the rappor
 
-
-# Update rappor sum
-def update_rappor_sums(rappor_sum, rappor, cohort, params):
-  for bit_num in xrange(params.num_bloombits):
-    if rappor & (1 << bit_num):
-      rappor_sum[cohort][1 + bit_num] += 1
-  rappor_sum[cohort][0] += 1  # The 0^th entry contains total reports in cohort

@@ -48,27 +48,6 @@ class RapporParamsTest(unittest.TestCase):
   def tearDown(self):
     pass
 
-  def testUpdateRapporSumsWithLessThan32BitBloomFilter(self):
-    report = 0x1d  # From LSB, bits 1, 3, 4, 5 are set
-    # Empty rappor_sum
-    rappor_sum = [[0] * (self.typical_instance.num_bloombits + 1)
-                  for _ in xrange(self.typical_instance.num_cohorts)]
-    # A random cohort number
-    cohort = 42
-
-    # Setting up expected rappor sum
-    expected_rappor_sum = [[0] * (self.typical_instance.num_bloombits + 1)
-                           for _ in xrange(self.typical_instance.num_cohorts)]
-    expected_rappor_sum[42][0] = 1
-    expected_rappor_sum[42][1] = 1
-    expected_rappor_sum[42][3] = 1
-    expected_rappor_sum[42][4] = 1
-    expected_rappor_sum[42][5] = 1
-
-    rappor.update_rappor_sums(rappor_sum, report, cohort,
-                              self.typical_instance)
-    self.assertEquals(expected_rappor_sum, rappor_sum)
-
   def testGetRapporMasksWithoutOnePRR(self):
     params = copy.copy(self.typical_instance)
     params.prob_f = 0.5  # For simplicity
