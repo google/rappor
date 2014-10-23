@@ -336,27 +336,10 @@ def main(argv):
   with open(inst.infile) as inf, open(inst.outfile, 'w') as outf:
     for user_id, encoded in rappor_encode(params, rand_funcs, inf):
       # encoded is a list of (cohort, rappor) pairs
-      outf.write('%s,' % user_id)
+      row = [user_id]
       for cohort, irr in encoded:
-        outf.write('%s %s,' % (cohort, bin(irr)[2:]))  # strip off leading '0b'
-      outf.write('\n')
-
-
-def dummy():
-  # Print sums of all rappor bits into output file
-  with open(inst.outfile, 'w') as f:
-    for row in xrange(params.num_cohorts):
-      for col in xrange(params.num_bloombits):
-        f.write(str(rappor_sums[row][col]) + ",")
-      f.write(str(rappor_sums[row][params.num_bloombits]) + "\n")
-
-  # Initializing array to capture sums of rappors.
-  rappor_sums = [[0] * (params.num_bloombits + 1)
-                 for _ in xrange(params.num_cohorts)]
-
-      # Sum rappors.  TODO: move this to separate tool.
-  rappor.update_rappor_sums(rappor_sums, r, cohort, params)
-  return rappor_sums
+        row.append('%s %s' % (cohort, bin(irr)[2:]))  # strip off leading '0b'
+      print >>outf, ','.join(row)
 
 
 if __name__ == "__main__":
