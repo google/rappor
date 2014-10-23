@@ -69,7 +69,10 @@ def main(argv):
 
       num_reports[cohort] += 1
 
-      for bit_num, c in enumerate(irr):
+      #print repr(irr)
+      assert len(irr) == 16, len(irr)
+      for i, c in enumerate(irr):
+        bit_num = num_bloombits - i - 1  # e.g. char 0 is bit 15, char 15 is bit 0
         if c == '1':
           sums[cohort][bit_num] += 1
         else:
@@ -77,7 +80,6 @@ def main(argv):
             raise Error('Invalid IRR -- digits should be 0 or 1')
     #print line
 
-  #f = sys.stdout
   for cohort in xrange(num_cohorts):
     # First column is the total number of reports in the cohort.
     row = [num_reports[cohort]] + sums[cohort]

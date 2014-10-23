@@ -280,6 +280,18 @@ def rappor_encode(params, rand_funcs, infile):
     yield user_id, [e.encode(w) for w in words]
 
 
+def bit_string(irr, num_bloombits):
+  """Like bin(), but uses leading zeroes, and no '0b'."""
+  s = ''
+  bits = []
+  for bit_num in xrange(num_bloombits):
+    if irr & (1 << bit_num):
+      bits.append('1')
+    else:
+      bits.append('0')
+  return ''.join(reversed(bits))
+
+
 def main(argv):
   inst, ret_val = parse_args(argv)
   if ret_val == PARSE_ERROR:
@@ -338,7 +350,7 @@ def main(argv):
       # encoded is a list of (cohort, rappor) pairs
       row = [user_id]
       for cohort, irr in encoded:
-        row.append('%s %s' % (cohort, bin(irr)[2:]))  # strip off leading '0b'
+        row.append('%s %s' % (cohort, bit_string(irr, params.num_bloombits)))
       print >>outf, ','.join(row)
 
 
