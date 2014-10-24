@@ -15,10 +15,11 @@
 # limitations under the License.
 
 """
-Read the output of the RAPPOR simulation, and simply sum bits to produce a
-Counting Bloom filter.  file), which can be analyzed by R.
+Read the output of the RAPPOR simulation, and sum the bits by cohort to produce
+a Counting Bloom filter.  This can then be analyzed by R.
 """
 
+import csv
 import sys
 
 
@@ -85,24 +86,23 @@ def main(argv):
   sums = [[0] * num_bloombits for _ in xrange(num_cohorts)]
   num_reports = [0] * num_cohorts
 
-  for line in sys.stdin:
-    parts = line.split(',')
-    user_id, encoded = parts[0], parts[1:]
-    for e in encoded:
-      cohort, irr = e.split()
-      cohort = int(cohort)
+  csv_in = csv.reader(sys.stdin)
+  for i, (user_id, cohort, irr) in enumerate(csv_in):
+    if i == 0:
+      continue  # skip header
 
-      num_reports[cohort] += 1
+    cohort = int(cohort)
+    num_reports[cohort] += 1
 
-      #print repr(irr)
-      assert len(irr) == 16, len(irr)
-      for i, c in enumerate(irr):
-        bit_num = num_bloombits - i - 1  # e.g. char 0 is bit 15, char 15 is bit 0
-        if c == '1':
-          sums[cohort][bit_num] += 1
-        else:
-          if c != '0':
-            raise Error('Invalid IRR -- digits should be 0 or 1')
+    #print repr(irr)
+    assert len(irr) == 16, len(irr)
+    for i, c in enumerate(irr):
+      bit_num = num_bloombits - i - 1  # e.g. char 0 = bit 15, char 15 = bit 0
+      if c == '1':
+        sums[cohort][bit_num] += 1
+      else:
+        if c != '0':
+          raise Error('Invalid IRR -- digits should be 0 or 1')
     #print line
 
   for cohort in xrange(num_cohorts):
