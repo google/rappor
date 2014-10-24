@@ -217,6 +217,8 @@ PARAMS_HTML = """
 
 def print_params(params, csv_out, html_out):
   """Print Rappor parameters to a text file."""
+  c = csv.writer(csv_out)
+  c.writerow(('k', 'h', 'm', 'p', 'q', 'f'))  # header
   row = (
       params.num_bloombits,
       params.num_hashes,
@@ -224,8 +226,8 @@ def print_params(params, csv_out, html_out):
       params.prob_p,
       params.prob_q,
       params.prob_f)
-  print >>csv_out, "k,h,m,p,q,f\n"  # CSV header
-  print >>csv_out, "%s,%s,%s,%s,%s,%s\n" % row
+
+  c.writerow(row)
 
   # NOTE: No HTML escaping since we're writing numbers
   print >>html_out, PARAMS_HTML.format(*row)
