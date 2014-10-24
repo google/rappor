@@ -87,6 +87,14 @@ rappor-sim() {
     #-s 0  # deterministic seed
 }
 
+hash-candidates() {
+  local dist=$1
+  shift
+  PYTHONPATH=$CLIENT_DIR time tests/hash_candidates.py \
+    < _tmp/${dist}_candidates.txt \
+    > _tmp/${dist}_newmap.csv
+}
+
 sum-bits() {
   local dist=$1
   shift

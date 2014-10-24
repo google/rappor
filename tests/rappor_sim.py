@@ -60,8 +60,8 @@ def log(msg, *args):
   print >>sys.stderr, msg
 
 
-class RapporInstance(object):
-  """Simple class to create a RAPPOR instance with specific default params."""
+class SimOptions(object):
+  """Simulation options."""
   def __init__(self):
     self.params = rappor.Params()
 
@@ -69,6 +69,7 @@ class RapporInstance(object):
     self.outfile = ""            # Output file name
     self.histfile = ""           # Output histogram file
     self.mapfile = ""            # Output BF map file
+    self.candidates_file = ""    # Output candidates file
     self.paramsfile = ""         # Output params file
     self.randomness_seed = None  # Randomness seed
                                  # For debugging purposes only
@@ -96,7 +97,7 @@ def parse_args(argv):
     usage(argv[0])
     sys.exit(2)
 
-  inst = RapporInstance()
+  inst = SimOptions()
   for opt, arg in opts:
     if opt in ("-i", "--input"):
       inst.infile = arg
@@ -152,6 +153,7 @@ def parse_args(argv):
   inst.outfile = inst.outfile or (prefix + "_out.csv")
   inst.histfile = inst.histfile or (prefix + "_hist.csv")
   inst.mapfile = inst.mapfile or (prefix + "_map.csv")
+  inst.candidates_file = inst.candidates_file or (prefix + "_candidates.txt")
   inst.paramsfile = inst.paramsfile or (prefix + "_params.csv")
 
   return inst, PARSE_SUCCESS
@@ -310,6 +312,12 @@ def main(argv):
   all_words = sorted(word_hist)  # unique words
   with open(inst.mapfile, 'w') as f:
     print_map(all_words, params, f)
+
+  # Print all true values, one per line.  This file can be further processed to
+  # simulate inaccurate candidate lists.
+  with open(inst.candidates_file, 'w') as f:
+    for word in all_words:
+      print >>f, word
 
   rand = random.Random()  # default Mersenne Twister randomness
   #rand = random.SystemRandom()  # cryptographic randomness from OS
