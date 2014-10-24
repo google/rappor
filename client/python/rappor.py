@@ -185,4 +185,3 @@ class Encoder(object):
     #print 'irr', bin(irr)
 
     return cohort, irr  # irr is the rappor
-
