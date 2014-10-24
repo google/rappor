@@ -246,20 +246,6 @@ def make_histogram(csv_in):
   return dict(counter.most_common())
 
 
-def print_map(all_words, params, mapfile):
-  """Print Bloom Filter map of values from infile."""
-  # Print maps of distributions
-  # Required by the R analysis tool
-  k = params.num_bloombits
-  for word in all_words:
-    mapfile.write(word)
-    for cohort in xrange(params.num_cohorts):
-      for hash_no in xrange(params.num_hashes):
-        bf_bit = rappor.get_bf_bit(word, cohort, hash_no, k) + 1
-        mapfile.write("," + str(cohort * k + bf_bit))
-    mapfile.write("\n")
-
-
 def print_histogram(word_hist, histfile):
   """Write histogram of infile to histfile."""
   # Print histograms of distributions
@@ -308,10 +294,7 @@ def main(argv):
   with open(inst.histfile, 'w') as f:
     print_histogram(word_hist, f)
 
-  # Print maps to map file -- needed for the R analysis tool.
   all_words = sorted(word_hist)  # unique words
-  with open(inst.mapfile, 'w') as f:
-    print_map(all_words, params, f)
 
   # Print all true values, one per line.  This file can be further processed to
   # simulate inaccurate candidate lists.

@@ -90,15 +90,19 @@ rappor-sim() {
 hash-candidates() {
   local dist=$1
   shift
+  local out=_tmp/${dist}_map.csv
   PYTHONPATH=$CLIENT_DIR time tests/hash_candidates.py \
     < _tmp/${dist}_candidates.txt \
-    > _tmp/${dist}_newmap.csv
+    > $out
+  log "Wrote $out"
 }
 
 sum-bits() {
   local dist=$1
   shift
-  tests/sum_bits.py < _tmp/${dist}_out.csv > _tmp/${dist}_counts.csv
+  local out=_tmp/${dist}_counts.csv
+  tests/sum_bits.py < _tmp/${dist}_out.csv > $out
+  log "Wrote $out"
 }
 
 # Like rappor-sim, but run it through the Python profiler.
@@ -145,6 +149,9 @@ run-dist() {
 
   banner "Running RAPPOR ($dist)"
   rappor-sim $dist
+
+  banner "Hashing Candidates ($dist)"
+  hash-candidates $dist
 
   banner "Summing bits ($dist)"
   sum-bits $dist
