@@ -81,10 +81,25 @@ gen-sim-input() {
 rappor-sim() {
   local dist=$1
   shift
-  PYTHONPATH=$CLIENT_DIR time $REPO_ROOT/tests/rappor_sim.py \
+  PYTHONPATH=$CLIENT_DIR time \
+    tests/rappor_sim.py \
     -i _tmp/$dist.csv \
     "$@"
     #-s 0  # deterministic seed
+}
+
+# Like rappor-sim, but run it through the Python profiler.
+rappor-sim-profile() {
+  local dist=$1
+  shift
+
+  export PYTHONPATH=$CLIENT_DIR
+  # For now, just dump it to a text file.  Sort by cumulative time.
+  time python -m cProfile -s cumulative \
+    tests/rappor_sim.py \
+    -i _tmp/$dist.csv \
+    "$@" \
+    | tee _tmp/profile.txt
 }
 
 hash-candidates() {
@@ -103,20 +118,6 @@ sum-bits() {
   local out=_tmp/${dist}_counts.csv
   tests/sum_bits.py < _tmp/${dist}_out.csv > $out
   log "Wrote $out"
-}
-
-# Like rappor-sim, but run it through the Python profiler.
-rappor-sim-profile() {
-  local dist=$1
-  shift
-
-  export PYTHONPATH=$CLIENT_DIR
-  # For now, just dump it to a text file.  Sort by cumulative time.
-  time python -m cProfile -s cumulative \
-    tests/rappor_sim.py \
-    -i _tmp/$dist.csv \
-    "$@" \
-    | tee _tmp/profile.txt
 }
 
 # Analyze output of Python client library.
