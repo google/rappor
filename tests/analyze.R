@@ -35,6 +35,15 @@ if (!interactive()) {
 
 library(ggplot2)
 
+# Use CairoPNG if available.  Useful for headless R.
+if (library(Cairo, quietly = TRUE, logical.return = TRUE)) {
+  png_func = CairoPNG
+  cat('Using CairoPNG\n')
+} else {
+  png_func = png
+  cat('Using png\n')
+}
+
 source("analysis/R/analysis_lib.R")
 source("analysis/R/read_input.R")
 source("analysis/R/decode.R")
@@ -104,9 +113,9 @@ PlotAll <- function(d, title) {
   g + b + t
 }
 
-WritePlot<- function(p, outdir, width = 800, height = 600) {
+WritePlot <- function(p, outdir, width = 800, height = 600) {
   filename <- file.path(outdir, 'dist.png')
-  png(filename, width=width, height=height)
+  png_func(filename, width=width, height=height)
   plot(p)
   dev.off()
   Log('Wrote %s', filename)
