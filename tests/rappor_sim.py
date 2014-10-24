@@ -231,14 +231,15 @@ def print_params(params, csv_out, html_out):
   print >>html_out, PARAMS_HTML.format(*row)
 
 
-def make_histogram(infile):
+def make_histogram(csv_in):
   """Make a histogram of the simulated input file."""
   # TODO: It would be better to share parsing with rappor_encode()
-  words_counter = collections.Counter()
-  for line in infile:
-    _, words = line.strip().split(",")
-    words_counter.update(words.split())
-  return dict(words_counter.most_common())
+  counter = collections.Counter()
+  for i, (_, word) in enumerate(csv_in):
+    if i == 0:
+      continue
+    counter[word] += 1
+  return dict(counter.most_common())
 
 
 def print_map(all_words, params, mapfile):
@@ -296,7 +297,8 @@ def main(argv):
       print_params(params, csv_out, html_out)
 
   with open(inst.infile) as f:
-    word_hist = make_histogram(f)
+    csv_in = csv.reader(f)
+    word_hist = make_histogram(csv_in)
 
   # Print true histograms.
   with open(inst.histfile, 'w') as f:
