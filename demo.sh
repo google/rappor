@@ -110,7 +110,14 @@ analyze() {
   local out_dir=_tmp/${dist}_report
   mkdir -p $out_dir
 
-  time tests/analyze.R -t "$title" $prefix $out_dir
+  # The shebang on analyze.R is /usr/bin/Rscript.  With some Linux distros
+  # (Ubuntu), you often need to compile your own R to get say R 3.0 instead of
+  # 2.14.  In that case, do something like:
+  #
+  # export R_SCRIPT=/usr/local/bin/Rscript
+
+  local r_script=${R_SCRIPT:-env}
+  time $r_script tests/analyze.R -t "$title" $prefix $out_dir
 }
 
 # Run end to end for one distribution.
