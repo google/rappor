@@ -87,6 +87,12 @@ rappor-sim() {
     #-s 0  # deterministic seed
 }
 
+sum-bits() {
+  local dist=$1
+  shift
+  tests/sum_bits.py < _tmp/${dist}_out.csv > _tmp/${dist}_counts.csv
+}
+
 # Like rappor-sim, but run it through the Python profiler.
 rappor-sim-profile() {
   local dist=$1
@@ -131,6 +137,9 @@ run-dist() {
 
   banner "Running RAPPOR ($dist)"
   rappor-sim $dist
+
+  banner "Summing bits ($dist)"
+  sum-bits $dist
 
   banner "Analyzing RAPPOR output ($dist)"
   analyze $dist "Distribution Comparison ($dist)"
