@@ -15,8 +15,8 @@
 # limitations under the License.
 
 """
-Read the output of the RAPPOR simulation, and sum the bits by cohort to produce
-a Counting Bloom filter.  This can then be analyzed by R.
+Read the RAPPOR'd values on stdin, and sum the bits to produce a Counting Bloom
+filter by cohort.  This can then be analyzed by R.
 """
 
 import csv
@@ -24,10 +24,10 @@ import sys
 
 
 def main(argv):
-  """Returns an exit code."""
   # TODO: need to read params file?
   num_cohorts = 64
   num_bloombits = 16
+
   sums = [[0] * num_bloombits for _ in xrange(num_cohorts)]
   num_reports = [0] * num_cohorts
 
@@ -48,10 +48,11 @@ def main(argv):
         if c != '0':
           raise RuntimeError('Invalid IRR -- digits should be 0 or 1')
 
+  csv_out = csv.writer(sys.stdout)
   for cohort in xrange(num_cohorts):
     # First column is the total number of reports in the cohort.
     row = [num_reports[cohort]] + sums[cohort]
-    print ','.join(str(cell) for cell in row)
+    csv_out.writerow(row)
 
 
 if __name__ == '__main__':
