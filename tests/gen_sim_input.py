@@ -232,7 +232,7 @@ def main(argv):
   prefix, _ = os.path.splitext(OUTFILE)
   params_filename = prefix + '_sim_params.html'
   # TODO: This should take 'opts'
-  num_values = NUM_UNIQUE_VALUES * VALUES_PER_CLIENT
+  num_values = NUM_CLIENTS * VALUES_PER_CLIENT
   with open(params_filename, 'w') as f:
     WriteParamsHtml(num_values, f)
   log('Wrote %s', params_filename)
