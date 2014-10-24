@@ -141,6 +141,10 @@ run-dist() {
   banner "Summing bits ($dist)"
   sum-bits $dist
 
+  # TODO:
+  # guess-candidates  # cheat and get them from the true input
+  # hash-candidates  # create map file
+
   banner "Analyzing RAPPOR output ($dist)"
   analyze $dist "Distribution Comparison ($dist)"
 }
@@ -177,10 +181,10 @@ _run() {
     run-dist $dist $num_clients
   done
 
+  wc -l _tmp/*.csv
+
   # Expand the HTML skeleton
   expand-html ../tests/report.html _tmp
-
-  wc -l _tmp/*.csv
 }
 
 # Main entry point.  Run it for all distributions, and time the result.
