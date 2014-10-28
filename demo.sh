@@ -102,6 +102,12 @@ rappor-sim-profile() {
     | tee _tmp/profile.txt
 }
 
+gen-candidates() {
+  local dist=$1
+  # Assume that we know the set of true inputs EXACTLY
+  cp _tmp/${dist}_true_inputs.txt _tmp/${dist}_candidates.txt
+}
+
 hash-candidates() {
   local dist=$1
   shift
@@ -150,6 +156,9 @@ run-dist() {
 
   banner "Running RAPPOR ($dist)"
   rappor-sim $dist
+
+  banner "Generating candidates ($dist)"
+  gen-candidates $dist
 
   banner "Hashing Candidates ($dist)"
   hash-candidates $dist

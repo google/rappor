@@ -69,7 +69,7 @@ class SimOptions(object):
     self.outfile = ""            # Output file name
     self.histfile = ""           # Output histogram file
     self.mapfile = ""            # Output BF map file
-    self.candidates_file = ""    # Output candidates file
+    self.true_inputs_file = ""   # File that contains unique client inputs
     self.paramsfile = ""         # Output params file
     self.randomness_seed = None  # Randomness seed
                                  # For debugging purposes only
@@ -153,7 +153,7 @@ def parse_args(argv):
   inst.outfile = inst.outfile or (prefix + "_out.csv")
   inst.histfile = inst.histfile or (prefix + "_hist.csv")
   inst.mapfile = inst.mapfile or (prefix + "_map.csv")
-  inst.candidates_file = inst.candidates_file or (prefix + "_candidates.txt")
+  inst.true_inputs_file = inst.true_inputs_file or (prefix + "_true_inputs.txt")
   inst.paramsfile = inst.paramsfile or (prefix + "_params.csv")
 
   return inst, PARSE_SUCCESS
@@ -298,7 +298,7 @@ def main(argv):
 
   # Print all true values, one per line.  This file can be further processed to
   # simulate inaccurate candidate lists.
-  with open(inst.candidates_file, 'w') as f:
+  with open(inst.true_inputs_file, 'w') as f:
     for word in all_words:
       print >>f, word
 
