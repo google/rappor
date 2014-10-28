@@ -119,15 +119,24 @@ v60
 EOF
 }
 
-gen-candidates() {
+# Args:
+#   dist: which distribution we are running on
+#   to_remove: list of values which we "forgot" to include in the candidates
+#       list.  Passed to egrep -v, e.g. v1|v2|v3.
+print-candidates() {
   local dist=$1
   # Assume that we know the set of true inputs EXACTLY
   #cp _tmp/${dist}_true_inputs.txt _tmp/${dist}_candidates.txt
   #
-  local to_remove='v1|v2'  # true values we omitted from the candidates list.
+  local to_remove="$2"  # true values we omitted from the candidates list.
 
-  { egrep -v "$to_remove" _tmp/${dist}_true_inputs.txt;
-    more-candidates; } >_tmp/${dist}_candidates.txt
+  local in=_tmp/${dist}_true_inputs.txt
+  if test -n "$to_remove"; then
+    egrep -v "$to_remove" $in  # remove some true inputs
+  else
+    cat $in  # include all true inputs
+  fi
+  more-candidates
 }
 
 hash-candidates() {
@@ -180,7 +189,12 @@ run-dist() {
   rappor-sim $dist
 
   banner "Generating candidates ($dist)"
-  gen-candidates $dist
+
+  # Example of removing candidates.
+  #print-candidates $dist 'v1|v2'  > _tmp/${dist}_candidates.txt
+
+  # Keep all candidates
+  print-candidates $dist '' > _tmp/${dist}_candidates.txt
 
   banner "Hashing Candidates ($dist)"
   hash-candidates $dist
