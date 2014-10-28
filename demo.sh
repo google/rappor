@@ -102,10 +102,32 @@ rappor-sim-profile() {
     | tee _tmp/profile.txt
 }
 
+# By default, we generate v1..v50.  Add some more here.  We hope these are
+# estimated at 0.
+more-candidates() {
+  cat <<EOF
+v51
+v52
+v53
+v54
+v55
+v56
+v57
+v58
+v59
+v60
+EOF
+}
+
 gen-candidates() {
   local dist=$1
   # Assume that we know the set of true inputs EXACTLY
-  cp _tmp/${dist}_true_inputs.txt _tmp/${dist}_candidates.txt
+  #cp _tmp/${dist}_true_inputs.txt _tmp/${dist}_candidates.txt
+  #
+  local to_remove='v1|v2'  # true values we omitted from the candidates list.
+
+  { egrep -v "$to_remove" _tmp/${dist}_true_inputs.txt;
+    more-candidates; } >_tmp/${dist}_candidates.txt
 }
 
 hash-candidates() {
