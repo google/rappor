@@ -30,18 +30,19 @@ run-markdown() {
   <!DOCTYPE html>
   <html>
     <head>
+      <meta charset="UTF-8">
       <style>
         code { color: green }
       </style>
+      <!-- INSERT LATCH JS -->
     </head>
     <body style="margin: 0 auto; width: 40em; text-align: left;">
-      <p>
+      <!-- INSERT LATCH HTML -->
 EOF
 
   markdown "$@"
 
   cat <<EOF
-      </p>
     </body>
   </html>
 EOF

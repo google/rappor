@@ -10,15 +10,12 @@ Start with this command:
 
     $ ./demo.sh run
 
-It currently takes 45 seconds or so to run.
+It takes a minute or so to run.  The dependencies listed in the
+[README](../README.html) must be installed.
 
-As described in the [README](../README.html), this command generates simulated
-input data with different distributions, runs it through RAPPOR, then analyzes
-and plots the output.
+This command generates simulated input data with different distributions, runs
+it through RAPPOR, then analyzes and plots the output.
 
-(The dependencies listed in the README must be installed.)
-
-The command is composed of serveral part.
 
 1. Generating Simulated Input Data
 ----------------------------------
