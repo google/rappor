@@ -153,7 +153,8 @@ def parse_args(argv):
   inst.outfile = inst.outfile or (prefix + "_out.csv")
   inst.histfile = inst.histfile or (prefix + "_hist.csv")
   inst.mapfile = inst.mapfile or (prefix + "_map.csv")
-  inst.true_inputs_file = inst.true_inputs_file or (prefix + "_true_inputs.txt")
+  inst.true_inputs_file = inst.true_inputs_file or (
+      prefix + "_true_inputs.txt")
   inst.paramsfile = inst.paramsfile or (prefix + "_params.csv")
 
   return inst, PARSE_SUCCESS

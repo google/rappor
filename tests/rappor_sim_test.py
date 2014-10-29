@@ -23,15 +23,10 @@ import unittest
 import rappor_sim  # module under test
 
 
-class RapporParamsTest(unittest.TestCase):
-  def setUp(self):
-    pass
-
-  def tearDown(self):
-    pass
+class RapporSimTest(unittest.TestCase):
 
   def testParseArgs(self):
-    expected = rappor_sim.RapporInstance()
+    expected = rappor_sim.SimOptions()
     p = expected.params
     p.num_bloombits = 16      # Number of bloom filter bits
     p.num_hashes = 2          # Number of bloom filter hashes
@@ -45,6 +40,7 @@ class RapporParamsTest(unittest.TestCase):
     expected.outfile = "test_out.csv"        # Output file name
     expected.histfile = "test_hist.csv"      # Output histogram file
     expected.mapfile = "test_map.csv"        # Output BF map file
+    expected.true_inputs_file = "test_true_inputs.txt"
     expected.paramsfile = "test_params.csv"  # Output params file
 
     arg_string = ("script --cohorts 64 --hashes 2 --bloombits 16 -p 0.4"
