@@ -126,7 +126,7 @@ TODO: add apps?
 Links
 -----
 
-- [Google Blog Post about RAPPOR](http://googleresearch.blogspot.com/2014/10/learning-statistics-with-privacy-aided.html#gpluscomments)
+- [Google Blog Post about RAPPOR](http://googleresearch.blogspot.com/2014/10/learning-statistics-with-privacy-aided.html)
 - [RAPPOR paper](http://arxiv.org/abs/1407.6981)
 - [RAPPOR implementation in Chrome](http://www.chromium.org/developers/design-documents/rappor)
   - This is a production quality C++ implementation, but it's somewhat tied to
