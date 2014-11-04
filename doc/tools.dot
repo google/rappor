@@ -1,0 +1,66 @@
+// Based on http://graphviz.org/content/cluster
+
+// Node types:
+//   Rectangle: process
+//   Oval: data
+//   Diamond: debug/simulation data
+
+digraph G {
+
+  subgraph cluster_0 {
+    label = "Client";
+    style=filled;
+    color=lightgrey;
+
+    node [style=filled, color=white];
+
+    gen_sim_input -> dist_csv -> rappor_sim;
+    
+    rappor_sim -> out;
+    rappor_sim -> params;
+    rappor_sim -> hist;
+    rappor_sim -> true_inputs;
+
+    dist_csv [shape=Msquare, label="dist.csv"];
+    rappor_sim [label="rappor_sim"];
+    out [shape=Msquare, label="dist_out.csv"];
+    params [shape=Msquare, label="dist_params.csv"];
+
+    // simulation data
+    hist [shape=Mdiamond, label="dist_hist.csv"];
+    true_inputs [shape=Mdiamond, label="dist_true_inputs.txt"];
+  }
+
+  subgraph cluster_1 {
+    label = "Server";
+    node [style=filled];
+    color=blue
+
+    sum_bits -> counts;
+
+    // sum_bits needs the params to construct the matrix.  Technically it could
+    // infer it, but this is simple.
+    params -> sum_bits;
+
+    true_inputs -> demo_sh -> candidates -> hash_candidates -> map;
+    params -> hash_candidates;
+
+    params -> analyze;
+    map -> analyze;
+    counts -> analyze;
+    hist -> analyze;
+
+    analyze -> plot_png;
+
+    analyze [label="analyze.R"];
+
+    counts [shape=Msquare, label="dist_count.csv"];
+    candidates [shape=Msquare, label="dist_candidates.txt"];
+    map [shape=Msquare, label="dist_map.csv"];
+
+    plot_png [shape=Msquare, label="dist.png"];
+
+  }
+
+  out -> sum_bits;
+}
