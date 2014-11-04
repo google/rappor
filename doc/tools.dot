@@ -34,8 +34,8 @@ digraph G {
     params [shape=Mbox, label="dist_params.csv"];
 
     // simulation data
-    hist [shape=Mbox, style=dotted, label="dist_hist.csv"];
-    true_inputs [shape=Mbox, style=dotted, label="dist_true_inputs.txt"];
+    hist [shape=Mbox, style=dotted, color=black, label="dist_hist.csv"];
+    true_inputs [shape=Mbox, style=dotted, color=black, label="dist_true_inputs.txt"];
   }
 
   subgraph cluster_1 {
@@ -66,7 +66,7 @@ digraph G {
 
     // Processes
     analyze [label="analyze.R"];
-    demo_sh [label="demo.sh", style=dotted];
+    demo_sh [label="demo.sh", style=dotted, color=black];
 
     // Data
     counts [shape=Mbox, label="dist_count.csv"];
