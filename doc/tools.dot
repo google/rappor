@@ -6,11 +6,12 @@
 //   Diamond: debug/simulation data
 
 digraph G {
+  colorscheme=pastel13
 
   subgraph cluster_0 {
     label = "Client";
     style=filled;
-    color=lightgrey;
+    color=2;
 
     node [style=filled, color=white];
 
@@ -33,8 +34,10 @@ digraph G {
 
   subgraph cluster_1 {
     label = "Server";
-    node [style=filled];
-    color=blue
+    style = filled;
+    color=3;
+
+    node [style=filled, color=white];
 
     sum_bits -> counts;
 
