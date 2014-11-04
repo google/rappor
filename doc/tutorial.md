@@ -27,9 +27,8 @@ For the server simulation, we:
   2. Come up with candidate strings, and hash them in the same manner as the
   client.
   3. Using the reports, RAPPOR parameters, and candidate strings as input,
-  infer the distribution of true values.  We don't see the true values
-  themselves.
-  4. Plot the true and inferred distributions side by side for comparison.
+  infer the distribution of true values.  We don't see the values themselves.
+  We plot the true and inferred distributions side by side for comparison.
 
 This process is described in detail below.
 
@@ -207,6 +206,10 @@ the result quality.
      - basic RAPPOR
 -->
 
+Conclusion
+----------
+
+TODO
 
 [paper]: http://arxiv.org/abs/1407.6981
 [example]: http://google.github.io/rappor/examples/report.html
