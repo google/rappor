@@ -99,4 +99,15 @@ py-lint() {
     | xargs --verbose -- $0 python-lint
 }
 
+doc-lint() {
+  which tidy >/dev/null || die "tidy not found"
+  for doc in _tmp/report.html _tmp/doc/*.html; do
+    echo $doc
+  # -e: show only errors and warnings
+  # -q: quiet
+    tidy -e -q $doc || true
+  done
+}
+
+
 "$@"

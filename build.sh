@@ -31,8 +31,8 @@ run-markdown() {
   <html>
     <head>
       <meta charset="UTF-8">
-      <style>
-        code { color: green }
+      <style type="text/css">
+        code { color: green; }
       </style>
       <!-- INSERT LATCH JS -->
     </head>
@@ -46,6 +46,17 @@ EOF
     </body>
   </html>
 EOF
+}
+
+run-dot() {
+  local in=$1
+  local out=$2
+
+  local msg="dot not found (perhaps 'sudo apt-get install graphviz')"
+  which dot >/dev/null || die "$msg"
+
+  log "Running dot"
+  dot -Tpng -o $out $in
 }
 
 # Scan for TODOs.  Does this belong somewhere else?
@@ -66,6 +77,8 @@ doc() {
   # TODO: generated docs
   run-markdown <README.md >_tmp/README.html
   run-markdown <doc/tutorial.md >_tmp/doc/tutorial.html
+
+  run-dot doc/tools.dot _tmp/doc/tools.png
 
   log 'Wrote docs to _tmp'
 }

@@ -19,6 +19,8 @@ It takes a minute or so to run.  The dependencies listed in the
 
 It should look like [this][example].
 
+<img src="tools.png" alt="Diagram of RAPPOR Tools" />
+
 We simulate both the client and the server.  For the client, we:
 
 1. Generate simulated input data with different distributions.

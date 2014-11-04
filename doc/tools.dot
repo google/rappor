@@ -29,13 +29,13 @@ digraph G {
     rappor_sim [label="rappor_sim"];
 
     // Data
-    dist_csv [shape=Mbox, label="dist.csv"];
-    out [shape=Mbox, label="dist_out.csv"];
-    params [shape=Mbox, label="dist_params.csv"];
+    dist_csv [shape=box, label="dist.csv"];
+    out [shape=box, label="dist_out.csv"];
+    params [shape=box, label="dist_params.csv"];
 
     // simulation data
-    hist [shape=Mbox, style=dotted, color=black, label="dist_hist.csv"];
-    true_inputs [shape=Mbox, style=dotted, color=black, label="dist_true_inputs.txt"];
+    hist [shape=box, style=dotted, color=black, label="dist_hist.csv"];
+    true_inputs [shape=box, style=dotted, color=black, label="dist_true_inputs.txt"];
   }
 
   subgraph cluster_1 {
@@ -69,11 +69,11 @@ digraph G {
     demo_sh [label="demo.sh", style=dotted, color=black];
 
     // Data
-    counts [shape=Mbox, label="dist_count.csv"];
-    candidates [shape=Mbox, label="dist_candidates.txt"];
-    map [shape=Mbox, label="dist_map.csv"];
+    counts [shape=box, label="dist_count.csv"];
+    candidates [shape=box, label="dist_candidates.txt"];
+    map [shape=box, label="dist_map.csv"];
 
-    plot_png [shape=Mbox, label="dist.png"];
+    plot_png [shape=box, label="dist.png"];
 
   }
 
