@@ -1,7 +1,7 @@
 RAPPOR Tutorial
 ===============
 
-This doc expalins the simulation tools and data formats in the [RAPPOR
+This doc explains the simulation tools and data formats in the [RAPPOR
 repository](https://github.com/google/rappor).  We'll focus on the code, and
 describe the algorithm only informally.  For details, see the [paper][].
 
@@ -175,7 +175,7 @@ before being passed to R for analysis.
 
 The map file has one row per candidate.  In this case, there are 60 rows: 
 50 for the true values and 10 for "fake" values, which make the candidates a
-supserset of the true input.
+superset of the true input.
 
 The left most column is the raw candidate string.  Then there are 128 more
 columns: for `m = 64` cohorts times `k = 2` hash functions in the Bloom filter.
