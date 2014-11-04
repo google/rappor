@@ -22,10 +22,10 @@ digraph G {
     rappor_sim -> hist;
     rappor_sim -> true_inputs;
 
-    dist_csv [shape=Msquare, label="dist.csv"];
+    dist_csv [shape=Mbox, label="dist.csv"];
     rappor_sim [label="rappor_sim"];
-    out [shape=Msquare, label="dist_out.csv"];
-    params [shape=Msquare, label="dist_params.csv"];
+    out [shape=Mbox, label="dist_out.csv"];
+    params [shape=Mbox, label="dist_params.csv"];
 
     // simulation data
     hist [shape=Mdiamond, label="dist_hist.csv"];
@@ -57,11 +57,11 @@ digraph G {
 
     analyze [label="analyze.R"];
 
-    counts [shape=Msquare, label="dist_count.csv"];
-    candidates [shape=Msquare, label="dist_candidates.txt"];
-    map [shape=Msquare, label="dist_map.csv"];
+    counts [shape=Mbox, label="dist_count.csv"];
+    candidates [shape=Mbox, label="dist_candidates.txt"];
+    map [shape=Mbox, label="dist_map.csv"];
 
-    plot_png [shape=Msquare, label="dist.png"];
+    plot_png [shape=Mbox, label="dist.png"];
 
   }
 
