@@ -6,7 +6,10 @@
 //   Diamond: debug/simulation data
 
 digraph G {
-  colorscheme=pastel13
+  //rankdir="LR";  // left to right layout
+
+  // http://www.graphviz.org/content/color-names
+  colorscheme=pastel13;
 
   subgraph cluster_0 {
     label = "Client";
@@ -22,14 +25,17 @@ digraph G {
     rappor_sim -> hist;
     rappor_sim -> true_inputs;
 
-    dist_csv [shape=Mbox, label="dist.csv"];
+    // Process
     rappor_sim [label="rappor_sim"];
+
+    // Data
+    dist_csv [shape=Mbox, label="dist.csv"];
     out [shape=Mbox, label="dist_out.csv"];
     params [shape=Mbox, label="dist_params.csv"];
 
     // simulation data
-    hist [shape=Mdiamond, label="dist_hist.csv"];
-    true_inputs [shape=Mdiamond, label="dist_true_inputs.txt"];
+    hist [shape=Mbox, style=dotted, label="dist_hist.csv"];
+    true_inputs [shape=Mbox, style=dotted, label="dist_true_inputs.txt"];
   }
 
   subgraph cluster_1 {
@@ -45,18 +51,24 @@ digraph G {
     // infer it, but this is simple.
     params -> sum_bits;
 
-    true_inputs -> demo_sh -> candidates -> hash_candidates -> map;
+    // only in the simulation
+    true_inputs -> demo_sh -> candidates [style=dotted];
+
+    candidates -> hash_candidates -> map;
     params -> hash_candidates;
 
     params -> analyze;
     map -> analyze;
     counts -> analyze;
-    hist -> analyze;
+    hist -> analyze [style=dotted];  // only for comparison
 
     analyze -> plot_png;
 
+    // Processes
     analyze [label="analyze.R"];
+    demo_sh [label="demo.sh", style=dotted];
 
+    // Data
     counts [shape=Mbox, label="dist_count.csv"];
     candidates [shape=Mbox, label="dist_candidates.txt"];
     map [shape=Mbox, label="dist_map.csv"];
