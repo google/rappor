@@ -1,12 +1,9 @@
-(under construction)
-
 RAPPOR Tutorial
 ===============
 
-This doc walks through the simulation tools and data formats in the [RAPPOR
-repository](https://github.com/google/rappor).  We will focus on the code, and
-describe the algorithm informally.  For details, see the
-[paper][].
+This doc expalins the simulation tools and data formats in the [RAPPOR
+repository](https://github.com/google/rappor).  We'll focus on the code, and
+describe the algorithm only informally.  For details, see the [paper][].
 
 Start with this command:
 
@@ -17,20 +14,21 @@ It takes a minute or so to run.  The dependencies listed in the
 
     Wrote _tmp/report.html.  Open this in your browser.
 
-It will look like [this][example].
+It should look like [this][example].
 
 We simulate both the client and the server.  For the client, we:
 
-1. Generate simulated input data with different distributions 
-2. Obscure each value with the RAPPOR privacy-preserving reporting mechanism
+1. Generate simulated input data with different distributions.
+2. Obscure each value with the RAPPOR privacy-preserving reporting mechanism.
 
 For the server simulation, we:
 
-  1. Aggregate the reports by summing bits.
-  2. Come up with candidate strings, and hash them.
-  3.  Infer the distribution of true values, using the RAPPOR'd reports, RAPPOR
-  parameters, and candidate strings as input.  We
-  don't see the true values.
+  1. Aggregate the reports by summing bits (i.e. make a counting Bloom filter)
+  2. Come up with candidate strings, and hash them in the same manner as the
+  client.
+  3. Using the reports, RAPPOR parameters, and candidate strings as input,
+  infer the distribution of true values.  We don't see the true values
+  themselves.
   4. Plot the true and inferred distributions side by side for comparison.
 
 This process is described in detail below.
@@ -64,15 +62,15 @@ The `tests/gen_sim_input.py` tool generates CSV data, like this:
 
 *(spaces added for clarity)*
 
-By default we generate 700,000 rows -- 7 random values from `v1` - `v50` for
+By default we generate 700,000 rows: 7 random values from `v1` to `v50` for
 each client.  This can be changed by passing flags to the script.
 
 We're simulating an environment where there are many RAPPOR clients, and a
-single server doing the RAPPOR analysis on the accumulated data.
+single server does the RAPPOR analysis on the accumulated data.
 
-The `client` is an ID, and the `true_value` is the real value that is reported.
-This value should *not* be sent over the network "in the clear".  We wish to
-preserve the client's privacy.
+The `client` has an integer ID, and the `true_value` is the real value that is
+reported.  This value should **not** be sent over the network because we wish
+to preserve the client's privacy.
 
 
 2. RAPPOR Reporting
@@ -82,6 +80,9 @@ The `tests/rappor_sim.py` tool uses the Python client library
 (`client/python/rappor.py`) to obscure the `v1` .. `vN` strings.  We want to be
 able to infer the distribution of these strings over the entire population, but
 we don't want to know any individual values.
+
+After the RAPPOR transformation, we get another CSV file with 700,000 rows.
+Each client is assigned a cohort.
 
 **exp_out.csv**
 
@@ -105,9 +106,6 @@ we don't want to know any individual values.
 
 *(spaces added for clarity)*
 
-After the RAPPOR transformation, we get another CSV file with 700,000 rows.
-Each client is assigned a cohort.
-
 We also get a one-row CSV file that contains the RAPPOR parameters:
 
 **exp_params.csv**
@@ -116,15 +114,15 @@ We also get a one-row CSV file that contains the RAPPOR parameters:
     16,2,64,0.5,0.75,0.5
 
 These are described in the [paper][]. The parameters that the clients use
-*must* be known to the server; otherwise the decoding will fail.
+must be known to the server, or the decoding will fail.
 
 The `rappor_sim.py` process also writes these files:
 
 - `exp_hist.csv`: The true histogram of input values.  This is used only for
   comparison.  In the real world you obviously won't have this.
 - `exp_true_inputs.txt`: A list of the unique values reported, e.g. `v1` ..
-  `v50`.  You will *not* have this either, in general.  To use RAPPOR, you must
-  supply *candidate strings*.
+  `v50`.  You won't have this either, in general.  To use RAPPOR, you must
+  supply *candidate strings*, described below.
 
 3. Report Aggregation
 ---------------------
@@ -138,14 +136,15 @@ The `rappor_sim.py` process also writes these files:
     ...
 
 The file has 64 rows, because the simulation has 64 cohorts by default (`m =
-64`).  This can be adjusted for different data sets.
+64`).  This parameter should be adjusted based on the setting.  <!-- TODO: more
+detail -->
 
 There are 17 columns.  The left-most column is the total number of reports in
 the cohort.  The remaining 16 columns correspond to the `k = 16` bits in the
 Bloom filter.  Each column contains the number of reports with that bit set
 to 1.
 
-So, in general, the `_counts.csv` file is a (k+1) * m matrix.
+So, in general, the "counts" file is a (k+1) * m matrix.
 
 4. Candidate Strings
 --------------------
@@ -157,15 +156,15 @@ the candidate strings.  This is done in the `more-candidates` /
 You can also test what happens if you omit true strings from the candidates, by
 editing the invocation of `print-candidates` in `run-dist`:
 
-    # Example of omitting true values.  This generate candidates from
+    # Example of omitting true values.  Generate candidates from
     # exp_true_inputs.txt, omitting values v1 and v2.
     print-candidates $dist 'v1|v2'  > _tmp/${dist}_candidates.txt
 
 In general, coming up with candidates is an application- or metric-specific
 process.
 
-The candidates are hashed by `hash_candidates.py` to create the "map" file
-`exp_map.csv`, before being passed to R for analysis.
+The candidates are hashed by `hash_candidates.py` to create the "map" file,
+before being passed to R for analysis.
 
 **exp_map.csv**
 
@@ -177,7 +176,7 @@ The map file has one row per candidate.  In this case, there are 60 rows:
 supserset of the true input.
 
 The left most column is the raw candidate string.  Then there are 128 more
-columns: for `m = 64` cohorts times `k = 2` hash functions in the bloom filter.
+columns: for `m = 64` cohorts times `k = 2` hash functions in the Bloom filter.
 
 <!-- TODO: more detail about setting params?  Examples of coming up with
 candidate strings? -->
@@ -190,15 +189,20 @@ Once you have the `counts`, `params`, and `map` files, you can pass it to the
 library.
 
 Then you will get a plot of the true distribution vs. the distribution
-recovered from data with the RAPPOR privacy algorithm.
+recovered with the RAPPOR privacy algorithm.
 
 [View the example output][example].
 
 You can change the simulation parameters and RAPPOR parameters via flags, and
 compare the resulting distributions.
 
+For example, if you are collecting from more clients, you should also have more
+cohorts (i.e. raise `m`), to prevent hash function collisions from degrading
+the result quality.
+
 <!-- TODO: 
      - how to change flags
+     - more detail on what the various parameters do
      - association analysis
      - basic RAPPOR
 -->
