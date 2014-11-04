@@ -5,6 +5,9 @@ This doc expalins the simulation tools and data formats in the [RAPPOR
 repository](https://github.com/google/rappor).  We'll focus on the code, and
 describe the algorithm only informally.  For details, see the [paper][].
 
+Overview
+--------
+
 Start with this command:
 
     $ ./demo.sh run
@@ -195,7 +198,7 @@ recovered with the RAPPOR privacy algorithm.
 You can change the simulation parameters and RAPPOR parameters via flags, and
 compare the resulting distributions.
 
-For example, if you are collecting from more clients, you should also have more
+For example, if you are collecting from more clients, you should also use more
 cohorts (i.e. raise `m`), to prevent hash function collisions from degrading
 the result quality.
 
@@ -204,12 +207,20 @@ the result quality.
      - more detail on what the various parameters do
      - association analysis
      - basic RAPPOR
+     - longitudinal privacy
 -->
 
 Conclusion
 ----------
 
-TODO
+RAPPOR allows you infer statistics about populations while preserving the
+privacy of individual clients.  In this doc, we walked through a simple demo.
+However, there are other variations of RAPPOR and settings in which you can use
+RAPPOR, which we'll write more about.
+
+Feel free to send feedback on this doc to
+[rappor-discuss@googlegroups.com](https://groups.google.com/forum/#!forum/rappor-discuss).
+
 
 [paper]: http://arxiv.org/abs/1407.6981
 [example]: http://google.github.io/rappor/examples/report.html
