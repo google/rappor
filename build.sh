@@ -56,7 +56,10 @@ run-dot() {
   which dot >/dev/null || die "$msg"
 
   log "Running dot"
-  dot -Tpng -o $out $in
+  # width, height
+  dot \
+    -Tpng -Gsize='2,4!' -Gdpi=300 \
+    -o $out $in
 }
 
 # Scan for TODOs.  Does this belong somewhere else?
