@@ -79,9 +79,9 @@ doc() {
   # For now, just one file.
   # TODO: generated docs
   run-markdown <README.md >_tmp/README.html
-  run-markdown <doc/tutorial.md >_tmp/doc/tutorial.html
+  run-markdown <doc/data-flow.md >_tmp/doc/data-flow.html
 
-  run-dot doc/tools.dot _tmp/doc/tools.png
+  run-dot doc/data-flow.dot _tmp/doc/data-flow.png
 
   log 'Wrote docs to _tmp'
 }

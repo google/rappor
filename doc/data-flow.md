@@ -1,5 +1,5 @@
-RAPPOR Tutorial
-===============
+RAPPOR Data Flow
+================
 
 This doc explains the simulation tools and data formats in the [RAPPOR
 repository](https://github.com/google/rappor).  We'll focus on the code, and
@@ -24,7 +24,7 @@ represent processes; rectangles represent data.  The dotted lines denote
 components that are involved in the simulation, but wouldn't be used in a
 "real" setting.
 
-<img src="tools.png" alt="Diagram of RAPPOR Tools" />
+<img src="data-flow.png" alt="Diagram of RAPPOR Data Flow" />
 
 We simulate both the client and the server.  For the client, we:
 
