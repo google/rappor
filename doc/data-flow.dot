@@ -12,11 +12,12 @@ digraph G {
   colorscheme=pastel13;
 
   subgraph cluster_0 {
-    label = "Client";
+    graph [ fontsize=24 ];
+    label = "Reporting";
     style=filled;
     color=2;
 
-    node [style=filled, color=white];
+    node [style=filled, color=white, fontsize=12];
 
     gen_sim_input -> dist_csv -> rappor_sim;
     
@@ -39,11 +40,12 @@ digraph G {
   }
 
   subgraph cluster_1 {
-    label = "Server";
+    graph [ fontsize=24 ];
+    label = "Analysis";
     style = filled;
     color=3;
 
-    node [style=filled, color=white];
+    node [style=filled, color=white, fontsize=12];
 
     sum_bits -> counts;
 
