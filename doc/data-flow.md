@@ -19,10 +19,13 @@ It takes a minute or so to run.  The dependencies listed in the
 
 It should look like [this][example].
 
-This diagram shows what processes and files are involved in the demo.  Ovals
-represent processes; rectangles represent data.  The dotted lines denote
+The following diagram shows what processes and files are involved in the demo.
+Ovals represent processes; rectangles represent data.  The dotted lines denote
 components that are involved in the simulation, but wouldn't be used in a
 "real" setting.
+
+In most configurations, the reports will be sent by many client machines, and a
+server does the analysis, i.e. the green parts of the diagram.
 
 <img src="data-flow.png" alt="Diagram of RAPPOR Data Flow" />
 
