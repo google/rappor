@@ -13,7 +13,7 @@ Start with this command:
     $ ./demo.sh run
 
 It takes a minute or so to run.  The dependencies listed in the
-[README](../README.html) must be installed.  At the end, it will say:
+[README][] must be installed.  At the end, it will say:
 
     Wrote _tmp/report.html.  Open this in your browser.
 
@@ -229,5 +229,6 @@ Feel free to send feedback on this doc to
 [rappor-discuss@googlegroups.com](https://groups.google.com/forum/#!forum/rappor-discuss).
 
 
+[README]: https://github.com/google/rappor/blob/master/README.md
 [paper]: http://arxiv.org/abs/1407.6981
 [example]: http://google.github.io/rappor/examples/report.html
