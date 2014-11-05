@@ -18,7 +18,6 @@ die() {
   exit 1
 }
 
-
 # Count lines of code
 count() {
   find . \
@@ -26,7 +25,10 @@ count() {
     | xargs wc -l
 }
 
-# This must be a repoistory
+#
+# Publish docs
+#
+
 readonly DOC_DEST=../rappor-gh-pages
 
 assert-dest() {
