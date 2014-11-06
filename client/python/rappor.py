@@ -19,8 +19,13 @@ network (as opposed to raw client data).
 
 Note that we use SHA1 for the Bloom filter hash function.
 """
+import csv
 import hashlib
 import random
+
+
+class Error(Exception):
+  pass
 
 
 class Params(object):
@@ -44,6 +49,49 @@ class Params(object):
 
   def __repr__(self):
     return repr(self.__dict__)
+
+  @staticmethod
+  def from_csv(f):
+    """Read the RAPPOR parameters from a CSV file.
+
+    Args:
+      f: file handle
+
+    Returns:
+      Params instance.
+
+    Raises:
+      rappor.Error: when the file is malformed.
+    """
+    c = csv.reader(f)
+    ok = False
+    p = Params()
+    for i, row in enumerate(c):
+
+      if i == 0:
+        if row != ['k', 'h', 'm', 'p', 'q', 'f']:
+          raise Error('Header %s is malformed; expected k,h,m,p,q,f' % row)
+
+      elif i == 1:
+        try:
+          # NOTE: May raise exceptions
+          p.num_bloombits = int(row[0])
+          p.num_hashes = int(row[1])
+          p.num_cohorts = int(row[2])
+          p.prob_p = float(row[3])
+          p.prob_p = float(row[4])
+          p.prob_q = float(row[5])
+        except (ValueError, IndexError) as e:
+          raise Error('Row is malformed: %s' % e)
+        ok = True
+
+      else:
+        raise Error('Params file should only have two rows')
+
+    if not ok:
+      raise Error("Expected second row with params")
+
+    return p
 
 
 class SimpleRandom(object):

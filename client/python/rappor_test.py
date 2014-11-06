@@ -22,6 +22,7 @@ probability (< 1 in 10,000 times). This is implicitly required
 for testing probability. Such tests start with the stirng "testProbFailure."
 """
 
+import cStringIO
 import copy
 import math
 import random
@@ -47,6 +48,24 @@ class RapporParamsTest(unittest.TestCase):
 
   def tearDown(self):
     pass
+
+  def testFromCsv(self):
+    f = cStringIO.StringIO('k,h,m,p,q,f\n32,2,64,0.5,0.75,0.6\n')
+    params = rappor.Params.from_csv(f)
+    self.assertEqual(32, params.num_bloombits)
+    self.assertEqual(64, params.num_cohorts)
+
+    # Malformed header
+    f = cStringIO.StringIO('k,h,m,p,q\n32,2,64,0.5,0.75,0.6\n')
+    self.assertRaises(rappor.Error, rappor.Params.from_csv, f)
+
+    # Missing second row
+    f = cStringIO.StringIO('k,h,m,p,q,f\n')
+    self.assertRaises(rappor.Error, rappor.Params.from_csv, f)
+
+    # Too many rows
+    f = cStringIO.StringIO('k,h,m,p,q,f\n32,2,64,0.5,0.75,0.6\nextra')
+    self.assertRaises(rappor.Error, rappor.Params.from_csv, f)
 
   def testGetRapporMasksWithoutOnePRR(self):
     params = copy.copy(self.typical_instance)
