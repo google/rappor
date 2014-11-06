@@ -104,17 +104,19 @@ Directory Structure
     client/             # client libraries
       python/
         rappor.py
-        rappor_test.py  # Unit tests go next to implementation.
+        rappor_test.py  # Unit tests go next to the implementation.
       cpp/              # placeholder
     analysis/
-      R/                # R code for analysis.
-    tests/              # System tests
+      R/                # R code for analysis
+      tools/            # command line tools for analysis
+    tests/              # system tests
       gen_sim_input.py  # generate test input data
       rappor_sim.py     # run simulation
       run.sh            # driver for unit tests, lint
     doc/
     build.sh            # build docs, C extension
     demo.sh             # run demo
+    run.sh              # misc automation
 
 <!--
 TODO: add apps?
