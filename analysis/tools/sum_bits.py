@@ -22,11 +22,22 @@ filter by cohort.  This can then be analyzed by R.
 import csv
 import sys
 
+import rappor
+
 
 def main(argv):
-  # TODO: need to read params file?
-  num_cohorts = 64
-  num_bloombits = 16
+  try:
+    filename = argv[1]
+  except IndexError:
+    raise RuntimeError('Usage: sum_bits.py <params file>')
+  with open(filename) as f:
+    try:
+      params = rappor.Params.from_csv(f)
+    except rappor.Error as e:
+      raise RuntimeError(e)
+
+  num_cohorts = params.num_cohorts
+  num_bloombits = params.num_bloombits
 
   sums = [[0] * num_bloombits for _ in xrange(num_cohorts)]
   num_reports = [0] * num_cohorts

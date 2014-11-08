@@ -25,18 +25,24 @@ import rappor
 
 
 def main(argv):
-  # TODO: need to read params file?
-  num_cohorts = 64
-  num_hashes = 2
-  num_bloombits = 16
+  try:
+    filename = argv[1]
+  except IndexError:
+    raise RuntimeError('Usage: hash_candidates.py <params file>')
+  with open(filename) as f:
+    try:
+      params = rappor.Params.from_csv(f)
+    except rappor.Error as e:
+      raise RuntimeError(e)
 
+  num_bloombits = params.num_bloombits
   csv_out = csv.writer(sys.stdout)
 
   for line in sys.stdin:
     word = line.strip()
     row = [word]
-    for cohort in xrange(num_cohorts):
-      for hash_no in xrange(num_hashes):
+    for cohort in xrange(params.num_cohorts):
+      for hash_no in xrange(params.num_hashes):
         bf_bit = rappor.get_bf_bit(word, cohort, hash_no, num_bloombits) + 1
         row.append(cohort * num_bloombits + bf_bit)
     csv_out.writerow(row)

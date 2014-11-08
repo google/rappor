@@ -144,6 +144,7 @@ hash-candidates() {
   shift
   local out=_tmp/${dist}_map.csv
   PYTHONPATH=$CLIENT_DIR time analysis/tools/hash_candidates.py \
+    _tmp/${dist}_params.csv \
     < _tmp/${dist}_candidates.txt \
     > $out
   log "Wrote $out"
@@ -153,7 +154,10 @@ sum-bits() {
   local dist=$1
   shift
   local out=_tmp/${dist}_counts.csv
-  analysis/tools/sum_bits.py < _tmp/${dist}_out.csv > $out
+  PYTHONPATH=$CLIENT_DIR analysis/tools/sum_bits.py \
+    _tmp/${dist}_params.csv \
+    < _tmp/${dist}_out.csv \
+    > $out
   log "Wrote $out"
 }
 
