@@ -95,7 +95,7 @@ The R interface is also subject to change.
 <!-- TODO: Add links to interface docs when available. -->
 
 The `fastrand` C module is optional.  It's likely only useful for simulation of
-thousands of clients.  It doesn't use crytographically strong randomness, and
+thousands of clients.  It doesn't use cryptographically strong randomness, and
 thus should **not** be used in production.
 
 Directory Structure

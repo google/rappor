@@ -109,5 +109,11 @@ doc-lint() {
   done
 }
 
+# This isn't a strict check, but can help.
+# TODO: Add words to whitelist.
+spell-all() {
+  which spell >/dev/null || die "spell not found"
+  spell README.md doc/*.md | sort | uniq
+}
 
 "$@"

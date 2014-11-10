@@ -20,21 +20,21 @@ It takes a minute or so to run.  The dependencies listed in the
 It should look like [this][example].
 
 The following diagram shows what processes and files are involved in the demo.
-Ovals represent processes; rectangles represent data.  The dotted lines denote
-components that are involved in the simulation, but wouldn't be used in a
-"real" setting.
+Ovals represent **processes**; rectangles represent **data**.  The dotted lines
+denote components that are involved in the simulation, but wouldn't be used in
+a "real" setting.
 
-In most configurations, the reports will be sent by many client machines, and a
-server does the analysis, i.e. the green parts of the diagram.
+In most configurations, reporting (in blue) is done by client machines, while
+analysis (in green) is done by a server.
 
 <img src="data-flow.png" alt="Diagram of RAPPOR Data Flow" />
 
-We simulate both the client and the server.  For the client, we:
+In the simulation, reporting consists of these steps:
 
-1. Generate simulated input data with different distributions.
-2. Obscure each value with the RAPPOR privacy-preserving reporting mechanism.
+  1. Generate simulated input data with different distributions.
+  2. Obscure each value with the RAPPOR privacy-preserving reporting mechanism.
 
-For the server simulation, we:
+Analysis consists of these steps:
 
   1. Aggregate the reports by summing bits (i.e. make a counting Bloom filter)
   2. Come up with candidate strings, and hash them in the same manner as the
@@ -80,18 +80,17 @@ each client.  This can be changed by passing flags to the script.
 We're simulating an environment where there are many RAPPOR clients, and a
 single server does the RAPPOR analysis on the accumulated data.
 
-The `client` has an integer ID, and the `true_value` is the real value that is
-reported.  This value should **not** be sent over the network because we wish
-to preserve the client's privacy.
+The `client` is represented by an integer ID.  The `true_value` should **not**
+be sent over the network because we wish to preserve the client's privacy.
 
 
 2. RAPPOR Reporting
 -------------------
 
 The `tests/rappor_sim.py` tool uses the Python client library
-(`client/python/rappor.py`) to obscure the `v1` .. `vN` strings.  We want to be
-able to infer the distribution of these strings over the entire population, but
-we don't want to know any individual values.
+(`client/python/rappor.py`) to obscure the `v1` .. `vN` strings.  We want to
+infer the distribution of these strings over the entire population, but we
+don't want to know any individual values.
 
 After the RAPPOR transformation, we get another CSV file with 700,000 rows.
 Each client is assigned a cohort.
@@ -126,7 +125,8 @@ We also get a one-row CSV file that contains the RAPPOR parameters:
     16,2,64,0.5,0.75,0.5
 
 These are described in the [paper][]. The parameters that the clients use
-must be known to the server, or the decoding will fail.
+must be known to the server, or the decoding will fail.  In addition, all
+clients must use the same parameters for a given variable.
 
 The `rappor_sim.py` process also writes these files:
 
@@ -148,20 +148,20 @@ The `rappor_sim.py` process also writes these files:
     ...
 
 The file has 64 rows, because the simulation has 64 cohorts by default (`m =
-64`).  This parameter should be adjusted based on the setting.  <!-- TODO: more
-detail -->
+64`).  This parameter should be adjusted based on the number of unique true
+values expected.  <!-- TODO: more detail -->
 
 There are 17 columns.  The left-most column is the total number of reports in
 the cohort.  The remaining 16 columns correspond to the `k = 16` bits in the
 Bloom filter.  Each column contains the number of reports with that bit set
 to 1.
 
-So, in general, the "counts" file is a (k+1) * m matrix.
+So, in general, the "counts" file is a `(k+1) * m` matrix.
 
 4. Candidate Strings
 --------------------
 
-In the simulation, we assume that you will will come up with a *superset* of
+In the simulation, we assume that the analyst will come up with a *superset* of
 the candidate strings.  This is done in the `more-candidates` /
 `print-candidates` functions in `demo.sh`.
 
@@ -170,6 +170,7 @@ editing the invocation of `print-candidates` in `run-dist`:
 
     # Example of omitting true values.  Generate candidates from
     # exp_true_inputs.txt, omitting values v1 and v2.
+
     print-candidates $dist 'v1|v2'  > _tmp/${dist}_candidates.txt
 
 In general, coming up with candidates is an application- or metric-specific
@@ -200,17 +201,17 @@ Once you have the `counts`, `params`, and `map` files, you can pass it to the
 `tests/analyze.R` tool, which is a small wrapper around the `analyze/R`
 library.
 
-Then you will get a plot of the true distribution vs. the distribution
-recovered with the RAPPOR privacy algorithm.
+You will get a plot of the true distribution vs. the distribution recovered
+with the RAPPOR privacy algorithm.
 
 [View the example output][example].
 
 You can change the simulation parameters and RAPPOR parameters via flags, and
 compare the resulting distributions.
 
-For example, if you are collecting from more clients, you should also use more
-cohorts (i.e. raise `m`), to prevent hash function collisions from degrading
-the result quality.
+For example, if you expect more unique values from clients, you should also use
+more cohorts (i.e. raise `m`), to prevent hash function collisions from
+degrading the result quality.
 
 <!-- TODO: 
      - how to change flags
@@ -235,3 +236,4 @@ Feel free to send feedback on this doc to
 [README]: https://github.com/google/rappor/blob/master/README.md
 [paper]: http://arxiv.org/abs/1407.6981
 [example]: http://google.github.io/rappor/examples/report.html
+
