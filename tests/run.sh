@@ -56,7 +56,7 @@ py-unit() {
   find $REPO_ROOT -name \*_test.py | sh -x -e
   local exit_code=$?
   if test $exit_code -eq 0; then
-    echo 'ALL PASSED'
+    echo 'ALL TESTS PASSED'
   else
     echo 'FAIL'
     exit 1
@@ -67,6 +67,7 @@ py-unit() {
 # All tests
 all() {
   py-unit
+  echo
   py-lint
 
   # TODO: Add R tests, end to end demo
@@ -90,7 +91,7 @@ python-lint() {
 }
 
 py-lint() {
-  which pep8 || die "pep8 not installed ('sudo apt-get install pep8' on Ubuntu)"
+  which pep8 >/dev/null || die "pep8 not installed ('sudo apt-get install pep8' on Ubuntu)"
 
   # Excluding setup.py, because it's a config file and uses "invalid" 'name =
   # 1' style (spaces around =).
