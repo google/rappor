@@ -65,6 +65,7 @@ doc() {
   # TODO: generated docs
   run-markdown <README.md >_tmp/README.html
   run-markdown <doc/tutorial.md >_tmp/doc/tutorial.html
+  run-markdown <doc/randomness.md >_tmp/doc/randomness.html
 
   log 'Wrote docs to _tmp'
 }
