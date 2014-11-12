@@ -48,7 +48,8 @@ def SumBits(params, stdin, stdout):
     num_reports[cohort] += 1
 
     if not len(irr) == params.num_bloombits:
-      raise RuntimeError("Expected %d bits, got %r" % (params.num_bloombits, len(irr)))
+      raise RuntimeError(
+          "Expected %d bits, got %r" % (params.num_bloombits, len(irr)))
     for i, c in enumerate(irr):
       bit_num = num_bloombits - i - 1  # e.g. char 0 = bit 15, char 15 = bit 0
       if c == '1':

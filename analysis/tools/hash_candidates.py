@@ -24,6 +24,20 @@ import sys
 import rappor
 
 
+def HashCandidates(params, stdin, stdout):
+  num_bloombits = params.num_bloombits
+  csv_out = csv.writer(stdout)
+
+  for line in stdin:
+    word = line.strip()
+    row = [word]
+    for cohort in xrange(params.num_cohorts):
+      for hash_no in xrange(params.num_hashes):
+        bf_bit = rappor.get_bf_bit(word, cohort, hash_no, num_bloombits) + 1
+        row.append(cohort * num_bloombits + bf_bit)
+    csv_out.writerow(row)
+
+
 def main(argv):
   try:
     filename = argv[1]
@@ -35,17 +49,7 @@ def main(argv):
     except rappor.Error as e:
       raise RuntimeError(e)
 
-  num_bloombits = params.num_bloombits
-  csv_out = csv.writer(sys.stdout)
-
-  for line in sys.stdin:
-    word = line.strip()
-    row = [word]
-    for cohort in xrange(params.num_cohorts):
-      for hash_no in xrange(params.num_hashes):
-        bf_bit = rappor.get_bf_bit(word, cohort, hash_no, num_bloombits) + 1
-        row.append(cohort * num_bloombits + bf_bit)
-    csv_out.writerow(row)
+  HashCandidates(params, sys.stdin, sys.stdout)
 
 
 if __name__ == '__main__':
