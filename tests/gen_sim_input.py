@@ -27,6 +27,7 @@ After it goes through RAPPOR, we should be able see the distribution, but not
 any user's particular input data.
 """
 
+import csv
 import getopt
 import math
 import os
@@ -214,25 +215,24 @@ def main(argv):
   start_time = time.time()
 
   # Printing values into file OUTFILE
-  num_values = 0
+  VALUES_PER_CLIENT = 7
   with open(OUTFILE, "w") as f:
+    c = csv.writer(f)
+    c.writerow(('client', 'true_value'))
     for i in xrange(1, NUM_CLIENTS + 1):
       if i % 10000 == 0:
         elapsed = time.time() - start_time
         log('Generated %d rows in %.2f seconds', i, elapsed)
 
-      f.write('%d,' % i)
-      # Generates between 5 and 9 values for each user/client.  This is hard
-      # coded for now -- could be set by flags.
-      values = [rand_sample() for _ in xrange(random.randint(5, 9))]
-      f.write(' '.join('s%d' % v for v in values))
-      f.write("\n")
-      num_values += len(values)
+      for _ in xrange(7):  # A fixed number of values per user
+        true_value = 'v%d' % rand_sample()
+        c.writerow((i, true_value))
   log('Wrote %s', OUTFILE)
 
   prefix, _ = os.path.splitext(OUTFILE)
   params_filename = prefix + '_sim_params.html'
   # TODO: This should take 'opts'
+  num_values = NUM_CLIENTS * VALUES_PER_CLIENT
   with open(params_filename, 'w') as f:
     WriteParamsHtml(num_values, f)
   log('Wrote %s', params_filename)

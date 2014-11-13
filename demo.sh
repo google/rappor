@@ -81,7 +81,8 @@ gen-sim-input() {
 rappor-sim() {
   local dist=$1
   shift
-  PYTHONPATH=$CLIENT_DIR time $REPO_ROOT/tests/rappor_sim.py \
+  PYTHONPATH=$CLIENT_DIR time \
+    tests/rappor_sim.py \
     -i _tmp/$dist.csv \
     "$@"
     #-s 0  # deterministic seed
@@ -99,6 +100,65 @@ rappor-sim-profile() {
     -i _tmp/$dist.csv \
     "$@" \
     | tee _tmp/profile.txt
+}
+
+# By default, we generate v1..v50.  Add some more here.  We hope these are
+# estimated at 0.
+more-candidates() {
+  cat <<EOF
+v51
+v52
+v53
+v54
+v55
+v56
+v57
+v58
+v59
+v60
+EOF
+}
+
+# Args:
+#   dist: which distribution we are running on
+#   to_remove: list of values which we "forgot" to include in the candidates
+#       list.  Passed to egrep -v, e.g. v1|v2|v3.
+print-candidates() {
+  local dist=$1
+  # Assume that we know the set of true inputs EXACTLY
+  #cp _tmp/${dist}_true_inputs.txt _tmp/${dist}_candidates.txt
+  #
+  local to_remove="$2"  # true values we omitted from the candidates list.
+
+  local in=_tmp/${dist}_true_inputs.txt
+  if test -n "$to_remove"; then
+    egrep -v "$to_remove" $in  # remove some true inputs
+  else
+    cat $in  # include all true inputs
+  fi
+  more-candidates
+}
+
+hash-candidates() {
+  local dist=$1
+  shift
+  local out=_tmp/${dist}_map.csv
+  PYTHONPATH=$CLIENT_DIR time analysis/tools/hash_candidates.py \
+    _tmp/${dist}_params.csv \
+    < _tmp/${dist}_candidates.txt \
+    > $out
+  log "Wrote $out"
+}
+
+sum-bits() {
+  local dist=$1
+  shift
+  local out=_tmp/${dist}_counts.csv
+  PYTHONPATH=$CLIENT_DIR analysis/tools/sum_bits.py \
+    _tmp/${dist}_params.csv \
+    < _tmp/${dist}_out.csv \
+    > $out
+  log "Wrote $out"
 }
 
 # Analyze output of Python client library.
@@ -131,6 +191,24 @@ run-dist() {
 
   banner "Running RAPPOR ($dist)"
   rappor-sim $dist
+
+  banner "Generating candidates ($dist)"
+
+  # Example of removing candidates.
+  #print-candidates $dist 'v1|v2'  > _tmp/${dist}_candidates.txt
+
+  # Keep all candidates
+  print-candidates $dist '' > _tmp/${dist}_candidates.txt
+
+  banner "Hashing Candidates ($dist)"
+  hash-candidates $dist
+
+  banner "Summing bits ($dist)"
+  sum-bits $dist
+
+  # TODO:
+  # guess-candidates  # cheat and get them from the true input
+  # hash-candidates  # create map file
 
   banner "Analyzing RAPPOR output ($dist)"
   analyze $dist "Distribution Comparison ($dist)"
@@ -168,10 +246,10 @@ _run() {
     run-dist $dist $num_clients
   done
 
+  wc -l _tmp/*.csv
+
   # Expand the HTML skeleton
   expand-html ../tests/report.html _tmp
-
-  wc -l _tmp/*.csv
 }
 
 # Main entry point.  Run it for all distributions, and time the result.

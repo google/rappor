@@ -10,7 +10,7 @@ For a detailed description of the algorithms, see the
 [paper](http://arxiv.org/abs/1407.6981) and links below.
 
 Feel free to send feedback to
-[rappor-discuss@googlegroups.com](https://groups.google.com/forum/#!forum/rappor-discuss).
+[rappor-discuss@googlegroups.com][group].
 
 Running the Demo
 ----------------
@@ -95,7 +95,7 @@ The R interface is also subject to change.
 <!-- TODO: Add links to interface docs when available. -->
 
 The `fastrand` C module is optional.  It's likely only useful for simulation of
-thousands of clients.  It doesn't use crytographically strong randomness, and
+thousands of clients.  It doesn't use cryptographically strong randomness, and
 thus should **not** be used in production.
 
 Directory Structure
@@ -104,17 +104,19 @@ Directory Structure
     client/             # client libraries
       python/
         rappor.py
-        rappor_test.py  # Unit tests go next to implementation.
+        rappor_test.py  # Unit tests go next to the implementation.
       cpp/              # placeholder
     analysis/
-      R/                # R code for analysis.
-    tests/              # System tests
+      R/                # R code for analysis
+      tools/            # command line tools for analysis
+    tests/              # system tests
       gen_sim_input.py  # generate test input data
       rappor_sim.py     # run simulation
       run.sh            # driver for unit tests, lint
     doc/
     build.sh            # build docs, C extension
     demo.sh             # run demo
+    run.sh              # misc automation
 
 <!--
 TODO: add apps?
@@ -122,6 +124,11 @@ TODO: add apps?
     apps/
       # Shiny apps for demo.  Depends on the analysis code.
 -->
+
+Documentation
+-------------
+
+- [RAPPOR Data Flow](http://google.github.io/rappor/doc/data-flow.html)
 
 Links
 -----
@@ -135,6 +142,6 @@ Links
     production quality, but supports experimentation with different parameters
     and data sets.  Of course, anyone is free to implement RAPPOR independently
     as well.
-- Mailing list:
-  [rappor-discuss@googlegroups.com](https://groups.google.com/forum/#!forum/rappor-discuss).
+- Mailing list: [rappor-discuss@googlegroups.com][group]
 
+[group]: https://groups.google.com/forum/#!forum/rappor-discuss

@@ -57,7 +57,7 @@ Log <- function(...) {
 LoadInputs <- function(prefix, ctx) {
   # prefix: path prefix, e.g. '_tmp/exp'
   p <- paste0(prefix, '_params.csv')
-  c <- paste0(prefix, '_out.csv')
+  c <- paste0(prefix, '_counts.csv')
   m <- paste0(prefix, '_map.csv')
   h <- paste0(prefix, '_hist.csv')
 

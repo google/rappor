@@ -22,6 +22,7 @@ probability (< 1 in 10,000 times). This is implicitly required
 for testing probability. Such tests start with the stirng "testProbFailure."
 """
 
+import cStringIO
 import copy
 import math
 import random
@@ -48,26 +49,23 @@ class RapporParamsTest(unittest.TestCase):
   def tearDown(self):
     pass
 
-  def testUpdateRapporSumsWithLessThan32BitBloomFilter(self):
-    report = 0x1d  # From LSB, bits 1, 3, 4, 5 are set
-    # Empty rappor_sum
-    rappor_sum = [[0] * (self.typical_instance.num_bloombits + 1)
-                  for _ in xrange(self.typical_instance.num_cohorts)]
-    # A random cohort number
-    cohort = 42
+  def testFromCsv(self):
+    f = cStringIO.StringIO('k,h,m,p,q,f\n32,2,64,0.5,0.75,0.6\n')
+    params = rappor.Params.from_csv(f)
+    self.assertEqual(32, params.num_bloombits)
+    self.assertEqual(64, params.num_cohorts)
 
-    # Setting up expected rappor sum
-    expected_rappor_sum = [[0] * (self.typical_instance.num_bloombits + 1)
-                           for _ in xrange(self.typical_instance.num_cohorts)]
-    expected_rappor_sum[42][0] = 1
-    expected_rappor_sum[42][1] = 1
-    expected_rappor_sum[42][3] = 1
-    expected_rappor_sum[42][4] = 1
-    expected_rappor_sum[42][5] = 1
+    # Malformed header
+    f = cStringIO.StringIO('k,h,m,p,q\n32,2,64,0.5,0.75,0.6\n')
+    self.assertRaises(rappor.Error, rappor.Params.from_csv, f)
 
-    rappor.update_rappor_sums(rappor_sum, report, cohort,
-                              self.typical_instance)
-    self.assertEquals(expected_rappor_sum, rappor_sum)
+    # Missing second row
+    f = cStringIO.StringIO('k,h,m,p,q,f\n')
+    self.assertRaises(rappor.Error, rappor.Params.from_csv, f)
+
+    # Too many rows
+    f = cStringIO.StringIO('k,h,m,p,q,f\n32,2,64,0.5,0.75,0.6\nextra')
+    self.assertRaises(rappor.Error, rappor.Params.from_csv, f)
 
   def testGetRapporMasksWithoutOnePRR(self):
     params = copy.copy(self.typical_instance)

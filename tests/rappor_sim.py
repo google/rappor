@@ -32,6 +32,7 @@ We output 4 files:
     the RAPPOR analysis infers from the first 3 values.
 """
 
+import csv
 import collections
 import getopt
 import os
@@ -59,8 +60,8 @@ def log(msg, *args):
   print >>sys.stderr, msg
 
 
-class RapporInstance(object):
-  """Simple class to create a RAPPOR instance with specific default params."""
+class SimOptions(object):
+  """Simulation options."""
   def __init__(self):
     self.params = rappor.Params()
 
@@ -68,6 +69,7 @@ class RapporInstance(object):
     self.outfile = ""            # Output file name
     self.histfile = ""           # Output histogram file
     self.mapfile = ""            # Output BF map file
+    self.true_inputs_file = ""   # File that contains unique client inputs
     self.paramsfile = ""         # Output params file
     self.randomness_seed = None  # Randomness seed
                                  # For debugging purposes only
@@ -95,7 +97,7 @@ def parse_args(argv):
     usage(argv[0])
     sys.exit(2)
 
-  inst = RapporInstance()
+  inst = SimOptions()
   for opt, arg in opts:
     if opt in ("-i", "--input"):
       inst.infile = arg
@@ -151,6 +153,8 @@ def parse_args(argv):
   inst.outfile = inst.outfile or (prefix + "_out.csv")
   inst.histfile = inst.histfile or (prefix + "_hist.csv")
   inst.mapfile = inst.mapfile or (prefix + "_map.csv")
+  inst.true_inputs_file = inst.true_inputs_file or (
+      prefix + "_true_inputs.txt")
   inst.paramsfile = inst.paramsfile or (prefix + "_params.csv")
 
   return inst, PARSE_SUCCESS
@@ -216,6 +220,8 @@ PARAMS_HTML = """
 
 def print_params(params, csv_out, html_out):
   """Print Rappor parameters to a text file."""
+  c = csv.writer(csv_out)
+  c.writerow(('k', 'h', 'm', 'p', 'q', 'f'))  # header
   row = (
       params.num_bloombits,
       params.num_hashes,
@@ -223,35 +229,22 @@ def print_params(params, csv_out, html_out):
       params.prob_p,
       params.prob_q,
       params.prob_f)
-  print >>csv_out, "k,h,m,p,q,f\n"  # CSV header
-  print >>csv_out, "%s,%s,%s,%s,%s,%s\n" % row
+
+  c.writerow(row)
 
   # NOTE: No HTML escaping since we're writing numbers
   print >>html_out, PARAMS_HTML.format(*row)
 
 
-def make_histogram(infile):
+def make_histogram(csv_in):
   """Make a histogram of the simulated input file."""
   # TODO: It would be better to share parsing with rappor_encode()
-  words_counter = collections.Counter()
-  for line in infile:
-    _, words = line.strip().split(",")
-    words_counter.update(words.split())
-  return dict(words_counter.most_common())
-
-
-def print_map(all_words, params, mapfile):
-  """Print Bloom Filter map of values from infile."""
-  # Print maps of distributions
-  # Required by the R analysis tool
-  k = params.num_bloombits
-  for word in all_words:
-    mapfile.write(word)
-    for cohort in xrange(params.num_cohorts):
-      for hash_no in xrange(params.num_hashes):
-        bf_bit = rappor.get_bf_bit(word, cohort, hash_no, k) + 1
-        mapfile.write("," + str(cohort * k + bf_bit))
-    mapfile.write("\n")
+  counter = collections.Counter()
+  for i, (_, word) in enumerate(csv_in):
+    if i == 0:
+      continue
+    counter[word] += 1
+  return dict(counter.most_common())
 
 
 def print_histogram(word_hist, histfile):
@@ -265,26 +258,16 @@ def print_histogram(word_hist, histfile):
     print >>histfile, fmt % pair
 
 
-def rappor_encode(params, rand_funcs, infile):
-  # Initializing array to capture sums of rappors.
-  rappor_sums = [[0] * (params.num_bloombits + 1)
-                 for _ in xrange(params.num_cohorts)]
-
-  start_time = time.time()
-  for i, line in enumerate(infile):
-    user_id, words = line.strip().split(",")
-
-    if i % 1000 == 0:
-      elapsed = time.time() - start_time
-      log('Processed %d inputs in %.2f seconds', i, elapsed)
-
-    # New encoder instance for each user.
-    e = rappor.Encoder(params, user_id, rand_funcs=rand_funcs)
-    for word in words.split():
-      cohort, r = e.encode(word)
-      # Sum rappors.  TODO: move this to separate tool.
-      rappor.update_rappor_sums(rappor_sums, r, cohort, params)
-  return rappor_sums
+def bit_string(irr, num_bloombits):
+  """Like bin(), but uses leading zeroes, and no '0b'."""
+  s = ''
+  bits = []
+  for bit_num in xrange(num_bloombits):
+    if irr & (1 << bit_num):
+      bits.append('1')
+    else:
+      bits.append('0')
+  return ''.join(reversed(bits))
 
 
 def main(argv):
@@ -305,16 +288,20 @@ def main(argv):
       print_params(params, csv_out, html_out)
 
   with open(inst.infile) as f:
-    word_hist = make_histogram(f)
+    csv_in = csv.reader(f)
+    word_hist = make_histogram(csv_in)
 
   # Print true histograms.
   with open(inst.histfile, 'w') as f:
     print_histogram(word_hist, f)
 
-  # Print maps to map file -- needed for the R analysis tool.
   all_words = sorted(word_hist)  # unique words
-  with open(inst.mapfile, 'w') as f:
-    print_map(all_words, params, f)
+
+  # Print all true values, one per line.  This file can be further processed to
+  # simulate inaccurate candidate lists.
+  with open(inst.true_inputs_file, 'w') as f:
+    for word in all_words:
+      print >>f, word
 
   rand = random.Random()  # default Mersenne Twister randomness
   #rand = random.SystemRandom()  # cryptographic randomness from OS
@@ -340,15 +327,35 @@ def main(argv):
     raise AssertionError
 
   # Do RAPPOR transformation.
-  with open(inst.infile) as f:
-    rappor_sums = rappor_encode(params, rand_funcs, f)
+  with open(inst.infile) as f_in, open(inst.outfile, 'w') as f_out:
+    csv_in = csv.reader(f_in)
+    csv_out = csv.writer(f_out)
 
-  # Print sums of all rappor bits into output file
-  with open(inst.outfile, 'w') as f:
-    for row in xrange(params.num_cohorts):
-      for col in xrange(params.num_bloombits):
-        f.write(str(rappor_sums[row][col]) + ",")
-      f.write(str(rappor_sums[row][params.num_bloombits]) + "\n")
+    header = ('client', 'cohort', 'rappor')
+    csv_out.writerow(header)
+
+    cur_client = None  # current client
+
+    start_time = time.time()
+
+    for i, (client, true_value) in enumerate(csv_in):
+      if i == 0:
+        continue  # skip header line
+
+      if i % 10000 == 0:
+        elapsed = time.time() - start_time
+        log('Processed %d inputs in %.2f seconds', i, elapsed)
+
+      # New encoder instance for each client.
+      if client != cur_client:
+        cur_client = client
+        e = rappor.Encoder(params, cur_client, rand_funcs=rand_funcs)
+
+      cohort, irr = e.encode(true_value)
+
+      # encoded is a list of (cohort, rappor) pairs
+      out_row = (client, cohort, bit_string(irr, params.num_bloombits))
+      csv_out.writerow(out_row)
 
 
 if __name__ == "__main__":

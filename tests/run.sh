@@ -100,4 +100,21 @@ py-lint() {
     | xargs --verbose -- $0 python-lint
 }
 
+doc-lint() {
+  which tidy >/dev/null || die "tidy not found"
+  for doc in _tmp/report.html _tmp/doc/*.html; do
+    echo $doc
+  # -e: show only errors and warnings
+  # -q: quiet
+    tidy -e -q $doc || true
+  done
+}
+
+# This isn't a strict check, but can help.
+# TODO: Add words to whitelist.
+spell-all() {
+  which spell >/dev/null || die "spell not found"
+  spell README.md doc/*.md | sort | uniq
+}
+
 "$@"
