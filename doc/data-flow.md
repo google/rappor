@@ -75,7 +75,7 @@ The `tests/gen_sim_input.py` tool generates CSV data, like this:
 *(spaces added for clarity)*
 
 By default we generate 700,000 rows: 7 random values from `v1` to `v50` for
-each client.  This can be changed by passing flags to the script.
+each client.  These can be thought of as a variable being reported over time.
 
 We're simulating an environment where there are many RAPPOR clients, and a
 single server does the RAPPOR analysis on the accumulated data.
