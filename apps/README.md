@@ -7,7 +7,7 @@ To run them, first install Shiny:
 
     $ R
     ...
-    install.packages('shiny')
+    > install.packages('shiny')
     ...
 
 You can view Shiny's platform requirements in
@@ -17,14 +17,14 @@ This code has been tested on Ubuntu Linux, but should work on other platforms
 that Shiny supports.
 
 Both of these apps use the underlying analysis code in `analysis/R`, just like
-the command line demo in `demo.sh` does.
+the command line demo `demo.sh` does.
 
 rappor-analysis
 ---------------
 
 This app "decodes" a RAPPOR data set.  In other words, you can upload the
-`params`, `counts`, and `map` files, and view the inferred distribution and
-debug info.
+`params`, `counts`, and `map` files, and view the inferred distribution, as
+well as debug info.
 
 These files are discussed in the RAPPOR [Data Flow][data-flow] doc.
 
@@ -33,8 +33,8 @@ rappor-sim
 ----------
 
 This app lets you simulate RAPPOR runs with different populations and
-parameters.  This can help you choose RAPPOR parameters for a given situation /
-variable.
+parameters.  This can help you choose collection parameters for a given
+situation / variable.
 
 Help
 ----
