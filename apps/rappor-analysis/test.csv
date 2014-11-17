@@ -1,0 +1,20 @@
+[1] String     Estimate   St.Dev     P.value    Proportion SNR       
+<0 rows> (or 0-length row.names)
+SUMMARY
+                   parameters   values
+1           Candidate strings  300.000
+2            Detected strings    0.000
+3  Discovered Prop (out of N)    0.000
+4          Explained Variance    0.000
+5            Missing Variance    0.988
+6              Noise Variance    0.012
+7 Theoretical Noise Std. Dev. 2236.068
+PRIVACY
+           parameters      values
+1         Effective p 0.500000000
+2         Effective q 0.750000000
+3            exp(e_1) 9.000000000
+4                 e_1 2.197224577
+5          exp(e_inf)         Inf
+6               e_inf         Inf
+7 Detection frequency 0.001040297

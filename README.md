@@ -109,6 +109,7 @@ Directory Structure
     analysis/
       R/                # R code for analysis
       tools/            # command line tools for analysis
+    apps/               # web apps to help you use RAPPOR
     tests/              # system tests
       gen_sim_input.py  # generate test input data
       rappor_sim.py     # run simulation
