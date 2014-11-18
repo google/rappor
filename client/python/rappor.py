@@ -116,26 +116,26 @@ class SimpleRandom(object):
 class _RandFuncs(object):
   """Base class for randomness."""
 
-  def __init__(self, params, rand):
+  def __init__(self, params, rand=None):
     """
     Args:
       params: RAPPOR parameters
-      rand: object satisfying random.Random() interface.
+      rand: optional object satisfying the random.Random() interface.
     """
-    self.rand = rand
+    self.rand = rand or random.Random()
     self.num_bits = params.num_bloombits
-    self.cohort_rand_fn = rand.randint
+    self.cohort_rand_fn = self.rand.randint
 
 
 class SimpleRandFuncs(_RandFuncs):
 
-  def __init__(self, params, rand):
-    _RandFuncs.__init__(self, params, rand)
+  def __init__(self, params, rand=None):
+    _RandFuncs.__init__(self, params, rand=rand)
 
-    self.f_gen = SimpleRandom(params.prob_f, self.num_bits, rand)
-    self.p_gen = SimpleRandom(params.prob_p, self.num_bits, rand)
-    self.q_gen = SimpleRandom(params.prob_q, self.num_bits, rand)
-    self.uniform_gen = SimpleRandom(0.5, self.num_bits, rand)
+    self.f_gen = SimpleRandom(params.prob_f, self.num_bits, rand=rand)
+    self.p_gen = SimpleRandom(params.prob_p, self.num_bits, rand=rand)
+    self.q_gen = SimpleRandom(params.prob_q, self.num_bits, rand=rand)
+    self.uniform_gen = SimpleRandom(0.5, self.num_bits, rand=rand)
 
 
 # Compute masks for rappor's Permanent Randomized Response
@@ -192,9 +192,9 @@ class Encoder(object):
     self.params = params  # RAPPOR params
     self.user_id = user_id
 
-    self.rand_funcs = rand_funcs
-    self.p_gen = rand_funcs.p_gen
-    self.q_gen = rand_funcs.q_gen
+    self.rand_funcs = rand_funcs or SimpleRandFuncs(params)
+    self.p_gen = self.rand_funcs.p_gen
+    self.q_gen = self.rand_funcs.q_gen
 
   def encode(self, word):
     """Compute rappor (Instantaneous Randomized Response)."""
