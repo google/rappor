@@ -89,8 +89,7 @@ shinyUI(pageWithSidebar(
                                                                         plotOutput("counts", height = "800px")),
                                                                tabPanel("Estimated Counts", plotOutput("ests", height = "800px")),
                                                                tabPanel("Collision Counts", plotOutput("collisions", height = "800px")),
-                                                               tabPanel("Map", plotOutput("map", height = "800px")),
-                                                               tabPanel("Lasso", plotOutput("lasso", height = "600px"))
+                                                               tabPanel("Map", plotOutput("map", height = "800px"))
                                                                )
                                                    )
                                   )

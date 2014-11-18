@@ -135,17 +135,6 @@ shinyServer(function(input, output, session) {
   },
                                 include.rownames = FALSE, include.colnames = FALSE, digits = 4)
 
-  # Lasso plot.
-  output$lasso <- renderPlot({
-    fit <- Analyze()$lasso
-    # BUG: fit is NULL
-    print('lasso fit')
-    print(summary(fit))
-    print(structure(fit))
-
-    plot(fit)
-  })
-
   output$map <- renderPlot({
     image(as.matrix(Map()$map), col = c("white", "darkred"), xaxt = "n", yaxt = "n", bty = "n")
   })
