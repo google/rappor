@@ -13,6 +13,15 @@ To run them, first install Shiny:
 You can view Shiny's platform requirements in
 [CRAN](http://cran.r-project.org/web/packages/shiny/index.html).
 
+Then change to the app directory, and execute the `run_app.sh` script:
+
+    $ cd rappor/apps/rappor-analysis
+    $ ./run_app.sh
+    ...
+    Listening on http://0.0.0.0.:6789
+
+Then visit http://localhost:6789/ in your browser.
+
 This code has been tested on Ubuntu Linux, but should work on other platforms
 that Shiny supports.
 
