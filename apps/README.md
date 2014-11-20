@@ -1,7 +1,8 @@
 RAPPOR Shiny Apps
 =================
 
-This directory contains web apps written using the [Shiny][shiny] web framework from [RStudio][rstudio].
+This directory contains web apps written using the [Shiny][shiny] web framework
+from [RStudio][rstudio].
 
 To run them, first install Shiny:
 
@@ -36,7 +37,6 @@ This app "decodes" a RAPPOR data set.  In other words, you can upload the
 well as debug info.
 
 These files are discussed in the RAPPOR [Data Flow][data-flow] doc.
-
 
 rappor-sim
 ----------
