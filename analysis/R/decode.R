@@ -13,7 +13,7 @@
 # limitations under the License.
 
 #
-# This library implements the RAPPOR, an anonymous collection mechanism.
+# This library implements the RAPPOR marginal decoding algorithms using LASSO.
 
 library(glmnet)
 
@@ -47,61 +47,45 @@ EstimateBloomCounts <- function(params, obs_counts) {
     (x[-1] - (p + .5 * f * q - .5 * f * p) * x[1]) / ((1 - f) * (q - p))
   }))
 
+  # Some estimates may be set to infinity, e.g. if f=1. We want to
+  #     account for this possibility, and set the corresponding counts
+  #     to 0.
+  ests[abs(ests) == Inf] <- 0
   ests
 }
 
-FitLasso <- function(X, Y, intercept = TRUE, cv_step = 1, max_lambda = 100) {
+FitLasso <- function(X, Y, intercept = TRUE) {
   # Fits a Lasso model to select a subset of columns of X.
   #
   # Input:
   #    X: a design matrix of size km by M (the number of candidate strings).
   #    Y: a vector of size km with estimated counts from EstimateBloomCounts().
+  #    intercept: whether to fit with intercept or not.
   #
   # Output:
   #    lasso: a cross-validated Lasso object.
-  #    non_zero: indices of non-zero coefficients for optimal selection of
-  #              lambda.
+  #    coefs: a vector of size ncol(X) of coefficients.
+  #    intercept: estimate of the intercept.
+  #    resid: residuals estimates.
 
   zero_coefs <- rep(0, ncol(X))
   names(zero_coefs) <- colnames(X)
 
-  lambdas <- seq(0, max_lambda, cv_step)
-  mod <- try(cv.glmnet(X, Y, standardize = FALSE, intercept = intercept,
-                       lambda = lambdas,
-                       type.measure = "mae", nfolds = 10), silent = TRUE)
+  mod <- try(glmnet(X, Y, standardize = FALSE, intercept = intercept,
+                    pmax = ceiling(length(Y) * .9)),
+             silent = TRUE)
 
   # If fitting fails, return an empty data.frame.
-  if (class(mod) == "try-error") {
-    return(list(fit = NULL, coefs = zero_coefs))
+  if (class(mod)[1] == "try-error") {
+    return(list(fit = NULL, coefs = zero_coefs, intercept = 0, resid = NULL))
+  } else {
+    coefs <- coef(mod)
+    intercept <- coefs[1, ncol(coefs)]
+    coefs <- coefs[-1, ncol(coefs)]
+    predicted <- predict(mod, X, type = "response")
+    resid <- Y - predicted[, ncol(predicted)]
+    list(fit = mod, coefs = coefs, intercept = intercept, resid = resid)
   }
-
-  # More refined lambda's based on the first coarse run.
-  if ((as.numeric(ncol(X)) * as.numeric(nrow(X))) < 10^7) {
-    min_lambda <- mod$lambda.min
-    if (min_lambda == max(lambdas)) {
-      lambdas <- seq(301, 500, cv_step)
-    } else if (min_lambda == min(lambdas)) {
-      lambdas <- seq(0, 1, .01)
-    } else {
-      lambdas <- c(seq(0, max(0, min_lambda - 2), cv_step),
-                   seq(max(0, min_lambda - 2), max(min_lambda + 2, 0), .01),
-                   seq(max(0, min_lambda + 2), 500, cv_step))
-      lambdas <- sort(unique(lambdas[lambdas > 0]))
-    }
-    mod <- try(cv.glmnet(X, Y, standardize = FALSE, intercept = intercept,
-                         lambda = lambdas,
-                         type.measure = "mae", nfolds = 10), silent = TRUE)
-    # If fitting fails, return an empty data.frame.
-    if (class(mod) == "try-error") {
-      return(list(fit = NULL, coefs = zero_coefs))
-    }
-  }
-
-  # Select the best model based on cross-validation.
-  coefs <- coef(mod, s = mod$lambda.min)
-  resid <- Y - predict(mod, X, s = mod$lambda.min, type = "response")
-
-  list(fit = mod, coefs = coefs[-1, ], intercept = coefs[1, 1], resid = resid)
 }
 
 CustomLM <- function(X, Y) {
@@ -158,6 +142,7 @@ PerformInference <- function(X, Y, N, mod, params, alpha, correction) {
 
   if (nrow(fit) > 0) {
     str_names <- fit$String
+    str_names <- str_names[!is.na(str_names)]
     if (length(str_names) > 0 && length(str_names) < nrow(X)) {
       this_data <- as.data.frame(as.matrix(X[, str_names]))
       Y_hat <- predict(lm(Y ~ ., data = this_data))
@@ -208,6 +193,9 @@ ComputePrivacyGuarantees <- function(params, alpha, N) {
 
 Decode <- function(counts, map, params, alpha = 0.05,
                    correction = c("Bonferroni"), ...) {
+  # In basic RAPPOR, the corrected counts are exactly the estimates of
+  #     true variable counts.
+
   k <- params$k
   p <- params$p
   q <- params$q
@@ -226,23 +214,20 @@ Decode <- function(counts, map, params, alpha = 0.05,
     lasso <- mod_lasso$fit
 
     # Select non-zero coefficients.
-    coefs <- sort(mod_lasso$coef, decreasing = TRUE)
-    non_zero <- sum(coefs > 0)
-    if (non_zero > 0) {
-      coefs <- names(coefs[1:min(non_zero, k * m * .9)])
-    } else {
-      coefs <- names(coefs[1:2])
+    non_zero <- which(mod_lasso$coefs > 0)
+    if (length(non_zero) == 0) {
+      non_zero <- 1:2
     }
-    ind <- match(coefs, names(mod_lasso$coefs))
 
     # Fit regular linear model to obtain unbiased estimates.
-    X <- as.data.frame(apply(as.matrix(map[, coefs]), 2, as.numeric))
+    X <- as.data.frame(apply(as.matrix(map[, non_zero]), 2, as.numeric))
     mod <- CustomLM(X, Y)
 
     # Return complete vector of coefficients with 0's.
     coefs <- rep(0, length(mod_lasso$coefs))
     names(coefs) <- names(mod_lasso$coefs)
-    coefs[ind] <- mod$coef
+    coefs[non_zero] <- mod$coef
+    coefs[is.na(coefs)] <- 0
     mod$coefs <- coefs
   } else {
     mod <- CustomLM(as.data.frame(as.matrix(map)), Y)
@@ -255,6 +240,11 @@ Decode <- function(counts, map, params, alpha = 0.05,
 
   inf <- PerformInference(map, Y, N, mod, params, alpha, correction)
   fit <- inf$fit
+  # If this is a basic RAPPOR instance, just use the counts for the estimate
+  #     (Check if the map is diagonal to tell if this is basic RAPPOR.)
+  if (sum(map) == sum(diag(map))) {
+    fit$Estimate <- colSums(counts)[-1]
+  }
   resid <- mod$resid / inf$resid_sigma
 
   # Estimates from the model are per instance so must be multipled by h.
@@ -271,10 +261,10 @@ Decode <- function(counts, map, params, alpha = 0.05,
 
   # Compute summary of the fit.
   parameters =
-    c("Candidate strings", "Detected strings",
-      "Sample size (N)", "Discovered Prop (out of N)",
-      "Explained Variance", "Missing Variance", "Noise Variance",
-      "Theoretical Noise Std. Dev.")
+      c("Candidate strings", "Detected strings",
+        "Sample size (N)", "Discovered Prop (out of N)",
+        "Explained Variance", "Missing Variance", "Noise Variance",
+        "Theoretical Noise Std. Dev.")
   values <- c(length(strs), nrow(fit), N, round(sum(fit[, 2]) / N, 3),
               round(inf$SS, 3),
               round(inf$resid_sigma, 3))
@@ -287,4 +277,42 @@ Decode <- function(counts, map, params, alpha = 0.05,
 
   list(fit = fit, summary = res_summary, privacy = privacy, params = params,
        lasso = lasso, ests = ests, counts = counts[, -1], resid = resid)
+}
+
+ComputeCounts <- function(reports, cohorts, params) {
+  # Counts the number of times each bit in the Bloom filters was set for
+  #     each cohort.
+  #
+  # Args:
+  #   reports: A list of N elements, each containing the
+  #       report for a given report
+  #   cohorts: A list of N elements, each containing the
+  #       cohort number for a given report
+  #   params: A list of parameters for the problem
+  #
+  # Returns:
+  #   An mx(k+1) array containing the number of times each bit was set
+  #       in each cohort.
+
+  # Check that the cohorts are evenly assigned. We assume that if there
+  #     are m cohorts, each cohort should have approximately N/m reports.
+  #     The constraint we impose here simply says that cohort bins should
+  #     each have within N/m reports of one another. Since the most popular
+  #     cohort is expected to have about O(logN/loglogN) reports (which we )
+  #     approximate as O(logN) bins for practical values of N, a discrepancy of
+  #     O(N) bins seems significant enough to alter expected behavior. This
+  #     threshold can be changed to be more sensitive if desired.
+  N <- length(reports)
+  cohort_freqs <- table(factor(cohorts, levels = 1:params$m))
+  imbalance_threshold <- N / params$m
+  if ((max(cohort_freqs) - min(cohort_freqs)) > imbalance_threshold) {
+    cat("\nNote: You are using unbalanced cohort assignments, which can",
+        "significantly degrade estimation quality!\n\n")
+  }
+
+  # Count the times each bit was set, and add cohort counts to first column
+  counts <- lapply(1:params$m, function(i)
+                   Reduce("+", reports[which(cohorts == i)]))
+  counts[which(cohort_freqs == 0)] <- data.frame(rep(0, params$k))
+  cbind(cohort_freqs, do.call("rbind", counts))
 }
