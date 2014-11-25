@@ -141,8 +141,8 @@ TestComputeDistributionEM <- function() {
                                       marginals = NULL,
                                       estimate_var = FALSE)
   # The recovered distribution should be the delta function.
-  checkTrue ((joint_dist$fit[1, 1, 1] == 0.5) &
-             (joint_dist$fit[2, 2, 2] == 0.5))
+  checkEqualsNumeric(joint_dist$fit[1, 1, 1], 0.5)
+  checkEqualsNumeric(joint_dist$fit[2, 2, 2], 0.5)
 
   # Test 2: Now compute a marginal using EM
   dist <- ComputeDistributionEM(list(sim$reports[[1]]),
@@ -151,7 +151,7 @@ TestComputeDistributionEM <- function() {
                                 ignore_other = TRUE,
                                 params, marginals = NULL,
                                 estimate_var = FALSE)
-  checkTrue (dist$fit[1] == 0.5)
+  checkEqualsNumeric(dist$fit[1], 0.5)
 
   # Test 3: Check that the "other" category is correctly computed
   # Build a modified map with no column 2 (i.e. we only know that string
@@ -177,7 +177,7 @@ TestComputeDistributionEM <- function() {
                                 estimate_var = FALSE)
 
   # The recovered distribution should be uniform over 2 strings.
-  checkTrue (abs(dist$fit[1] - 0.5) < 0.1)
+  checkTrue(abs(dist$fit[1] - 0.5) < 0.1)
 
 
   # Test 4: Test the variance is 1/N
@@ -188,7 +188,7 @@ TestComputeDistributionEM <- function() {
                                 params, marginals = NULL,
                                 estimate_var = TRUE)
 
-  checkTrue (dist$em$var_cov[1, 1] == 1 / N)
+  checkEqualsNumeric(dist$em$var_cov[1, 1], 1 / N)
 
   # Test 5: Check that when f=0.2, we still get a good estimate
   params <- list(k = 12, h = 2, m = 2, p = 0, q = 1, f = 0.2)
@@ -199,7 +199,7 @@ TestComputeDistributionEM <- function() {
                                 params, marginals = NULL,
                                 estimate_var = FALSE)
 
-  checkTrue (abs(dist$fit[1, 1] - 0.5) < 0.15)
+  checkTrue(abs(dist$fit[1, 1] - 0.5) < 0.15)
 
 }
 
@@ -226,10 +226,10 @@ TestDecode <- function() {
   marginal <- Decode(variable_counts, sim$maps[[1]]$rmap, params)$fit
 
   # The recovered distribution should be uniform over 2 strings.
-  checkTrue (abs(marginal$proportion[1] - 0.5) < 0.05)
+  checkTrue(abs(marginal$proportion[1] - 0.5) < 0.05)
 
   # Test 2: Make sure the std deviation is 0, since there was no noise
-  checkTrue (marginal$std_dev[1] == 0)
+  checkEqualsNumeric(marginal$std_dev[1], 0)
 
   # Test 3: Basic RAPPOR
   num_strings <- 4
@@ -244,6 +244,6 @@ TestDecode <- function() {
                                    params)
   marginal <- Decode(variable_counts, sim$maps[[1]]$rmap, params)$fit
 
-  checkTrue (marginal$proportion[1] == 0.25)
+  checkEqualsNumeric(marginal$proportion[1], 0.25)
 
 }
