@@ -1,0 +1,23 @@
+num_partitions 4
+ngram_size 2
+edge 0.ab 1.cd
+edge 0.xx 1.cd
+edge 0.ij 1.kl
+edge 0.qr 1.st
+edge 0.ab 1.le
+edge 0.qr 2.uv
+edge 0.ab 2.ef
+edge 0.ij 2.mn
+edge 0.ij 3.op
+edge 0.qr 3.wx
+edge 0.ab 3.gh
+edge 1.cd 2.ef
+edge 1.kl 2.mn
+edge 1.st 2.uv
+edge 1.kl 3.op
+edge 1.cd 3.gh
+edge 1.st 3.wx
+edge 2.uv 3.wx
+edge 2.ef 3.gh
+edge 2.ef 3.zz
+edge 2.mn 3.op
