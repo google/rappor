@@ -317,9 +317,9 @@ class PathArray {
 
 // Given a PathArray of length i, produce one of length i+1.
 //
-// NOTE: It would be more efficient to filter right_nodes, and only add a new
-// path if it forms a "partial clique" (at step i+1).  This amounts to doing
-// the membership tests in edge_set at each step "column", instead of waiting
+// NOTE: It would be more efficient to filter 'right_nodes' here, and only add
+// a new path if it forms a "partial clique" (at step i+1).  This amounts to
+// doing the membership tests in edge_set for each "column", instead of waiting
 // until the end.
 //
 // This will reduce the exponential blowup of EnumeratePaths (although it
