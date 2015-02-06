@@ -133,6 +133,9 @@ main <- function(parsed) {
 
   ctx <- new.env()
 
+  # NOTE: It takes more than 2000+ ms to get here, while the analysis only
+  # takes 500 ms or so (as measured by system.time).
+
   LoadInputs(input_prefix, ctx)
   d <- ProcessAll(ctx)
   p <- PlotAll(d, options$title)
