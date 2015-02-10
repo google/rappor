@@ -237,6 +237,7 @@ class HealthHandler(object):
 
     req = ['1', '2']
     child.SendRequest(req)
+    # TODO: Get response here!
 
     self.pool.Return(child)
 

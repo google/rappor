@@ -37,4 +37,8 @@ install-r-packages() {
     'install.packages(c("RJSONIO", "glmnet", "optparse"), repos="http://cran.rstudio.com/")'
 }
 
+count() {
+  wc -l *.py *.R
+}
+
 "$@"
