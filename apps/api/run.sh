@@ -27,7 +27,7 @@ import-r() {
 
 # Run the server in a way th
 r-smoke-test() {
-  ./hello_web.py --test
+  ./rappor_api.py --test
 }
 
 # For the API server.  Don't need shiny.
