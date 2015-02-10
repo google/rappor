@@ -354,8 +354,10 @@ class Child(object):
       # TODO: Use self.Write()
       if self.req_fifo_fd != -1:
         for line in request_lines:
+          log.info('SendRequest line %r to fd %d', line, self.req_fifo_fd)
           os.write(self.req_fifo_fd, line)
       else:
+        assert 0, 'write to fd'
         for line in request_lines:
           self.p.stdin.write(line)
         self.p.stdin.flush()
@@ -391,10 +393,14 @@ class Child(object):
       elif self.pgi_format == 'json':
         json_str = json.dumps(pgi_request)
         #req_str = tnet.dump_line(json_str)
-        req_str = json_str
+
+        assert '\n' not in json_str
+        # R side is doing readline
+        req_str = json_str + '\n'
       else:
         raise AssertionError(self.pgi_format)
 
+      log.info('Python sending %r', req_str)
       self.SendRequest([req_str])  # list of "lines"
 
       # use hello timeout, not request timeout!

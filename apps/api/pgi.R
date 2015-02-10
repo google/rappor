@@ -24,6 +24,11 @@
 #source('tnet.R')
 #source(file.path(Sys.getenv('PGI_LIB_DIR'), 'tnet.R'))
 
+# Request and response lines are JSON.
+# NOTE: rjson library has a very strict R 3.1 requirement, so I didn't try it.
+
+library(RJSONIO)  # fromJSON
+
 # For debugging
 pid <- Sys.getpid()
 
@@ -62,8 +67,16 @@ pgi.loop <- function(handlers) {
   resp.fifo <- fifo('response-fifo', open='w')
 
   while (1) {
+    log("Reading request line")
+
     # TODO: How does it handle errors?
-    pgi.request <- tnet.loadf(req.fifo)
+    req.line <- readLines(req.fifo, n = 1)  # read 1 line
+
+    log("Got request line")
+
+    #pgi.request <- tnet.loadf(req.fifo)
+    pgi.request = fromJSON(req.line)
+
     cat(paste("pgi.REQUEST", pgi.request, "\n"))
     log("Got request")
 
