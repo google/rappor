@@ -46,6 +46,7 @@ HOME = """
 
     <h3>GET Handlers</h3>
 
+    <a href="/_ah/health">/_ah/health</a> <br/>
     <a href="/text">/text</a> <br/>
     <a href="/json">/json</a> <br/>
     <a href="/redirect">/redirect</a> <br/>
@@ -199,6 +200,15 @@ class PlainTextHandler(object):
     return web.PlainTextResponse('hello\nthere\n')
 
 
+class HealthHandler(object):
+  """
+  Tests if the R process is up by sending it a request and having it echo it
+  back."""
+
+  def __call__(self, request):
+    return web.PlainTextResponse('health')
+
+
 class JsonHandler(object):
 
   def __call__(self, request):
@@ -348,6 +358,7 @@ def CreateApp(opts):
   handlers = [
       ( web.ConstRoute('GET', '/'),           HomeHandler()),
       ( web.ConstRoute('GET', '/text'),       PlainTextHandler()),
+      ( web.ConstRoute('GET', '/_ah/health'), HealthHandler()),
       ( web.ConstRoute('GET', '/json'),       JsonHandler()),
       ( web.ConstRoute('POST', '/json-post'), JsonPostHandler()),
       ( web.ConstRoute('GET', '/redirect'),   RedirectHandler()),
@@ -382,7 +393,7 @@ def main(argv):
   if opts.test_mode:
     print app
   else:
-    wsgiref_server.ServeForever(app, port=9100)
+    wsgiref_server.ServeForever(app, port=opts.port)
 
 
 if __name__ == '__main__':
