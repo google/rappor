@@ -212,7 +212,12 @@ class HealthHandler(object):
 
   def __init__(self, pool):
     self.pool = pool
+
+    # TODO: Block until all processes have been initialized?
+
     c = child.Child(['./pages.R'])
+    c.Start()
+
     print c
     self.pool.Return(c)
 

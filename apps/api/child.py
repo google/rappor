@@ -18,7 +18,7 @@ import time
 #import errors
 #import env
 #import file_io
-#import log
+import log
 #import util
 #
 #json = env.Module('json')
@@ -211,7 +211,7 @@ class Child(object):
       raise AssertionError(self.input)
 
     # Now start it
-    argv_str = util.ArgvString(self.argv)
+    argv_str = "'%s'" % ' '.join(self.argv)
     try:
       # set process group ID to the PID of the child.  Then we can kill all
       # processes in the group/tree at once.

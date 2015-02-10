@@ -21,3 +21,7 @@ def info(msg, *args):
   if args:
     msg = msg % args
   print >>sys.stderr, msg
+
+
+# For now there is no difference.  child.py uses it.
+error = info
