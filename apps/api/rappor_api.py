@@ -242,7 +242,6 @@ class HealthHandler(object):
     # NOTE: Need newline here
     req = ['{"foo": "bar"}\n']
     child.SendRequest(req)
-    # TODO: Get response here!
 
     f = child.OutputStream()
     log.info('out: %r', f)

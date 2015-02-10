@@ -25,16 +25,21 @@ import-r() {
     .
 }
 
-# Run the server in a way th
-r-smoke-test() {
-  ./rappor_api.py --test
-}
-
 # For the API server.  Don't need shiny.
 install-r-packages() {
   # NOTE: If you run this as root, it will write to /usr/local/lib/R.
   # This can avoid an interactive prompt.
   R -e 'install.packages(c("RJSONIO", "glmnet", "optparse"), repos="http://cran.rstudio.com/")'
+}
+
+# Run the server in batch mode
+r-smoke-test() {
+  ./rappor_api.py --test /_ah/health
+}
+
+parallel-test() {
+  # TODO: curl the server in parallel, time total
+  time seq 3 | xargs -P2 -n1 --verbose -- sleep
 }
 
 count() {
