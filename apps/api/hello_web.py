@@ -23,6 +23,7 @@ import web
 import wsgiref_server
 
 import app_types
+import child
 
 
 # TODO:
@@ -203,9 +204,29 @@ class PlainTextHandler(object):
 class HealthHandler(object):
   """
   Tests if the R process is up by sending it a request and having it echo it
-  back."""
+  back.
+
+  TODO: Add startup, we should send a request to all threads?  Block until they
+  wake up.
+  """
+
+  def __init__(self, pool):
+    self.pool = pool
+    c = child.Child(['./pages.R'])
+    print c
+    self.pool.Return(c)
 
   def __call__(self, request):
+    # Concurrency:
+    # Assume this gets called by different request threads
+
+    child = self.pool.Take()
+
+    req = ['1', '2']
+    child.SendRequest(req)
+
+    self.pool.Return(child)
+
     return web.PlainTextResponse('health')
 
 
@@ -355,10 +376,13 @@ def CreateApp(opts):
   d = os.path.dirname
   static_dir = d(d(os.path.abspath(sys.argv[0])))
 
+  pool = child.ChildPool([])
+
   handlers = [
+      ( web.ConstRoute('GET', '/_ah/health'), HealthHandler(pool)),
+
       ( web.ConstRoute('GET', '/'),           HomeHandler()),
       ( web.ConstRoute('GET', '/text'),       PlainTextHandler()),
-      ( web.ConstRoute('GET', '/_ah/health'), HealthHandler()),
       ( web.ConstRoute('GET', '/json'),       JsonHandler()),
       ( web.ConstRoute('POST', '/json-post'), JsonPostHandler()),
       ( web.ConstRoute('GET', '/redirect'),   RedirectHandler()),

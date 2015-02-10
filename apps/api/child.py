@@ -15,14 +15,14 @@ import signal
 import subprocess
 import time
 
-import errors
-import env
-import file_io
-import log
-import util
-
-json = env.Module('json')
-tnet = env.Module('tnet')
+#import errors
+#import env
+#import file_io
+#import log
+#import util
+#
+#json = env.Module('json')
+#tnet = env.Module('tnet')
 
 
 class Error(Exception):
