@@ -23,7 +23,6 @@ import web
 #import webutil
 import wsgiref_server
 
-import app_types
 import child
 
 
