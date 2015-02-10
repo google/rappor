@@ -41,8 +41,16 @@ log <- function(msg) {
 }
 
 .write.response <- function(response, f) {
-  s <- tnet.dump(response)
-  cat(s, file=f)
+  #s <- tnet.dump(response)
+  j = toJSON(response)
+  # Must be on a single line!
+  # We could also make it length-prefixed, but that introduces unicode issues.
+  # This is safe because JSON should not contain actual newlines.  They should
+  # all be \ escaped.
+
+  clean = gsub('\n', '', j)
+  writeLines(con = f, clean)
+  #cat(s, file=f)
 }
 
 # Invoke a request handler, catching exceptions.

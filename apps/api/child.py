@@ -434,8 +434,9 @@ class Child(object):
       if self.pgi_format == 'tnet':
         response = tnet.loads(response_str)
       elif self.pgi_format == 'json':
-        json_str = tnet.loads(response_str)
-        response = json.loads(json_str)
+        #json_str = tnet.loads(response_str)
+        #response = json.loads(json_str)
+        response = json.loads(response_str)
       else:
         raise AssertionError(self.pgi_format)
 
