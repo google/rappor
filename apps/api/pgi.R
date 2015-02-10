@@ -100,6 +100,8 @@ pgi.loop <- function(handlers) {
       next()
     }
 
+    log('R1')
+
     route.name <- pgi.request$route
     if (is.null(route.name)) {
       # error
@@ -108,6 +110,8 @@ pgi.loop <- function(handlers) {
       next()
     }
 
+    log('R2')
+
     request.handler <- handlers[[route.name]]
     if (is.null(request.handler)) {
       pgi.response <- .make.dev.error(
@@ -115,6 +119,8 @@ pgi.loop <- function(handlers) {
       .write.response(pgi.response, resp.fifo)
       next()
     }
+
+    log('R3')
 
     app.request <- pgi.request$request
     if (is.null(app.request)) {

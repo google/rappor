@@ -18,6 +18,7 @@ import os
 import sys
     
 
+import log
 import web
 #import webutil
 import wsgiref_server
@@ -213,7 +214,10 @@ class HealthHandler(object):
   def __init__(self, pool):
     self.pool = pool
 
-    # TODO: Block until all processes have been initialized?
+    # TODO:
+    # - Block until all processes have been initialized
+    # - Why does the R process not die when you hit Ctrl-C?  Should be in the
+    # same process group?
 
     c = child.Child(
         ['./pages.R'], input='fifo', output='fifo',
@@ -235,13 +239,19 @@ class HealthHandler(object):
 
     child = self.pool.Take()
 
-    req = ['1', '2']
+    # NOTE: Need newline here
+    req = ['{"foo": "bar"}\n']
     child.SendRequest(req)
     # TODO: Get response here!
 
+    f = child.OutputStream()
+    log.info('out: %r', f)
+    resp = f.readline()
+    log.info('RESP %r', resp)
+
     self.pool.Return(child)
 
-    return web.PlainTextResponse('health')
+    return web.PlainTextResponse('RESPONSE: %r' % resp)
 
 
 class JsonHandler(object):

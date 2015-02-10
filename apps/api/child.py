@@ -261,8 +261,11 @@ class Child(object):
       self.response_pipe = file_io.PipeReader(
           self.resp_pipe_fd, timeout=self.timeout)
     elif self.pgi_version == 2:
-      self.response_pipe2 = file_io.PipeReader2(
-          self.resp_pipe_fd, timeout=self.timeout)
+      #self.response_pipe2 = file_io.PipeReader2(
+      #    self.resp_pipe_fd, timeout=self.timeout)
+
+      # Getting rid of PipeReader
+      self.response_pipe2 = self.resp_pipe_fd
 
     self._ChangeStatus(_STARTING)
 
@@ -320,11 +323,11 @@ class Child(object):
           log.warning('Error removing %s: %s', self.resp_fifo_name, e)
 
   def OutputStream(self):
-    if self.pgi_version == 1:
-      return self.response_pipe
-    if self.pgi_version == 2:
-      return self.response_pipe2
-    raise AssertionError('Invalid pgi version: %r', self.pgi_version)
+    if self.pgi_version != 2:
+      raise AssertionError('Invalid pgi version: %r', self.pgi_version)
+
+    fd = self.response_pipe2
+    return os.fdopen(fd)
 
   def Write(self, byte_str):
     """
