@@ -215,7 +215,7 @@ class HealthHandler(object):
 
     # TODO: Block until all processes have been initialized?
 
-    c = child.Child(['./pages.R'])
+    c = child.Child(['./pages.R'], input='fifo', output='fifo', cwd='.')
     c.Start()
 
     print c

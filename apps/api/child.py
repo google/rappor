@@ -173,7 +173,7 @@ class Child(object):
     if self.output == 'stdout' or self.output == 'stderr':
       kwargs[self.output] = subprocess.PIPE
     elif self.output == 'fifo':
-      self.resp_fifo_name = util.SafeJoin(self.cwd, 'response-fifo')
+      self.resp_fifo_name = os.path.join(self.cwd, 'response-fifo')
       self._MaybeRemoveResponseFifo()
       os.mkfifo(self.resp_fifo_name)
       # Need to use rw mode even though we only read.  This is to make the
@@ -198,7 +198,7 @@ class Child(object):
     # Create request fifo if necessary
     self.req_fifo_name = None
     if self.input == 'fifo':
-      self.req_fifo_name = util.SafeJoin(self.cwd, 'request-fifo')
+      self.req_fifo_name = os.path.join(self.cwd, 'request-fifo')
       self._MaybeRemoveRequestFifo()
       os.mkfifo(self.req_fifo_name)
       self.req_fifo_fd = os.open(self.req_fifo_name, os.O_RDWR|os.O_NONBLOCK)
@@ -291,10 +291,7 @@ class Child(object):
 
   def WorkingDirPath(self, path, legacy=False):
     """Get absolute paths for relative paths the child refers to."""
-    # TODO: remove this when PGI 1 is removed.
-    if legacy:
-      return os.path.join(self.cwd, path)
-    return util.SafeJoin(self.cwd, path)
+    return os.path.join(self.cwd, path)
 
   def _MaybeRemoveRequestFifo(self):
     if self.req_fifo_fd != -1:
