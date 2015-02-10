@@ -1,5 +1,6 @@
-#!/usr/local/bin/R --vanilla --slave -f
-#!/usr/bin/R --vanilla --slave -f
+#!/usr/bin/env Rscript
+#
+# Use whateve Rscript is in the path.
 
 source('pgi.R')
 
