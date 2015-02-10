@@ -75,7 +75,11 @@ pgi.loop <- function(handlers) {
     log("Got request line")
 
     #pgi.request <- tnet.loadf(req.fifo)
-    pgi.request = fromJSON(req.line)
+
+    # This gives a vector
+    req.vec = fromJSON(req.line)
+    # Turn it into a list, so we can access fields with $
+    pgi.request = as.list(req.vec)
 
     cat(paste("pgi.REQUEST", pgi.request, "\n"))
     log("Got request")
