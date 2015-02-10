@@ -9,15 +9,16 @@ Abstractions for child processes (a lower level that PGI applets).
 """
 
 import errno
+import json
 import os
 import Queue
 import signal
 import subprocess
 import time
 
-#import errors
+import errors
 #import env
-#import file_io
+import file_io
 import log
 #import util
 #
@@ -389,7 +390,8 @@ class Child(object):
         req_str = tnet.dumps(pgi_request)
       elif self.pgi_format == 'json':
         json_str = json.dumps(pgi_request)
-        req_str = tnet.dump_line(json_str)
+        #req_str = tnet.dump_line(json_str)
+        req_str = json_str
       else:
         raise AssertionError(self.pgi_format)
 
@@ -398,13 +400,25 @@ class Child(object):
       # use hello timeout, not request timeout!
       hello_pipe = file_io.PipeReader2(self.resp_pipe_fd, timeout=timeout)
       try:
-        response_str = tnet.read(hello_pipe)
+        #response_str = tnet.read(hello_pipe)
+        response_str = ''
+        while True:
+          c = hello_pipe.read(1)
+          response_str += c
+          if c == '\n':
+            break
+
+        log.info('GOT RESPONSE %r', response_str)
+
+        #response_str = hello_pipe
       except EOFError:
         elapsed = time.time() - start_time
         self._ChangeStatus(_BROKEN,
             'Received EOF instead of init response (%.2fs)' % elapsed)
         return False
       except errors.TimeoutError, e:
+        log.error('TimeoutError: %s', e)
+
         elapsed = time.time() - start_time
         self._ChangeStatus(_BROKEN, 'Timed out after %.2fs' % elapsed)
         # BUG: Need to kill the process here; otherwise we can end up with 2

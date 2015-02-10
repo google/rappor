@@ -215,8 +215,16 @@ class HealthHandler(object):
 
     # TODO: Block until all processes have been initialized?
 
-    c = child.Child(['./pages.R'], input='fifo', output='fifo', cwd='.')
+    c = child.Child(
+        ['./pages.R'], input='fifo', output='fifo',
+        # TODO: Move this
+        cwd='.',
+        pgi_version=2,
+        pgi_format='json',
+        )
     c.Start()
+    # Timeout: Do we need this?  I think we should just use a thread.
+    c.SendHelloAndWait(10.0)
 
     print c
     self.pool.Return(c)
