@@ -32,9 +32,9 @@ r-smoke-test() {
 
 # For the API server.  Don't need shiny.
 install-r-packages() {
-  # Install as root so you can write to /usr/local/lib/R.
-  sudo R -e \
-    'install.packages(c("RJSONIO", "glmnet", "optparse"), repos="http://cran.rstudio.com/")'
+  # NOTE: If you run this as root, it will write to /usr/local/lib/R.
+  # This can avoid an interactive prompt.
+  R -e 'install.packages(c("RJSONIO", "glmnet", "optparse"), repos="http://cran.rstudio.com/")'
 }
 
 count() {

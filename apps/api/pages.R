@@ -1,3 +1,4 @@
+#!/usr/local/bin/R --vanilla --slave -f
 #!/usr/bin/R --vanilla --slave -f
 
 source('pgi.R')
