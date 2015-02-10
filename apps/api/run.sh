@@ -30,4 +30,11 @@ r-smoke-test() {
   ./hello_web.py --test
 }
 
+# For the API server.  Don't need shiny.
+install-r-packages() {
+  # Install as root so you can write to /usr/local/lib/R.
+  sudo R -e \
+    'install.packages(c("RJSONIO", "glmnet", "optparse"), repos="http://cran.rstudio.com/")'
+}
+
 "$@"
