@@ -22,101 +22,13 @@
 
 # An R package would avoid this.
 #source('tnet.R')
-source(file.path(Sys.getenv('PGI_LIB_DIR'), 'tnet.R'))
+#source(file.path(Sys.getenv('PGI_LIB_DIR'), 'tnet.R'))
 
 # For debugging
 pid <- Sys.getpid()
 
 log <- function(msg) {
   cat(paste(pid, ': ', msg, '\n', sep = ''), file=stderr())
-}
-
-read.r.table.line <- function(req_fifo) {
-  line <- readLines(req_fifo, n = 1)
-  matches <- charmatch('@request ', line)
-  if (is.na(matches[1])) {
-    log(paste('@error Invalid request line', line, '\n'))
-  }
-  chars <- substr(line, nchar('@request ') + 1, nchar(line))
-  # Add a newline
-  paste(chars, '\n')
-}
-
-#
-# DEPRECATED
-#
-request.loop <- function(request.handler, req_fifo, resp_fifo) {
-  while (1) {
-    # Blocking read
-    lines <- readLines(req_fifo, n = 1)
-    line <- lines[1]
-
-    # Test for prefixes
-    matches <- charmatch("@cmd quit", line)
-    if (!is.na(matches[1])) {
-      break
-    }
-
-    matched <- F
-
-    matches <- charmatch("@cmd hello?", line)
-    if (!is.na(matches[1])) {
-      cat('hello\n', file = resp_fifo)
-      matched <- T
-    }
-
-    matches <- charmatch("@request path:", line)
-    if (!is.na(matches[1])) {
-      path <- substr(line, nchar("@request path:") + 1, nchar(line))
-      request.handler(path)
-      matched <- T
-    }
-
-    matches <- charmatch("@request r-list:", line)
-    if (!is.na(matches[1])) {
-      list.str <- substr(line, nchar("@request r-list:") + 1, nchar(line))
-      # This is safe as long as the Python server properly escapes everything
-      request <- eval(parse(text=list.str))
-      request.handler(request, resp_fifo)
-      matched <- T
-    }
-
-    if (!matched) {
-      log(paste('@error Invalid request line', line, '\n'))
-    }
-    flush(stdout())
-  }
-  #if (!is.na(resp_fifo)) {
-  #  sink()
-  #}
-  log('Finished request loop\n')
-}
-
-#
-# DEPRECATED
-#
-request.loop.main <- function(request.handler, argv) {
-  log("Hello from pgi.R")
-
-  # Each applet is started in its own directory, and we use the standard name
-  # 'request-fifo' for the input stream
-  req_fifo <- fifo('request-fifo', blocking = TRUE)
-  # Open for write, default is nonblocking
-  resp_fifo <- fifo('response-fifo', open='w')
-
-  request.loop(request.handler, req_fifo, resp_fifo)
-
-  #resp_fifo_name <- argv[i + 2]
-  #if (is.na(resp_fifo_name)) {
-  #  resp_fifo <- NA
-  #} else {
-  #  resp_fifo <- fifo(resp_fifo_name)
-  #  sink(file=resp_fifo)
-  #}
-
-  # TODO: Send these to stderr
-  #print(paste("in:", req_fifo_name))
-  #print(paste("out:", resp_fifo_name))
 }
 
 .make.dev.error <- function(message) {

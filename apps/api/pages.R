@@ -1,6 +1,6 @@
 #!/usr/bin/R --vanilla --slave -f
 
-source(file.path(Sys.getenv('PGI_LIB_DIR'), 'pgi.R'))
+source('pgi.R')
 
 pid <- Sys.getpid()
 
