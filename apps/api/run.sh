@@ -25,4 +25,9 @@ import-r() {
     .
 }
 
+# Run the server in a way th
+r-smoke-test() {
+  ./hello_web.py --test
+}
+
 "$@"

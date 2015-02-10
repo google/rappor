@@ -13,8 +13,10 @@ TODO:
 import cgi
 import Cookie
 import re
+import optparse
 import os
 import sys
+    
 
 import web
 #import webutil
@@ -315,10 +317,30 @@ class OopsHandler(object):
     foo
 
 
-def main(argv):
-  # TODO:
-  # - JS post
+def Options():
+  """Returns an option parser instance."""
+  # TODO: where to get version number from?  Hook up to autodeploy?
+  p = optparse.OptionParser('mayord.py [options]') #, version='0.1')
 
+  p.add_option(
+      '--tmp-dir', metavar='PATH', dest='tmp_dir', default='',
+      help='Directory in which to store temporary request/response data.')
+  p.add_option(
+      '--port', metavar='NUM', dest='port', type=int, default=8500,
+      help='Port to serve HTTP on')
+  p.add_option(
+      '--num-processes', metavar='NUM', dest='num_processes', type=int,
+      default=2,
+      help='Number of concurrent R processes to use (e.g. set to # of CPUs).')
+  p.add_option(
+      '--test', action='store_true', dest='test_mode', default=False,
+      help='Batch test mode: serve one request and exit')
+  # Shared secret?
+  return p
+
+
+def CreateApp(opts):
+         
   # Go up two levels
   d = os.path.dirname
   static_dir = d(d(os.path.abspath(sys.argv[0])))
@@ -349,9 +371,18 @@ def main(argv):
 
   #handlers.extend(webutil.DirectoryPairs('/users/', ListUsersHandler()))
 
-  app = web.App(handlers)
+  return web.App(handlers)
 
-  wsgiref_server.ServeForever(app, port=9100)
+
+def main(argv):
+  (opts, argv) = Options().parse_args(argv)
+
+  app = CreateApp(opts)
+
+  if opts.test_mode:
+    print app
+  else:
+    wsgiref_server.ServeForever(app, port=9100)
 
 
 if __name__ == '__main__':
