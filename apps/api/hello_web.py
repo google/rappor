@@ -20,6 +20,8 @@ import web
 #import webutil
 import wsgiref_server
 
+import app_types
+
 
 # TODO:
 # - regular form (add unicode by default, make sure you can round trip it)
