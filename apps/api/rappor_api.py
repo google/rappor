@@ -161,14 +161,10 @@ def InitPool(num_processes, pool):
     pool.Return(c)
 
 
-def CreateApp(opts):
-         
+def CreateApp(opts, pool):
   # Go up two levels
   d = os.path.dirname
   static_dir = d(d(os.path.abspath(sys.argv[0])))
-
-  pool = child.ChildPool([])
-  InitPool(opts.num_processes, pool)
 
   handlers = [
       ( web.ConstRoute('GET', '/_ah/health'), HealthHandler(pool)),
@@ -184,13 +180,18 @@ def CreateApp(opts):
 def main(argv):
   (opts, argv) = Options().parse_args(argv)
 
-  app = CreateApp(opts)
+  pool = child.ChildPool([])
+  InitPool(opts.num_processes, pool)
+
+  app = CreateApp(opts, pool)
 
   if opts.test_mode:
     print app
   else:
     log.info('Serving on port %d', opts.port)
     wsgiref_server.ServeForever(app, port=opts.port)
+    log.info('Killing child processes')
+    pool.TakeAndKillAll()
 
 
 if __name__ == '__main__':
