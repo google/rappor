@@ -1,12 +1,7 @@
-#!/usr/bin/R
-#
-# Run with R --vanilla --slave -f myScript.R \
-#            --args <request in fifo> <response file out dir>
-#
 # To test in communication in shell, do:
 #
 #   mkfifo reqfifo
-#   echo '@request path:/' > reqfifo
+#   echo '{"command": "init"}' > request-fifo
 #
 # To test in communication in Python, do:
 #   os.mkfifo('blah')
@@ -20,16 +15,11 @@
 # TODO:
 # - error handling for bad commands
 
-# An R package would avoid this.
-#source('tnet.R')
-#source(file.path(Sys.getenv('PGI_LIB_DIR'), 'tnet.R'))
-
 # Request and response lines are JSON.
 # NOTE: rjson library has a very strict R 3.1 requirement, so I didn't try it.
-
 library(RJSONIO)  # fromJSON
 
-# For debugging
+# For logging
 pid <- Sys.getpid()
 
 log <- function(msg) {
@@ -140,5 +130,4 @@ pgi.loop <- function(handlers) {
     flush(stdout())
   }
 }
-
 

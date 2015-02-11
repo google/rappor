@@ -91,8 +91,8 @@ class HealthHandler(object):
         logging.info('Sleeping %d seconds', seconds)
         time.sleep(seconds)
 
-      # NOTE: Need newline here
-      req = {"foo": "bar"}
+      req = {'route': 'health', 'request': {"a": 3}}
+      logging.info('Sending %r', req)
       child.SendRequest(req)
 
       resp = child.RecvResponse()

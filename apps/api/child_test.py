@@ -24,7 +24,7 @@ class ChildTest(unittest.TestCase):
 
     c.SendHelloAndWait(10.0)
 
-    c.SendRequest({'foo': 'bar'})
+    c.SendRequest({'route': 'health', 'request': {"a": 1}})
     resp = c.RecvResponse()
 
     print repr(resp)
