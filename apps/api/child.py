@@ -41,7 +41,7 @@ class Child(object):
   """
   def __init__(
       self, argv,
-      env=None, stop_signal=None,
+      env=None,
       cwd=None,
       log_fd=None,
       output='stdout',
@@ -66,7 +66,6 @@ class Child(object):
     self.argv = argv  # for DataDict
     self.env = env
     self.cwd = cwd
-    self.stop_signal = stop_signal or signal.SIGKILL
     self.log_fd = log_fd
 
     # These values came from JSON; make them strings and not unicode
@@ -293,7 +292,7 @@ class Child(object):
     assert self.pid is not None, "Child wasn't Start()ed"
     try:
       # negate to send signal to process group
-      os.kill(-self.pid, self.stop_signal)
+      os.kill(-self.pid, signal.SIGTERM)
     except OSError, e:
       log.error('Error killing process -%d: %s', self.pid, e)
     log.info('Sent signal to child -%d', self.pid)
