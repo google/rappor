@@ -47,7 +47,6 @@ class Child(object):
       output='stdout',
       timeout=3.0,
       template_data=None,
-      pgi_format='tnet',
       ports={},  # name -> Port() instance
       ):
     """
@@ -59,7 +58,6 @@ class Child(object):
         descriptor.
       timeout: timeout in seconds on output pipe reader
       template_data: additional data dictionary for DataDict()
-      pgi_format: what format to use.  Used in SendHelloAndWait() now.
     """
     # By default, we kill with SIGKILL.  Applications might want to request
     # SIGTERM if they do something special.  TODO: Is SIGTERM better?  Then an
@@ -74,7 +72,6 @@ class Child(object):
     # These values came from JSON; make them strings and not unicode
     self.timeout = timeout
     self.template_data = template_data or {}
-    self.pgi_format = pgi_format
 
     self.req_fifo_name = None
     self.req_fifo_fd = -1
@@ -283,14 +280,7 @@ class Child(object):
       # copies of it
       return False
 
-    if self.pgi_format == 'tnet':
-      response = tnet.loads(response_str)
-    elif self.pgi_format == 'json':
-      #json_str = tnet.loads(response_str)
-      #response = json.loads(json_str)
-      response = json.loads(response_str)
-    else:
-      raise AssertionError(self.pgi_format)
+    response = json.loads(response_str)
 
     elapsed = time.time() - start_time
     if response.get('result') == 'ok':

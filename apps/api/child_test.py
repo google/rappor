@@ -13,10 +13,7 @@ class ChildTest(unittest.TestCase):
   def testSendHelloAndWait(self):
     child.MakeDir('_test')
 
-    c = child.Child(
-        ['../pages.R'], cwd='_test',
-        pgi_format='json',
-        )
+    c = child.Child(['../pages.R'], cwd='_test')
     c.Start()
     # Timeout: Do we need this?  I think we should just use a thread.
     c.SendHelloAndWait(10.0)

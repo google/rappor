@@ -146,12 +146,9 @@ def InitPool(num_processes, pool):
     work_dir = 'w%d' % i
     child.MakeDir(work_dir)
 
-    c = child.Child(
-        ['../pages.R'],
+    c = child.Child(['../pages.R'],
         # TODO: Move this
-        cwd=work_dir,
-        pgi_format='json',
-        )
+        cwd=work_dir)
     c.Start()
     # Timeout: Do we need this?  I think we should just use a thread.
     c.SendHelloAndWait(10.0)
