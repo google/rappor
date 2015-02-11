@@ -14,8 +14,7 @@ class ChildTest(unittest.TestCase):
     child.MakeDir('_test')
 
     c = child.Child(
-        ['../pages.R'], input='fifo', output='fifo',
-        cwd='_test',
+        ['../pages.R'], cwd='_test',
         pgi_format='json',
         )
     c.Start()

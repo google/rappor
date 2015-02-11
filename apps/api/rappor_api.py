@@ -147,7 +147,7 @@ def InitPool(num_processes, pool):
     child.MakeDir(work_dir)
 
     c = child.Child(
-        ['../pages.R'], input='fifo', output='fifo',
+        ['../pages.R'],
         # TODO: Move this
         cwd=work_dir,
         pgi_format='json',

@@ -44,7 +44,6 @@ class Child(object):
       env=None, stop_signal=None,
       cwd=None,
       log_fd=None,
-      input='stdin',
       output='stdout',
       timeout=3.0,
       template_data=None,
@@ -58,10 +57,6 @@ class Child(object):
       stop_signal: signal number to kill the process with
       log_fd: if specified, then stdout or stderr is redirect to this
         descriptor.
-      input: specifies request input (stdin or fifo).  If None, then requests
-        aren't handled at all.  It is assumed that the child bound its own port.
-      output: specifies response output (stdout stderr or fifo).
-        TODO: stderr not a good idea because not buffered?
       timeout: timeout in seconds on output pipe reader
       template_data: additional data dictionary for DataDict()
       pgi_format: what format to use.  Used in SendHelloAndWait() now.
@@ -77,8 +72,6 @@ class Child(object):
     self.log_fd = log_fd
 
     # These values came from JSON; make them strings and not unicode
-    self.input = input.encode('utf-8')
-    self.output = output.encode('utf-8')
     self.timeout = timeout
     self.template_data = template_data or {}
     self.pgi_format = pgi_format
@@ -136,46 +129,26 @@ class Child(object):
       new_env.update(self.env)  # update with server/user environment
       kwargs['env'] = new_env
 
-    if self.output == 'stdout' or self.output == 'stderr':
-      kwargs[self.output] = subprocess.PIPE
-    elif self.output == 'fifo':
-      self.resp_fifo_name = os.path.join(self.cwd, 'response-fifo')
-      self._MaybeRemoveResponseFifo()
-      os.mkfifo(self.resp_fifo_name)
-      # Need to use rw mode even though we only read.  This is to make the
-      # open non-blocking, but the reads blocking.
-      self.resp_fifo_fd = os.open(self.resp_fifo_name, os.O_RDWR)
-    elif self.output == 'none':
-      pass
-    else:
-      raise AssertionError(self.output)
+    self.resp_fifo_name = os.path.join(self.cwd, 'response-fifo')
+    self._MaybeRemoveResponseFifo()
+    os.mkfifo(self.resp_fifo_name)
+    # Need to use rw mode even though we only read.  This is to make the
+    # open non-blocking, but the reads blocking.
+    self.resp_fifo_fd = os.open(self.resp_fifo_name, os.O_RDWR)
 
     if self.log_fd:
       # If the response output is stdout, direct stderr to the debug log.  If
       # it's not (e.g. a named pipe), redirect both stdout and stderr.
-      if self.output == 'stdout':
-        kwargs['stderr'] = self.log_fd
-      elif self.output == 'stderr':
-        kwargs['stdout'] = self.log_fd
-      else:
-        kwargs['stdout'] = self.log_fd
-        kwargs['stderr'] = subprocess.STDOUT
+      kwargs['stdout'] = self.log_fd
+      kwargs['stderr'] = subprocess.STDOUT
 
     # Create request fifo if necessary
     self.req_fifo_name = None
-    if self.input == 'fifo':
-      self.req_fifo_name = os.path.join(self.cwd, 'request-fifo')
-      self._MaybeRemoveRequestFifo()
-      os.mkfifo(self.req_fifo_name)
-      #self.req_fifo_fd = os.open(self.req_fifo_name, os.O_RDWR|os.O_NONBLOCK)
-      self.req_fifo_fd = os.open(self.req_fifo_name, os.O_RDWR)
-    elif self.input == 'stdin':
-      # Requests go on stdin
-      kwargs['stdin'] = subprocess.PIPE
-    elif self.input == 'none':
-      pass
-    else:
-      raise AssertionError(self.input)
+    self.req_fifo_name = os.path.join(self.cwd, 'request-fifo')
+    self._MaybeRemoveRequestFifo()
+    os.mkfifo(self.req_fifo_name)
+    #self.req_fifo_fd = os.open(self.req_fifo_name, os.O_RDWR|os.O_NONBLOCK)
+    self.req_fifo_fd = os.open(self.req_fifo_name, os.O_RDWR)
 
     # Now start it
     argv_str = "'%s'" % ' '.join(self.argv)
@@ -200,27 +173,9 @@ class Child(object):
     #  self.log_fd.close()
 
     # set req_pipe_fd -- has to be done after Popen call
-    if self.input == 'fifo':
-      self.req_pipe_fd = self.req_fifo_fd
-    elif self.input == 'stdin':
-      self.req_pipe_fd = self.p.stdin.fileno()
-    elif self.input == 'none':
-      self.req_pipe_fd = None
-    else:
-      raise AssertionError(self.input)
+    self.req_pipe_fd = self.req_fifo_fd
 
-    # Now set resp_pipe_fd for callers to read from
-    if self.output == 'stdout':
-      self.resp_pipe_fd = self.p.stdout.fileno()  # PUBLIC
-    elif self.output == 'stderr':
-      self.resp_pipe_fd = self.p.stderr.fileno()
-    elif self.output == 'fifo':
-      self.resp_pipe_fd = self.resp_fifo_fd
-    elif self.output == 'none':
-      self.resp_pipe_fd = None
-    else:
-      # Should have been checked by the schema
-      assert self.resp_pipe_fd is not None, 'Invalid output %r' % self.output
+    self.resp_pipe_fd = self.resp_fifo_fd
 
     # Getting rid of PipeReader
     self.response_pipe2 = self.resp_pipe_fd
