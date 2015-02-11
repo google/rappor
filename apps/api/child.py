@@ -316,22 +316,10 @@ class Child(object):
       self.SendRequest(pgi_request)  # list of "lines"
 
       # use hello timeout, not request timeout!
-      hello_pipe = file_io.PipeReader2(self.resp_pipe_fd, timeout=timeout)
+      f = os.fdopen(self.resp_pipe_fd)
       try:
-        #response_str = tnet.read(hello_pipe)
-
-        # TODO: Fix this
-
-        response_str = ''
-        while True:
-          c = hello_pipe.read(1)
-          response_str += c
-          if c == '\n':
-            break
-
+        response_str = f.readline()
         log.info('GOT RESPONSE %r', response_str)
-
-        #response_str = hello_pipe
       except EOFError:
         elapsed = time.time() - start_time
         log.info('BROKEN: Received EOF instead of init response (%.2fs)', elapsed)
