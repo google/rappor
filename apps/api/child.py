@@ -54,14 +54,10 @@ class Child(object):
     self.cwd = cwd
     self.log_fd = log_fd
 
-    self.req_fifo_name = None
+    self.req_fifo_name = os.path.join(self.cwd, 'request-fifo')
     self.req_fifo_fd = -1
 
-    # parallel to resp_pipe_fd.  TODO: Get rid of req_fifo_fd.  SendRequest
-    # shouldn't have an "if" in it, but I don't want to disturb it now.
-    self.req_pipe_fd = -1
-
-    self.resp_fifo_name = None
+    self.resp_fifo_name = os.path.join(self.cwd, 'response-fifo')
     self.resp_fifo_fd = -1
 
     self.name = argv[0]  # for __str__
@@ -69,8 +65,6 @@ class Child(object):
     # These attributes are unknown here and set by Start()
     self.pid = None
     self.p = None  # set by Start
-    self.response_pipe = None  # don't know yet
-    self.response_pipe2 = None  # don't know yet
 
   def Start(self):
     """Start the process."""
@@ -88,7 +82,6 @@ class Child(object):
       new_env.update(self.env)  # update with server/user environment
       kwargs['env'] = new_env
 
-    self.resp_fifo_name = os.path.join(self.cwd, 'response-fifo')
     self._MaybeRemoveResponseFifo()
     os.mkfifo(self.resp_fifo_name)
     # Need to use rw mode even though we only read.  This is to make the
@@ -102,8 +95,6 @@ class Child(object):
       kwargs['stderr'] = subprocess.STDOUT
 
     # Create request fifo if necessary
-    self.req_fifo_name = None
-    self.req_fifo_name = os.path.join(self.cwd, 'request-fifo')
     self._MaybeRemoveRequestFifo()
     os.mkfifo(self.req_fifo_name)
     #self.req_fifo_fd = os.open(self.req_fifo_name, os.O_RDWR|os.O_NONBLOCK)
@@ -131,14 +122,7 @@ class Child(object):
     #if self.log_fd:
     #  self.log_fd.close()
 
-    # set req_pipe_fd -- has to be done after Popen call
-    self.req_pipe_fd = self.req_fifo_fd
-
-    self.resp_pipe_fd = self.resp_fifo_fd
-
-    # Getting rid of PipeReader
-    self.response_pipe2 = self.resp_pipe_fd
-    self.response_f = os.fdopen(self.response_pipe2)
+    self.response_f = os.fdopen(self.resp_fifo_fd)
 
   def __str__(self):
     return '<Child %s %s>' % (self.pid, self.name)
@@ -177,13 +161,6 @@ class Child(object):
 
   def OutputStream(self):
     return self.response_f
-
-  def Write(self, byte_str):
-    """
-    Write a chunk of bytes to the input of this process (whether it's stdin or a
-    named fifo).
-    """
-    os.write(self.req_pipe_fd, byte_str)
 
   def StubPage(self):
     if self.port_num:
