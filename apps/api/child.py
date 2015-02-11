@@ -17,46 +17,12 @@ import subprocess
 import time
 
 import errors
-#import env
 import file_io
 import log
-#import util
-#
-#json = env.Module('json')
-#tnet = env.Module('tnet')
 
 
 class Error(Exception):
   pass
-
-
-_WAITING = 0  # waiting to start
-_STARTING = 1  # waiting for ping response
-_READY = 2  # ping response sent; ready to serve
-_STOPPED = 3
-
-# NOTE: updater.py has a _STOPPING state, but we don't have one here.  That
-# could be surface in in TakeAndKillAll.
-_BROKEN = 4
-
-
-def _StateDisplay(state):
-  """Returns string, CSS class."""
-  if state == _WAITING:
-    return 'WAITING', 'normal'
-  elif state == _STARTING:
-    # STARTED 4 seconds ago
-    return 'STARTING', 'normal'
-  elif state == _READY:
-    # READY in 3.2s
-    return 'READY', 'good'
-  elif state == _STOPPED:
-    return 'STOPPED', 'normal'
-  elif state == _BROKEN:
-    # BROKEN Could not load app config
-    return 'BROKEN', 'bad'
-  else:
-    raise AssertionError('Invalid child state %s' % state)
 
 
 class Child(object):
@@ -129,10 +95,6 @@ class Child(object):
     self.response_pipe = None  # don't know yet
     self.response_pipe2 = None  # don't know yet
 
-    # Normally processes start right away.  But if there is a "startup group"
-    # then the apps in that group start serially.
-    self._ChangeStatus(_WAITING)
-
     self.port_num = None  # port number
     if ports:
       # For now a single port?
@@ -151,9 +113,6 @@ class Child(object):
           # no free port, for now the app won't get what it wants it should
           # fail in some manner.
           log.error("Couldn't pick port")
-
-  def _ChangeStatus(self, state, note=None):
-    self.status = (state, time.time(), note)
 
   def Start(self):
     """Start the process."""
@@ -267,31 +226,11 @@ class Child(object):
       # Getting rid of PipeReader
       self.response_pipe2 = self.resp_pipe_fd
 
-    self._ChangeStatus(_STARTING)
-
   def __str__(self):
     return '<Child %s %s>' % (self.pid, self.name)
 
   def __repr__(self):
     return self.__str__()
-
-  def DataDict(self):
-    status = self.status  # be extra sure reads are consistent
-    state, timestamp, note = status
-    state_str, css_class = _StateDisplay(state)
-
-    data = {
-        'type': 'PROCESS',
-        'pid': self.pid,
-        'argv': self.argv,
-        'state': state_str,
-        'css_class': css_class,
-        'time': timestamp,
-        'note': note,
-        'port': self.port_num,
-        }
-    data.update(self.template_data)
-    return data
 
   def WorkingDirPath(self, path, legacy=False):
     """Get absolute paths for relative paths the child refers to."""
@@ -345,14 +284,8 @@ class Child(object):
       body = "App doesn't serve HTTP (or isn't managed by Poly)"
     return {'response': util.HtmlResponse(body)}
 
-  def HasIO(self):
-    return self.input != 'none' and self.output != 'none'
-
   def SendRequest(self, req):
     """Send a request to the child process via its input stream."""
-    if not self.HasIO():
-      raise AssertionError("Should not send request without IO.")
-
     try:
       assert self.req_fifo_fd != -1
       # NOTE: need a newline here
@@ -372,12 +305,6 @@ class Child(object):
     See if this child has entered its main loop by sending the PGI string
     '@cmd hello?'
     """
-    # Disable when there is no input/output.  TODO: We should be have
-    # user-defined probes in this case.  Or maybe just send GET / by default.
-    if not self.HasIO():
-      self._ChangeStatus(_READY, 'socket')
-      return True
-
     start_time = time.time()
 
     if self.pgi_version == 2:
@@ -392,6 +319,9 @@ class Child(object):
       hello_pipe = file_io.PipeReader2(self.resp_pipe_fd, timeout=timeout)
       try:
         #response_str = tnet.read(hello_pipe)
+
+        # TODO: Fix this
+
         response_str = ''
         while True:
           c = hello_pipe.read(1)
@@ -404,14 +334,14 @@ class Child(object):
         #response_str = hello_pipe
       except EOFError:
         elapsed = time.time() - start_time
-        self._ChangeStatus(_BROKEN,
-            'Received EOF instead of init response (%.2fs)' % elapsed)
+        log.info('BROKEN: Received EOF instead of init response (%.2fs)', elapsed)
         return False
       except errors.TimeoutError, e:
         log.error('TimeoutError: %s', e)
 
         elapsed = time.time() - start_time
-        self._ChangeStatus(_BROKEN, 'Timed out after %.2fs' % elapsed)
+        log.info('Timed out after %.2fs', elapsed)
+
         # BUG: Need to kill the process here; otherwise we can end up with 2
         # copies of it
         return False
@@ -427,10 +357,8 @@ class Child(object):
 
       elapsed = time.time() - start_time
       if response.get('result') == 'ok':
-        self._ChangeStatus(_READY, 'in %.2fs (PGI 2)' % elapsed)
         return True
       else:
-        self._ChangeStatus(_BROKEN, 'Invalid reply %s' % response)
         return False
 
   def Kill(self):
@@ -458,11 +386,6 @@ class Child(object):
       return 0
     else:
       raise AssertionError("Unknown status of child %s" % child_pid)
-
-  def SetStopped(self):
-    # It would be nice to know how long it took to stop the process, but the
-    # signals are all sent in parallel.
-    self._ChangeStatus(_STOPPED)
 
 
 class ChildPool(object):
@@ -505,4 +428,3 @@ class ChildPool(object):
       c.Kill()
     for c in children:
       c.Wait()
-      c.SetStopped()
