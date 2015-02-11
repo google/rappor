@@ -11,6 +11,7 @@ TODO:
 """
 
 import cgi
+import errno
 import re
 import optparse
 import os
@@ -72,24 +73,12 @@ class HealthHandler(object):
     # - Why does the R process not die when you hit Ctrl-C?  Should be in the
     # same process group?
 
-    c = child.Child(
-        ['./pages.R'], input='fifo', output='fifo',
-        # TODO: Move this
-        cwd='.',
-        pgi_version=2,
-        pgi_format='json',
-        )
-    c.Start()
-    # Timeout: Do we need this?  I think we should just use a thread.
-    c.SendHelloAndWait(10.0)
-
-    print c
-    self.pool.Return(c)
-
   def __call__(self, request):
     # Concurrency:
     # Assume this gets called by different request threads
 
+    # TODO: Add request ID
+    log.info('Waiting for child')
     child = self.pool.Take()
     try:
 
@@ -149,6 +138,34 @@ def Options():
   return p
 
 
+def InitPool(num_processes, pool):
+  # TODO: Keep track of PIDs?
+  for i in xrange(num_processes):
+    log.info('Starting child %d', i)
+
+    work_dir = 'w%d' % i
+    try:
+      os.mkdir(work_dir)
+    except OSError, e:
+      # OK if it exists
+      if e.errno != errno.EEXIST:
+        raise
+
+    c = child.Child(
+        ['../pages.R'], input='fifo', output='fifo',
+        # TODO: Move this
+        cwd=work_dir,
+        pgi_version=2,
+        pgi_format='json',
+        )
+    c.Start()
+    # Timeout: Do we need this?  I think we should just use a thread.
+    c.SendHelloAndWait(10.0)
+
+    print c
+    pool.Return(c)
+
+
 def CreateApp(opts):
          
   # Go up two levels
@@ -156,6 +173,7 @@ def CreateApp(opts):
   static_dir = d(d(os.path.abspath(sys.argv[0])))
 
   pool = child.ChildPool([])
+  InitPool(opts.num_processes, pool)
 
   handlers = [
       ( web.ConstRoute('GET', '/_ah/health'), HealthHandler(pool)),

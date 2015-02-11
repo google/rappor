@@ -41,7 +41,7 @@ readonly HEALTH_URL=http://localhost:8500/_ah/health
 
 parallel-test() {
   # TODO: curl the server in parallel, time total
-  time seq 3 | xargs -P2 -n1 --verbose -- curl $HEALTH_URL
+  time seq 3 | xargs -P2 -n1 -I{} --verbose -- curl $HEALTH_URL?sleepSeconds={}
 }
 
 count() {

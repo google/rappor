@@ -2,7 +2,8 @@
 #
 # Use whateve Rscript is in the path.
 
-source('pgi.R')
+# TODO: Use realpath
+source('../pgi.R')
 
 pid <- Sys.getpid()
 
