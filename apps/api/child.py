@@ -348,22 +348,16 @@ class Child(object):
   def HasIO(self):
     return self.input != 'none' and self.output != 'none'
 
-  def SendRequest(self, request_lines):
+  def SendRequest(self, req):
     """Send a request to the child process via its input stream."""
     if not self.HasIO():
       raise AssertionError("Should not send request without IO.")
 
     try:
-      # TODO: Use self.Write()
-      if self.req_fifo_fd != -1:
-        for line in request_lines:
-          log.info('SendRequest line %r to fd %d', line, self.req_fifo_fd)
-          os.write(self.req_fifo_fd, line)
-      else:
-        assert 0, 'write to fd'
-        for line in request_lines:
-          self.p.stdin.write(line)
-        self.p.stdin.flush()
+      assert self.req_fifo_fd != -1
+      # NOTE: need a newline here
+      s = json.dumps(req) + '\n'
+      os.write(self.req_fifo_fd, s)
     except IOError, e:
       # TODO: If we get this broken pipe error, we should retry it instead of
       # raising an error.  We can keep this replica out of the queue, try
@@ -391,20 +385,8 @@ class Child(object):
 
       pgi_request = {'command': 'init'}
 
-      if self.pgi_format == 'tnet':
-        req_str = tnet.dumps(pgi_request)
-      elif self.pgi_format == 'json':
-        json_str = json.dumps(pgi_request)
-        #req_str = tnet.dump_line(json_str)
-
-        assert '\n' not in json_str
-        # R side is doing readline
-        req_str = json_str + '\n'
-      else:
-        raise AssertionError(self.pgi_format)
-
-      log.info('Python sending %r', req_str)
-      self.SendRequest([req_str])  # list of "lines"
+      log.info('Python sending %r', pgi_request)
+      self.SendRequest(pgi_request)  # list of "lines"
 
       # use hello timeout, not request timeout!
       hello_pipe = file_io.PipeReader2(self.resp_pipe_fd, timeout=timeout)
@@ -450,31 +432,6 @@ class Child(object):
       else:
         self._ChangeStatus(_BROKEN, 'Invalid reply %s' % response)
         return False
-
-    # -- PGI 2 never gets past here --
-
-    self.SendRequest(['@cmd hello?\n'])
-    out = file_io.PipeReader(self.resp_pipe_fd, timeout=timeout)
-    try:
-      line = out.ReadLine()
-    except errors.TimeoutError, e:  # TODO: expand this list of errors?
-      elapsed = time.time() - start_time
-      self._ChangeStatus(_BROKEN, 'Timed out after %.2fs' % elapsed)
-
-      # BUG: Need to kill the process here; otherwise we can end up with 2
-      # copies of it
-
-      return False
-    else:
-      line = line.lstrip()
-      if not line.startswith('hello'):
-        # UpdateError so we can show this on the web interface
-        raise errors.UpdateError(
-            'Process %d responded with %r instead of "hello"' %
-            (self.pid, line))
-      elapsed = time.time() - start_time
-      self._ChangeStatus(_READY, 'in %.2fs' % elapsed)
-      return True
 
   def Kill(self):
     """Send a kill signal to this process."""

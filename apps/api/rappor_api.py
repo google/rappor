@@ -102,7 +102,7 @@ class HealthHandler(object):
       time.sleep(seconds)
 
     # NOTE: Need newline here
-    req = ['{"foo": "bar"}\n']
+    req = {"foo": "bar"}
     child.SendRequest(req)
 
     f = child.OutputStream()
