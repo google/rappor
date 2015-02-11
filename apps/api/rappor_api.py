@@ -91,27 +91,30 @@ class HealthHandler(object):
     # Assume this gets called by different request threads
 
     child = self.pool.Take()
+    try:
 
-    # For testing concurrency
-    # TODO: Do in R?
-    seconds = request.query.get('sleepSeconds', '0')
-    seconds = int(seconds)
-    seconds = min(seconds, 10)
-    if seconds:
-      log.info('Sleeping %d seconds', seconds)
-      time.sleep(seconds)
+      # For testing concurrency
+      # TODO: Do in R?
+      seconds = request.query.get('sleepSeconds', '0')
+      seconds = int(seconds)
+      seconds = min(seconds, 10)
+      if seconds:
+        log.info('Sleeping %d seconds', seconds)
+        time.sleep(seconds)
 
-    # NOTE: Need newline here
-    req = {"foo": "bar"}
-    child.SendRequest(req)
+      # NOTE: Need newline here
+      req = {"foo": "bar"}
+      child.SendRequest(req)
 
-    # TODO: Simplify this
-    f = child.OutputStream()
-    log.info('out: %r', f)
-    resp = f.readline()
-    log.info('RESP %r', resp)
+      # TODO: Simplify this
+      f = child.OutputStream()
+      log.info('out: %r', f)
+      resp = f.readline()
+      log.info('RESP %r', resp)
 
-    self.pool.Return(child)
+    finally:
+      log.info('Returning child')
+      self.pool.Return(child)
 
     return web.PlainTextResponse(
         'RESPONSE: %r\n\n(sleep %d)' % (resp, seconds))

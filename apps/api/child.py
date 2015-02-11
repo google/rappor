@@ -161,7 +161,8 @@ class Child(object):
       self.req_fifo_name = os.path.join(self.cwd, 'request-fifo')
       self._MaybeRemoveRequestFifo()
       os.mkfifo(self.req_fifo_name)
-      self.req_fifo_fd = os.open(self.req_fifo_name, os.O_RDWR|os.O_NONBLOCK)
+      #self.req_fifo_fd = os.open(self.req_fifo_name, os.O_RDWR|os.O_NONBLOCK)
+      self.req_fifo_fd = os.open(self.req_fifo_name, os.O_RDWR)
     elif self.input == 'stdin':
       # Requests go on stdin
       kwargs['stdin'] = subprocess.PIPE
@@ -225,6 +226,7 @@ class Child(object):
 
       # Getting rid of PipeReader
       self.response_pipe2 = self.resp_pipe_fd
+      self.response_f = os.fdopen(self.response_pipe2)
 
   def __str__(self):
     return '<Child %s %s>' % (self.pid, self.name)
@@ -266,7 +268,8 @@ class Child(object):
       raise AssertionError('Invalid pgi version: %r', self.pgi_version)
 
     fd = self.response_pipe2
-    return os.fdopen(fd)
+    print 'fd', fd
+    return self.response_f
 
   def Write(self, byte_str):
     """
@@ -316,9 +319,8 @@ class Child(object):
       self.SendRequest(pgi_request)  # list of "lines"
 
       # use hello timeout, not request timeout!
-      f = os.fdopen(self.resp_pipe_fd)
       try:
-        response_str = f.readline()
+        response_str = self.response_f.readline()
         log.info('GOT RESPONSE %r', response_str)
       except EOFError:
         elapsed = time.time() - start_time
