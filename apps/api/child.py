@@ -23,6 +23,7 @@ class Error(Exception):
 
 
 def MakeDir(d):
+  """Make a directory, doing nothing if it already exists."""
   try:
     os.mkdir(d)
   except OSError, e:
@@ -32,10 +33,8 @@ def MakeDir(d):
 
 
 class Child(object):
-  """Encapsulates a child process (R interpreter, Python interpreter, etc.).
+  """A child process which communicates over a pair of FIFOs."""
 
-  Also manages any FIFOs needed to communicated with the process.
-  """
   def __init__(self, argv, env=None, cwd=None, log_fd=None):
     """
     Args:
@@ -59,12 +58,19 @@ class Child(object):
 
     self.resp_fifo_name = os.path.join(self.cwd, 'response-fifo')
     self.resp_fifo_fd = -1
+    self.response_f = None
 
     self.name = argv[0]  # for __str__
 
     # These attributes are unknown here and set by Start()
     self.pid = None
     self.p = None  # set by Start
+
+  def __str__(self):
+    return '<Child %s %s>' % (self.pid, self.name)
+
+  def __repr__(self):
+    return self.__str__()
 
   def Start(self):
     """Start the process."""
@@ -87,6 +93,7 @@ class Child(object):
     # Need to use rw mode even though we only read.  This is to make the
     # open non-blocking, but the reads blocking.
     self.resp_fifo_fd = os.open(self.resp_fifo_name, os.O_RDWR)
+    self.response_f = os.fdopen(self.resp_fifo_fd)
 
     if self.log_fd:
       # If the response output is stdout, direct stderr to the debug log.  If
@@ -103,17 +110,16 @@ class Child(object):
     # Now start it
     argv_str = "'%s'" % ' '.join(self.argv)
     try:
-      # set process group ID to the PID of the child.  Then we can kill all
+      # Set process group ID to the PID of the child.  Then we can kill all
       # processes in the group/tree at once.
-      #
-      # TODO: later we made need to protect against children that purposely
-      # ignore SIGTERM.  Then we need a timeout on the wait(), check using
-      # util.IsProcessRunning, and send SIGKILL.
       self.p = subprocess.Popen(self.argv, preexec_fn=os.setpgrp, **kwargs)
     except OSError, e:
-      logging.error('Error running %s: %s (working dir %s)', argv_str, e, self.cwd)
+      logging.error('Error running %s: %s (working dir %s)', argv_str, e,
+          self.cwd)
       raise
+
     self.pid = self.p.pid  # for debugging/monitoring
+
     logging.error('Started %s (PID %d)', argv_str, self.pid)
     # We don't have anything to do with this log file -- only the child process
     # manages it.  TODO: Not sure why the unit tests fail with ValueError with
@@ -121,14 +127,6 @@ class Child(object):
     # the child process should.
     #if self.log_fd:
     #  self.log_fd.close()
-
-    self.response_f = os.fdopen(self.resp_fifo_fd)
-
-  def __str__(self):
-    return '<Child %s %s>' % (self.pid, self.name)
-
-  def __repr__(self):
-    return self.__str__()
 
   def WorkingDirPath(self, path, legacy=False):
     """Get absolute paths for relative paths the child refers to."""
@@ -159,9 +157,6 @@ class Child(object):
         if e.errno != errno.ENOENT:
           log.warning('Error removing %s: %s', self.resp_fifo_name, e)
 
-  def RecvResponse(self):
-    return self.response_f.readline()
-
   def SendRequest(self, req):
     """Send a request to the child process via its input stream."""
     try:
@@ -177,6 +172,9 @@ class Child(object):
       # it.
       if e.errno == errno.EPIPE:
         raise errors.AppletError('%s: %s' % (self, e))
+
+  def RecvResponse(self):
+    return self.response_f.readline()
 
   def SendHelloAndWait(self, timeout):
     """
@@ -198,7 +196,8 @@ class Child(object):
       logging.error('GOT RESPONSE %r', response_str)
     except EOFError:
       elapsed = time.time() - start_time
-      logging.error('BROKEN: Received EOF instead of init response (%.2fs)', elapsed)
+      logging.error(
+          'BROKEN: Received EOF instead of init response (%.2fs)', elapsed)
       return False
     except errors.TimeoutError, e:
       logging.error('TimeoutError: %s', e)
