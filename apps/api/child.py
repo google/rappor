@@ -3,9 +3,7 @@
 # in the COPYING file.
 
 """
-child.py
-
-Abstractions for child processes (a lower level that PGI applets).
+child.py: Manage child processes (e.g. a pool of R interpreters).
 """
 
 import errno
@@ -17,7 +15,6 @@ import subprocess
 import time
 
 import errors
-import file_io
 import log
 
 
@@ -39,25 +36,14 @@ class Child(object):
 
   Also manages any FIFOs needed to communicated with the process.
   """
-  def __init__(
-      self, argv,
-      env=None,
-      cwd=None,
-      log_fd=None,
-      output='stdout',
-      timeout=3.0,
-      template_data=None,
-      ports={},  # name -> Port() instance
-      ):
+  def __init__(self, argv, env=None, cwd=None, log_fd=None):
     """
     Args:
       argv: argument array
       env: environment dictionary for the process
-      stop_signal: signal number to kill the process with
+      cwd: working directory
       log_fd: if specified, then stdout or stderr is redirect to this
         descriptor.
-      timeout: timeout in seconds on output pipe reader
-      template_data: additional data dictionary for DataDict()
     """
     # By default, we kill with SIGKILL.  Applications might want to request
     # SIGTERM if they do something special.  TODO: Is SIGTERM better?  Then an
@@ -67,10 +53,6 @@ class Child(object):
     self.env = env
     self.cwd = cwd
     self.log_fd = log_fd
-
-    # These values came from JSON; make them strings and not unicode
-    self.timeout = timeout
-    self.template_data = template_data or {}
 
     self.req_fifo_name = None
     self.req_fifo_fd = -1
@@ -89,25 +71,6 @@ class Child(object):
     self.p = None  # set by Start
     self.response_pipe = None  # don't know yet
     self.response_pipe2 = None  # don't know yet
-
-    self.port_num = None  # port number
-    if ports:
-      # For now a single port?
-      if len(ports) == 1:
-        port_obj = ports.values()[0]
-        port_num, ok = port_obj.GetPortNumber()
-        if ok:
-          self.port_num = port_num
-          log.info('Picked port %d', port_num)
-
-          # BUG(11/2013): This isn't propagated to bx tool!  Because that is
-          # setting env as arg.
-
-          self.env['PGI_PORT'] = str(port_num)
-        else:
-          # no free port, for now the app won't get what it wants it should
-          # fail in some manner.
-          log.error("Couldn't pick port")
 
   def Start(self):
     """Start the process."""
@@ -301,7 +264,6 @@ class Child(object):
 
   def Wait(self):
     """Wait for this process to exit."""
-    # TODO: If SIGTERM doesn't work after 10 seconds, try SIGQUIT?
     child_pid, status = os.waitpid(self.pid, 0)
     if os.WIFSIGNALED(status):
       sig_num = os.WTERMSIG(status)
