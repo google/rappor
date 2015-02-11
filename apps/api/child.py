@@ -159,17 +159,8 @@ class Child(object):
         if e.errno != errno.ENOENT:
           log.warning('Error removing %s: %s', self.resp_fifo_name, e)
 
-  def OutputStream(self):
-    return self.response_f
-
-  def StubPage(self):
-    if self.port_num:
-      # TODO: We could return the port for EACH replicas.  But this is
-      # secondary; the /NODE/processes page already has this info.
-      body = "App uses port %d" % self.port_num
-    else:
-      body = "App doesn't serve HTTP (or isn't managed by Poly)"
-    return {'response': util.HtmlResponse(body)}
+  def RecvResponse(self):
+    return self.response_f.readline()
 
   def SendRequest(self, req):
     """Send a request to the child process via its input stream."""

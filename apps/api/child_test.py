@@ -21,8 +21,7 @@ class ChildTest(unittest.TestCase):
     c.SendHelloAndWait(10.0)
 
     c.SendRequest({'foo': 'bar'})
-    f = c.OutputStream()
-    resp = f.readline()
+    resp = c.RecvResponse()
 
     print repr(resp)
 
