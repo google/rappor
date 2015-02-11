@@ -48,7 +48,6 @@ class Child(object):
       output='stdout',
       timeout=3.0,
       template_data=None,
-      pgi_version=None,
       pgi_format='tnet',
       ports={},  # name -> Port() instance
       ):
@@ -65,7 +64,6 @@ class Child(object):
         TODO: stderr not a good idea because not buffered?
       timeout: timeout in seconds on output pipe reader
       template_data: additional data dictionary for DataDict()
-      pgi_version: protocol version 1 or 2
       pgi_format: what format to use.  Used in SendHelloAndWait() now.
     """
     # By default, we kill with SIGKILL.  Applications might want to request
@@ -83,7 +81,6 @@ class Child(object):
     self.output = output.encode('utf-8')
     self.timeout = timeout
     self.template_data = template_data or {}
-    self.pgi_version = pgi_version
     self.pgi_format = pgi_format
 
     self.req_fifo_name = None
@@ -225,17 +222,9 @@ class Child(object):
       # Should have been checked by the schema
       assert self.resp_pipe_fd is not None, 'Invalid output %r' % self.output
 
-    # The unused one will remain None
-    if self.pgi_version == 1:
-      self.response_pipe = file_io.PipeReader(
-          self.resp_pipe_fd, timeout=self.timeout)
-    elif self.pgi_version == 2:
-      #self.response_pipe2 = file_io.PipeReader2(
-      #    self.resp_pipe_fd, timeout=self.timeout)
-
-      # Getting rid of PipeReader
-      self.response_pipe2 = self.resp_pipe_fd
-      self.response_f = os.fdopen(self.response_pipe2)
+    # Getting rid of PipeReader
+    self.response_pipe2 = self.resp_pipe_fd
+    self.response_f = os.fdopen(self.response_pipe2)
 
   def __str__(self):
     return '<Child %s %s>' % (self.pid, self.name)
@@ -273,11 +262,6 @@ class Child(object):
           log.warning('Error removing %s: %s', self.resp_fifo_name, e)
 
   def OutputStream(self):
-    if self.pgi_version != 2:
-      raise AssertionError('Invalid pgi version: %r', self.pgi_version)
-
-    fd = self.response_pipe2
-    print 'fd', fd
     return self.response_f
 
   def Write(self, byte_str):
@@ -319,46 +303,45 @@ class Child(object):
     """
     start_time = time.time()
 
-    if self.pgi_version == 2:
-      # TODO: Unify request/response tnet/json with request/response.
+    # TODO: Unify request/response tnet/json with request/response.
 
-      pgi_request = {'command': 'init'}
+    pgi_request = {'command': 'init'}
 
-      log.info('Python sending %r', pgi_request)
-      self.SendRequest(pgi_request)  # list of "lines"
+    log.info('Python sending %r', pgi_request)
+    self.SendRequest(pgi_request)  # list of "lines"
 
-      # use hello timeout, not request timeout!
-      try:
-        response_str = self.response_f.readline()
-        log.info('GOT RESPONSE %r', response_str)
-      except EOFError:
-        elapsed = time.time() - start_time
-        log.info('BROKEN: Received EOF instead of init response (%.2fs)', elapsed)
-        return False
-      except errors.TimeoutError, e:
-        log.error('TimeoutError: %s', e)
-
-        elapsed = time.time() - start_time
-        log.info('Timed out after %.2fs', elapsed)
-
-        # BUG: Need to kill the process here; otherwise we can end up with 2
-        # copies of it
-        return False
-
-      if self.pgi_format == 'tnet':
-        response = tnet.loads(response_str)
-      elif self.pgi_format == 'json':
-        #json_str = tnet.loads(response_str)
-        #response = json.loads(json_str)
-        response = json.loads(response_str)
-      else:
-        raise AssertionError(self.pgi_format)
+    # use hello timeout, not request timeout!
+    try:
+      response_str = self.response_f.readline()
+      log.info('GOT RESPONSE %r', response_str)
+    except EOFError:
+      elapsed = time.time() - start_time
+      log.info('BROKEN: Received EOF instead of init response (%.2fs)', elapsed)
+      return False
+    except errors.TimeoutError, e:
+      log.error('TimeoutError: %s', e)
 
       elapsed = time.time() - start_time
-      if response.get('result') == 'ok':
-        return True
-      else:
-        return False
+      log.info('Timed out after %.2fs', elapsed)
+
+      # BUG: Need to kill the process here; otherwise we can end up with 2
+      # copies of it
+      return False
+
+    if self.pgi_format == 'tnet':
+      response = tnet.loads(response_str)
+    elif self.pgi_format == 'json':
+      #json_str = tnet.loads(response_str)
+      #response = json.loads(json_str)
+      response = json.loads(response_str)
+    else:
+      raise AssertionError(self.pgi_format)
+
+    elapsed = time.time() - start_time
+    if response.get('result') == 'ok':
+      return True
+    else:
+      return False
 
   def Kill(self):
     """Send a kill signal to this process."""

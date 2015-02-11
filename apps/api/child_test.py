@@ -16,7 +16,6 @@ class ChildTest(unittest.TestCase):
     c = child.Child(
         ['../pages.R'], input='fifo', output='fifo',
         cwd='_test',
-        pgi_version=2,
         pgi_format='json',
         )
     c.Start()

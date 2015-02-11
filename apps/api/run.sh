@@ -40,8 +40,11 @@ r-smoke-test() {
 readonly HEALTH_URL=http://localhost:8500/_ah/health
 
 parallel-test() {
-  # TODO: curl the server in parallel, time total
   time seq 3 | xargs -P2 -n1 -I{} --verbose -- curl $HEALTH_URL?sleepSeconds={}
+}
+
+smoke-test() {
+  time seq 3 | xargs -P2 -n1 -I{} --verbose -- curl $HEALTH_URL
 }
 
 count() {

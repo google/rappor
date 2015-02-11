@@ -150,7 +150,6 @@ def InitPool(num_processes, pool):
         ['../pages.R'], input='fifo', output='fifo',
         # TODO: Move this
         cwd=work_dir,
-        pgi_version=2,
         pgi_format='json',
         )
     c.Start()
@@ -189,7 +188,9 @@ def main(argv):
     print app
   else:
     log.info('Serving on port %d', opts.port)
+    # Returns after Ctrl-C
     wsgiref_server.ServeForever(app, port=opts.port)
+
     log.info('Killing child processes')
     pool.TakeAndKillAll()
 
