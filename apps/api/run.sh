@@ -37,9 +37,11 @@ r-smoke-test() {
   ./rappor_api.py --test /_ah/health
 }
 
+readonly HEALTH_URL=http://localhost:8500/_ah/health
+
 parallel-test() {
   # TODO: curl the server in parallel, time total
-  time seq 3 | xargs -P2 -n1 --verbose -- sleep
+  time seq 3 | xargs -P2 -n1 --verbose -- curl $HEALTH_URL
 }
 
 count() {

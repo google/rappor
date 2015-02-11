@@ -15,6 +15,7 @@ import re
 import optparse
 import os
 import sys
+import time
 
 import log
 import web
@@ -91,6 +92,15 @@ class HealthHandler(object):
 
     child = self.pool.Take()
 
+    # For testing concurrency
+    # TODO: Do in R?
+    seconds = request.query.get('sleepSeconds', '0')
+    seconds = int(seconds)
+    seconds = min(seconds, 10)
+    if seconds:
+      log.info('Sleeping %d seconds', seconds)
+      time.sleep(seconds)
+
     # NOTE: Need newline here
     req = ['{"foo": "bar"}\n']
     child.SendRequest(req)
@@ -102,7 +112,8 @@ class HealthHandler(object):
 
     self.pool.Return(child)
 
-    return web.PlainTextResponse('RESPONSE: %r' % resp)
+    return web.PlainTextResponse(
+        'RESPONSE: %r\n\n(sleep %d)' % (resp, seconds))
 
 
 class OopsHandler(object):
