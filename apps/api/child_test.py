@@ -3,9 +3,13 @@
 child_test.py: Tests for child.py
 """
 
+import logging
 import unittest
 
 import child  # module under test
+
+
+logging.basicConfig(level=logging.INFO)  # So we see messages on stdout
 
 
 class ChildTest(unittest.TestCase):

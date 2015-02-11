@@ -8,6 +8,7 @@ child.py: Manage child processes (e.g. a pool of R interpreters).
 
 import errno
 import json
+import logging
 import os
 import Queue
 import signal
@@ -15,7 +16,6 @@ import subprocess
 import time
 
 import errors
-import log
 
 
 class Error(Exception):
@@ -111,10 +111,10 @@ class Child(object):
       # util.IsProcessRunning, and send SIGKILL.
       self.p = subprocess.Popen(self.argv, preexec_fn=os.setpgrp, **kwargs)
     except OSError, e:
-      log.error('Error running %s: %s (working dir %s)', argv_str, e, self.cwd)
+      logging.error('Error running %s: %s (working dir %s)', argv_str, e, self.cwd)
       raise
     self.pid = self.p.pid  # for debugging/monitoring
-    log.info('Started %s (PID %d)', argv_str, self.pid)
+    logging.error('Started %s (PID %d)', argv_str, self.pid)
     # We don't have anything to do with this log file -- only the child process
     # manages it.  TODO: Not sure why the unit tests fail with ValueError with
     # this code.  The Poly process should never try to write to this file; only
@@ -141,7 +141,7 @@ class Child(object):
     if self.req_fifo_name:
       try:
         os.remove(self.req_fifo_name)
-        log.info('Removed request FIFO %r', self.req_fifo_name)
+        logging.error('Removed request FIFO %r', self.req_fifo_name)
       except OSError, e:
         if e.errno != errno.ENOENT:
           log.warning('Error removing %s: %s', self.req_fifo_name, e)
@@ -154,7 +154,7 @@ class Child(object):
     if self.resp_fifo_name:
       try:
         os.remove(self.resp_fifo_name)
-        log.info('Removed response FIFO %r', self.resp_fifo_name)
+        logging.error('Removed response FIFO %r', self.resp_fifo_name)
       except OSError, e:
         if e.errno != errno.ENOENT:
           log.warning('Error removing %s: %s', self.resp_fifo_name, e)
@@ -189,22 +189,22 @@ class Child(object):
 
     pgi_request = {'command': 'init'}
 
-    log.info('Python sending %r', pgi_request)
+    logging.error('Python sending %r', pgi_request)
     self.SendRequest(pgi_request)  # list of "lines"
 
     # use hello timeout, not request timeout!
     try:
       response_str = self.response_f.readline()
-      log.info('GOT RESPONSE %r', response_str)
+      logging.error('GOT RESPONSE %r', response_str)
     except EOFError:
       elapsed = time.time() - start_time
-      log.info('BROKEN: Received EOF instead of init response (%.2fs)', elapsed)
+      logging.error('BROKEN: Received EOF instead of init response (%.2fs)', elapsed)
       return False
     except errors.TimeoutError, e:
-      log.error('TimeoutError: %s', e)
+      logging.error('TimeoutError: %s', e)
 
       elapsed = time.time() - start_time
-      log.info('Timed out after %.2fs', elapsed)
+      logging.error('Timed out after %.2fs', elapsed)
 
       # BUG: Need to kill the process here; otherwise we can end up with 2
       # copies of it
@@ -225,8 +225,8 @@ class Child(object):
       # negate to send signal to process group
       os.kill(-self.pid, signal.SIGTERM)
     except OSError, e:
-      log.error('Error killing process -%d: %s', self.pid, e)
-    log.info('Sent signal to child -%d', self.pid)
+      logging.error('Error killing process -%d: %s', self.pid, e)
+    logging.error('Sent signal to child -%d', self.pid)
     self._MaybeRemoveRequestFifo()
     self._MaybeRemoveResponseFifo()
 
@@ -235,10 +235,10 @@ class Child(object):
     child_pid, status = os.waitpid(self.pid, 0)
     if os.WIFSIGNALED(status):
       sig_num = os.WTERMSIG(status)
-      log.info('Child %s stopped by signal %s', child_pid, sig_num)
+      logging.error('Child %s stopped by signal %s', child_pid, sig_num)
       return sig_num
     elif os.WIFEXITED(status):
-      log.info('Child %s stopped by exit()', child_pid)
+      logging.error('Child %s stopped by exit()', child_pid)
       return 0
     else:
       raise AssertionError("Unknown status of child %s" % child_pid)

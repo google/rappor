@@ -12,13 +12,13 @@ TODO:
 
 import cgi
 import errno
+import logging
 import re
 import optparse
 import os
 import sys
 import time
 
-import log
 import web
 import wsgiref_server
 
@@ -78,7 +78,7 @@ class HealthHandler(object):
     # Assume this gets called by different request threads
 
     # TODO: Add request ID
-    log.info('Waiting for child')
+    logging.info('Waiting for child')
     child = self.pool.Take()
     try:
 
@@ -88,7 +88,7 @@ class HealthHandler(object):
       seconds = int(seconds)
       seconds = min(seconds, 10)
       if seconds:
-        log.info('Sleeping %d seconds', seconds)
+        logging.info('Sleeping %d seconds', seconds)
         time.sleep(seconds)
 
       # NOTE: Need newline here
@@ -96,10 +96,10 @@ class HealthHandler(object):
       child.SendRequest(req)
 
       resp = child.RecvResponse()
-      log.info('RESP %r', resp)
+      logging.info('RESP %r', resp)
 
     finally:
-      log.info('Returning child')
+      logging.info('Returning child')
       self.pool.Return(child)
 
     return web.PlainTextResponse(
@@ -138,7 +138,7 @@ def Options():
 def InitPool(num_processes, pool):
   # TODO: Keep track of PIDs?
   for i in xrange(num_processes):
-    log.info('Starting child %d', i)
+    logging.info('Starting child %d', i)
 
     work_dir = 'w%d' % i
     child.MakeDir(work_dir)
@@ -173,6 +173,9 @@ def CreateApp(opts, pool):
 def main(argv):
   (opts, argv) = Options().parse_args(argv)
 
+  # Make this olok better?
+  logging.basicConfig(level=logging.INFO)
+
   pool = child.ChildPool([])
   InitPool(opts.num_processes, pool)
 
@@ -181,11 +184,11 @@ def main(argv):
   if opts.test_mode:
     print app
   else:
-    log.info('Serving on port %d', opts.port)
+    logging.info('Serving on port %d', opts.port)
     # Returns after Ctrl-C
     wsgiref_server.ServeForever(app, port=opts.port)
 
-    log.info('Killing child processes')
+    logging.info('Killing child processes')
     pool.TakeAndKillAll()
 
 
