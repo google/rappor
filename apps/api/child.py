@@ -25,6 +25,15 @@ class Error(Exception):
   pass
 
 
+def MakeDir(d):
+  try:
+    os.mkdir(d)
+  except OSError, e:
+    # OK if it exists
+    if e.errno != errno.EEXIST:
+      raise
+
+
 class Child(object):
   """Encapsulates a child process (R interpreter, Python interpreter, etc.).
 

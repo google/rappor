@@ -144,12 +144,7 @@ def InitPool(num_processes, pool):
     log.info('Starting child %d', i)
 
     work_dir = 'w%d' % i
-    try:
-      os.mkdir(work_dir)
-    except OSError, e:
-      # OK if it exists
-      if e.errno != errno.EEXIST:
-        raise
+    child.MakeDir(work_dir)
 
     c = child.Child(
         ['../pages.R'], input='fifo', output='fifo',

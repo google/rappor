@@ -8,18 +8,14 @@ import unittest
 import child  # module under test
 
 
-class FooTest(unittest.TestCase):
-  def setUp(self):
-    pass
+class ChildTest(unittest.TestCase):
 
-  def tearDown(self):
-    pass
+  def testSendHelloAndWait(self):
+    child.MakeDir('_test')
 
-  def testFoo(self):
     c = child.Child(
-        ['./pages.R'], input='fifo', output='fifo',
-        # TODO: Move this
-        cwd='.',
+        ['../pages.R'], input='fifo', output='fifo',
+        cwd='_test',
         pgi_version=2,
         pgi_format='json',
         )
