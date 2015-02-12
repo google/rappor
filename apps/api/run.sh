@@ -34,7 +34,8 @@ install-r-packages() {
 
 # Run the server in batch mode
 get() {
-  ./rappor_api.py --test "$@"
+  ./rappor_api.py --log-dir _tmp/log --test "$@"
+  #./rappor_api.py --test "$@"
 }
 
 health() {

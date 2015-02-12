@@ -125,7 +125,11 @@ def Options():
 
   p.add_option(
       '--tmp-dir', metavar='PATH', dest='tmp_dir', default='',
-      help='Directory in which to store temporary request/response data.')
+      help='Store temporary request/response data in this directory.')
+  p.add_option(
+      '--log-dir', metavar='PATH', dest='log_dir', default='',
+      help='Store child process logs in this directory')
+
   p.add_option(
       '--port', metavar='NUM', dest='port', type=int, default=8500,
       help='Port to serve HTTP on')
@@ -141,10 +145,9 @@ def Options():
 
 
 # TODO:
-# - Write logs to PID-numbered files, in --log-dir
-# - And then SERVE that dir with webutil (or App Engine)
+# - And then SERVE log dir with webutil (or App Engine)
 
-def InitPool(num_processes, pool):
+def InitPool(num_processes, pool, log_dir=None):
 
   for i in xrange(num_processes):
     logging.info('Starting child %d', i)
@@ -152,9 +155,14 @@ def InitPool(num_processes, pool):
     work_dir = 'w%d' % i
     child.MakeDir(work_dir)
 
-    c = child.Child(['../pages.R'],
-        # TODO: Move this
-        cwd=work_dir)
+    if log_dir:
+      # TODO: Make a directory per server invocation?
+      filename = os.path.join(log_dir, '%d.log' % i)
+      f = open(filename, 'w')
+    else:
+      f = None
+
+    c = child.Child(['../pages.R'], cwd=work_dir, log_fd=f)
     c.Start()
     # Timeout: Do we need this?  I think we should just use a thread.
     c.SendHelloAndWait(10.0)
@@ -185,7 +193,7 @@ def main(argv):
   if opts.test_mode:
     pool = child.ChildPool([])
     # Only want 1 process for test mode
-    InitPool(1, pool)
+    InitPool(1, pool, log_dir=opts.log_dir)
     app = CreateApp(opts, pool)
 
     url = argv[1]
@@ -209,7 +217,7 @@ def main(argv):
 
   else:
     pool = child.ChildPool([])
-    InitPool(opts.num_processes, pool)
+    InitPool(opts.num_processes, pool, log_dir=opts.log_dir)
     app = CreateApp(opts, pool)
 
     logging.info('Serving on port %d', opts.port)
