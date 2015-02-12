@@ -3,7 +3,10 @@
 rappor_api.py
 
 TODO:
-  - add CSV serialization
+  - add CSV serialization, JSON -> CSV
+  - add request ID
+    - does that go in the framework?
+    - request.counter?  Then R can log it
   - maybe test out plots
 """
 

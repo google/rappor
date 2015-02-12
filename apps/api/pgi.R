@@ -65,7 +65,8 @@ pgi.loop <- function(handlers) {
   resp.fifo <- fifo('response-fifo', open='w')
 
   while (1) {
-    log("Reading request line")
+    log('------------------------')
+    log('Waiting for request line')
 
     # TODO: How does it handle errors?
     req.line <- readLines(req.fifo, n = 1)  # read 1 line
@@ -125,8 +126,6 @@ pgi.loop <- function(handlers) {
 
     log("Writing JSON response")
     .write.response(pgi.response, resp.fifo)
-
-    log("Handled request")
 
     flush(stdout())
   }

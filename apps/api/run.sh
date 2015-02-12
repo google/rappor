@@ -51,9 +51,10 @@ bad-sleep() {
 }
 
 readonly HEALTH_URL=http://localhost:8500/_ah/health
+readonly SLEEP_URL=http://localhost:8500/sleep
 
 parallel-test() {
-  time seq 3 | xargs -P2 -n1 -I{} --verbose -- curl $HEALTH_URL?sleepSeconds={}
+  time seq 3 | xargs -P2 -n1 -I{} --verbose -- curl $SLEEP_URL?sleepSeconds={}
 }
 
 smoke-test() {
