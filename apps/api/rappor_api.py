@@ -15,7 +15,6 @@ TODO:
 """
 
 import cgi
-import errno
 import logging
 import json
 import optparse
@@ -62,6 +61,9 @@ class HomeHandler(object):
 
 
 def ProcessHelper(pool, route_name, request):
+  # Concurrency:
+  # This will get called concurrently by different request threads
+
   # TODO: Add request ID
   logging.info('Waiting for child')
   child = pool.Take()
@@ -100,8 +102,6 @@ class HealthHandler(object):
     self.pool = pool
 
   def __call__(self, request):
-    # Concurrency:
-    # Assume this gets called by different request threads
     resp = ProcessHelper(self.pool, 'health', request)
     return web.PlainTextResponse(json.dumps(resp, indent=2))
 
@@ -130,7 +130,21 @@ class DistHandler(object):
     self.pool = pool
 
   def __call__(self, request):
+    # TODO:
+    # - process request.json
+    # - write to CSV
+    # - put filenames in the request
+    # - maybe we should use @ as files?
+    # - @params, @counts, @candidates -> @dist
+
+    # or really, counts is just a matrix.  We can make it in memory
+    # no csv files needed really
+    # or maybe it's more debuggable
+
     resp = ProcessHelper(self.pool, 'dist', request)
+
+    # read CSV, convert to JSON
+
     return web.JsonResponse(resp)
 
 

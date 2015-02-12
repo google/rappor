@@ -50,6 +50,10 @@ class Params(object):
   def __repr__(self):
     return repr(self.__dict__)
 
+  # TODO:
+  # to_csv is in rappor_sim.print_params
+  # to_json - for API server test data.
+
   @staticmethod
   def from_csv(f):
     """Read the RAPPOR parameters from a CSV file.

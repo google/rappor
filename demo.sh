@@ -208,11 +208,18 @@ run-dist() {
 
   # TODO:
   # guess-candidates  # cheat and get them from the true input
-  # hash-candidates  # create map file
 
   banner "Analyzing RAPPOR output ($dist)"
   analyze $dist "Distribution Comparison ($dist)"
 }
+
+# TODO:
+# - hash-candidates could produce JSON (candidates.json)
+# - sum_bits could produce JSON (counts.json)
+# - write params as JSON
+# - then combine the 3
+# - or perhaps import them all as a module
+#   - import gen_sim_input, rappor_sim, hash_candidates, sum_bits, 
 
 expand-html() {
   local template=${1:-../tests/report.html}

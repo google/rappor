@@ -41,6 +41,9 @@ sleep.handler <- function(state, request) {
 
 dist.handler <- function(state, request) {
   log('DistHandler')
+
+  # TODO: Read request$csv
+
   body <- list(msg='dist', request=request, pid=pid)
   counts = ReadCountsFile('foo.csv')
   return(list(body_data=body, counts=counts))
