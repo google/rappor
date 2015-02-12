@@ -40,9 +40,11 @@ readonly RAPPOR_SRC=$(cd $PWD/../.. && pwd)
 
 # Run the server in batch mode
 get() {
-  export RAPPOR_SRC
-  rappor-api --test "$@"
-  #./rappor_api.py --test "$@"
+  rappor-api --test-get "$@"
+}
+
+post() {
+  rappor-api --test-post "$@"
 }
 
 health() {
@@ -58,7 +60,7 @@ bad-sleep() {
 }
 
 dist() {
-  get /dist
+  echo '{"foo": "bar"}' | post /dist
 }
 
 readonly HEALTH_URL=http://localhost:8500/_ah/health

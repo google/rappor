@@ -15,6 +15,7 @@ TODO:
 """
 
 import cgi
+import cStringIO
 import logging
 import json
 import optparse
@@ -169,8 +170,12 @@ def Options():
       default=2,
       help='Number of concurrent R processes to use (e.g. set to # of CPUs).')
   p.add_option(
-      '--test', action='store_true', dest='test_mode', default=False,
-      help='Batch test mode: serve one request and exit')
+      '--test-get', action='store_true', dest='test_get', default=False,
+      help="Serve GET request and exit.  e.g. 'rappor-api --test-get URL QUERY'")
+  p.add_option(
+      '--test-post', action='store_true', dest='test_post', default=False,
+      help="Serve POST request and exit.  e.g. 'rappor-api --test-post URL' "
+           'JSON body should be on stdin.')
   # Shared secret?
   return p
 
@@ -225,8 +230,7 @@ def CreateApp(opts, pool):
       ( web.ConstRoute('GET', '/'),           HomeHandler()),
       ( web.ConstRoute('GET', '/_ah/health'), HealthHandler(pool)),
       ( web.ConstRoute('GET', '/sleep'),      SleepHandler(pool)),
-      # TODO: Make it a POST
-      ( web.ConstRoute('GET', '/dist'),       DistHandler(pool)),
+      ( web.ConstRoute('POST', '/dist'),       DistHandler(pool)),
       # JSON stats?
       # Logs
       # Work dir?
@@ -242,7 +246,7 @@ def main(argv):
   logging.basicConfig(level=logging.INFO)
 
   # Construct a fake request, send it to the app, print response, and exit
-  if opts.test_mode:
+  if opts.test_get or opts.test_post:
     pool = child.ChildPool([])
     # Only want 1 process for test mode
     opts.num_processes = 1
@@ -255,8 +259,21 @@ def main(argv):
     else:
       query = ''
 
-    wsgi_environ = {
-        'REQUEST_METHOD': 'GET', 'PATH_INFO': url, 'QUERY_STRING': query}
+    if opts.test_get:
+      wsgi_environ = {
+          'REQUEST_METHOD': 'GET', 'PATH_INFO': url, 'QUERY_STRING': query
+          }
+    elif opts.test_post:
+      body = sys.stdin.read()
+      content_length = len(body)
+      wsgi_environ = {
+          'REQUEST_METHOD': 'POST', 'PATH_INFO': url,
+          'CONTENT_TYPE': 'application/json',
+          'CONTENT_LENGTH': content_length,
+          'wsgi.input': cStringIO.StringIO(body),
+          }
+    else:
+      raise AssertionError
 
     def start_response(status, headers):
       print 'STATUS', status
