@@ -196,9 +196,10 @@ def CreateApp(opts, pool):
 def main(argv):
   (opts, argv) = Options().parse_args(argv)
 
-  # Make this olok better?
+  # TODO: Make this look better?
   logging.basicConfig(level=logging.INFO)
 
+  # Construct a fake request, send it to the app, print response, and exit
   if opts.test_mode:
     pool = child.ChildPool([])
     # Only want 1 process for test mode
@@ -224,6 +225,7 @@ def main(argv):
     finally:
       pool.TakeAndKillAll()
 
+  # Start serving
   else:
     pool = child.ChildPool([])
     InitPool(opts.num_processes, pool, log_dir=opts.log_dir)
@@ -239,7 +241,7 @@ def main(argv):
 
 if __name__ == '__main__':
   try:
-    sys.exit(main(sys.argv))
+    main(sys.argv)
   except RuntimeError, e:
-    print >> sys.stderr, e.args[0]
+    print >>sys.stderr, e.args[0]
     sys.exit(1)
