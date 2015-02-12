@@ -3,7 +3,7 @@
 # Use Rscript in PATH so we can use a locally compiled R.
 
 src <- Sys.getenv('RAPPOR_SRC')  # required
-source(file.path(src, 'apps/api/pgi.R'))
+source(file.path(src, 'apps/api/protocol.R'))
 
 source(file.path(src, 'analysis/R/decode.R'))
 #source(file.path(src, 'analysis/R/encode.R'))
