@@ -5,6 +5,11 @@
 src <- Sys.getenv('RAPPOR_SRC')  # required
 source(file.path(src, 'apps/api/pgi.R'))
 
+source(file.path(src, 'analysis/R/decode.R'))
+#source(file.path(src, 'analysis/R/encode.R'))
+source(file.path(src, 'analysis/R/analysis_lib.R'))
+source(file.path(src, 'analysis/R/read_input.R'))
+
 pid <- Sys.getpid()
 
 health.handler <- function(state, request) {
@@ -34,9 +39,17 @@ sleep.handler <- function(state, request) {
   return(list(body_data=body))
 }
 
+dist.handler <- function(state, request) {
+  log('DistHandler')
+  body <- list(msg='dist', request=request, pid=pid)
+  ReadCountsFile('foo.csv')
+  return(list(body_data=body))
+}
+
 handlers <- list(
     health=health.handler,
-    sleep=sleep.handler
+    sleep=sleep.handler,
+    dist=dist.handler
     )
 
 pgi.loop(handlers)

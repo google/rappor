@@ -123,6 +123,17 @@ class SleepHandler(object):
     return web.JsonResponse(resp)
 
 
+class DistHandler(object):
+  """Distribution of single variable."""
+
+  def __init__(self, pool):
+    self.pool = pool
+
+  def __call__(self, request):
+    resp = ProcessHelper(self.pool, 'dist', request)
+    return web.JsonResponse(resp)
+
+
 def Options():
   """Returns an option parser instance."""
   # TODO: where to get version number from?  Hook up to autodeploy?
@@ -167,6 +178,7 @@ def InitPool(opts, pool):
       filename = os.path.join(log_subdir, '%d.log' % i)
       f = open(filename, 'w')
     else:
+      filename = None
       f = None
 
     rappor_src = os.environ['RAPPOR_SRC']  # required
@@ -175,12 +187,16 @@ def InitPool(opts, pool):
     c = child.Child([applet], cwd=tmp_dir, log_fd=f)
     c.Start()
 
-    logging.info('Child %s logging to %s', c, filename)
+    if filename:
+      logging.info('Child %s logging to %s', c, filename)
     logging.info('Child %s started in %s', c, tmp_dir)
 
     # Timeout: Do we need this?  I think we should just use a thread.
+    start_time = time.time()
     if not c.SendHelloAndWait(10.0):
       raise RuntimeError('Failed to initialize child %s' % c)
+    logging.info(
+        'Took %.3f seconds to initialize child', time.time() - start_time)
 
     pool.Return(c)
 
@@ -194,6 +210,8 @@ def CreateApp(opts, pool):
       ( web.ConstRoute('GET', '/'),           HomeHandler()),
       ( web.ConstRoute('GET', '/_ah/health'), HealthHandler(pool)),
       ( web.ConstRoute('GET', '/sleep'),      SleepHandler(pool)),
+      # TODO: Make it a POST
+      ( web.ConstRoute('GET', '/dist'),       DistHandler(pool)),
       # JSON stats?
       # Logs
       # Work dir?
