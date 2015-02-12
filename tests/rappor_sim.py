@@ -214,7 +214,7 @@ PARAMS_HTML = """
 """
 
 
-def print_params(params, csv_out, html_out):
+def print_params(params, csv_out, html_out, json_out):
   """Print Rappor parameters to a text file."""
   c = csv.writer(csv_out)
   c.writerow(('k', 'h', 'm', 'p', 'q', 'f'))  # header
@@ -230,6 +230,8 @@ def print_params(params, csv_out, html_out):
 
   # NOTE: No HTML escaping since we're writing numbers
   print >>html_out, PARAMS_HTML.format(*row)
+
+  print >>json_out, params.to_json()
 
 
 def make_histogram(csv_in):
@@ -277,11 +279,13 @@ def main(argv):
   params_csv = inst.paramsfile
   base, _ = os.path.splitext(params_csv)
   params_html = base + '.html'
+  params_json = base + '.json'
 
   # Print parameters to parameters file -- needed for the R analysis tool.
   with open(params_csv, 'w') as csv_out:
     with open(params_html, 'w') as html_out:
-      print_params(params, csv_out, html_out)
+      with open(params_json, 'w') as json_out:
+        print_params(params, csv_out, html_out, json_out)
 
   with open(inst.infile) as f:
     csv_in = csv.reader(f)

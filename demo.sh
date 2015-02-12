@@ -216,7 +216,7 @@ run-dist() {
 # TODO:
 # - hash-candidates could produce JSON (candidates.json)
 # - sum_bits could produce JSON (counts.json)
-# - write params as JSON
+# - rappor-sim should produce params.json
 # - then combine the 3
 # - or perhaps import them all as a module
 #   - import gen_sim_input, rappor_sim, hash_candidates, sum_bits, 
