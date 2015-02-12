@@ -159,7 +159,6 @@ def InitPool(num_processes, pool):
     # Timeout: Do we need this?  I think we should just use a thread.
     c.SendHelloAndWait(10.0)
 
-    print c
     pool.Return(c)
 
 
@@ -188,7 +187,7 @@ def main(argv):
     # Only want 1 process for test mode
     InitPool(1, pool)
     app = CreateApp(opts, pool)
-    print app
+
     url = argv[1]
     if len(argv) >= 3:
       query = argv[2]

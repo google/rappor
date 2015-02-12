@@ -77,9 +77,6 @@ pgi.loop <- function(handlers) {
     # Turn it into a list, so we can access fields with $
     pgi.request = as.list(req.vec)
 
-    cat(paste("pgi.REQUEST", pgi.request, "\n"))
-    log("Got request")
-
     # on startup
     command <- pgi.request$command
     if (!is.null(command) && command == 'init') {
@@ -88,8 +85,6 @@ pgi.loop <- function(handlers) {
       next()
     }
 
-    log('R1')
-
     route.name <- pgi.request$route
     if (is.null(route.name)) {
       # error
@@ -97,8 +92,6 @@ pgi.loop <- function(handlers) {
       .write.response(pgi.response, resp.fifo)
       next()
     }
-
-    log('R2')
 
     request.handler <- handlers[[route.name]]
     if (is.null(request.handler)) {
@@ -119,19 +112,14 @@ pgi.loop <- function(handlers) {
       next()
     }
 
-    log('app.request: ')
-    str(app.request)  # prints to stdout
-
     log("Invoking handler")
 
     result <- tryCatch(.invoke.handler(request.handler, app.request),
                        error = function(e) e)
     if (inherits(result, 'error')) {
-      log('IS ERROR')
       str(result)
       pgi.response = .make.dev.error('Error invoking handler', error = result)
     } else {
-      log('IS NOT ERROR')
       pgi.response = result
     }
 
