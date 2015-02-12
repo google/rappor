@@ -4,20 +4,17 @@
 #   echo '{"command": "init"}' > request-fifo
 #
 # To test in communication in Python, do:
-#   os.mkfifo('blah')
-#   f=os.open('blah', os.O_RDWR|os.O_NONBLOCK)
-#   os.write(f,'hello\n')
-#   os.write(f,'hello\n')
+#   os.mkfifo('request-fifo')
+#   f = os.open('request-fifo', os.O_RDWR|os.O_NONBLOCK)
+#   os.write(f, '{"command": "init"}\n')
+#   os.write(f, '{"command": "init"}\n')
 #
-# Input commands always come on the request fifo, using a single line per
-# request.
-#
-# TODO:
-# - error handling for bad commands
+# Input commands are read as a single JSON line on the request fifo.
+# Responses are written as single JSON line on the response fifo.
 
-# Request and response lines are JSON.
-# NOTE: rjson library has a very strict R 3.1 requirement, so I didn't try it.
-library(RJSONIO)  # fromJSON
+# The rjson library has a very strict R 3.1 requirement, so I didn't try it.
+
+library(RJSONIO)  # fromJSON, toJSON
 
 # For logging
 pid <- Sys.getpid()
@@ -37,10 +34,9 @@ log <- function(fmt, ...) {
   # We could also make it length-prefixed, but that introduces unicode issues.
   # This is safe because JSON should not contain actual newlines.  They should
   # all be \ escaped.
-
   clean = gsub('\n', '', j)
+
   writeLines(con = f, clean)
-  #cat(s, file=f)
 }
 
 # Invoke a request handler, catching exceptions.
