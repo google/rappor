@@ -3,15 +3,13 @@
 rappor_api.py
 
 TODO:
-  - do import
-    - ./rappor_api.py -e RAPPOR_SRC=SOME_DIR
-    - and then source() that
-    - analysis/R/analysis_lib, etc.
   - add CSV serialization, JSON -> CSV
   - add request ID
     - does that go in the framework?
     - request.counter?  Then R can log it
   - maybe test out plots
+  - maybe make this module into a library, and then App Engine has its own
+    module which just calls CreateApp()
 """
 
 import cgi
@@ -43,7 +41,7 @@ HOME = """
     <h1><a href="https://github.com/google/rappor">RAPPOR</a> API Server</h1>
 
     <h3>Handlers</h3>
-    POST /single-var <br/>
+    POST /dist - distribution of a single RAPPOR variable<br/>
 
     <h3>Debug</h3>
 
@@ -74,8 +72,8 @@ def ProcessHelper(pool, route_name, request):
     req = {
         'route': route_name,
         'request': {
-          'query': request.query
-          }
+            'query': request.query
+            }
         }
     logging.info('Sending %r', req)
     child.SendRequest(req)
@@ -230,8 +228,8 @@ def CreateApp(opts, pool):
       ( web.ConstRoute('GET', '/'),           HomeHandler()),
       ( web.ConstRoute('GET', '/_ah/health'), HealthHandler(pool)),
       ( web.ConstRoute('GET', '/sleep'),      SleepHandler(pool)),
-      ( web.ConstRoute('POST', '/dist'),       DistHandler(pool)),
-      # JSON stats?
+      ( web.ConstRoute('POST', '/dist'),      DistHandler(pool)),
+      # JSON stats/vars?
       # Logs
       # Work dir?
       ]
