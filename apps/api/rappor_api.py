@@ -56,6 +56,37 @@ class HomeHandler(object):
     return web.HtmlResponse(HOME)
 
 
+def ProcessHelper(pool, route_name, request):
+  # TODO: Add request ID
+  logging.info('Waiting for child')
+  child = pool.Take()
+  try:
+
+    # For testing concurrency
+    # TODO: Do in R?
+    seconds = request.query.get('sleepSeconds', '0')
+    seconds = int(seconds)
+    seconds = min(seconds, 10)
+    if seconds:
+      logging.info('Sleeping %d seconds', seconds)
+      time.sleep(seconds)
+
+    # TODO: How to dispatch on route?
+    req = {'route': route_name, 'request': {"a": 3}}
+    logging.info('Sending %r', req)
+    child.SendRequest(req)
+
+    resp = child.RecvResponse()
+    logging.info('RESP %r', resp)
+
+  finally:
+    logging.info('Returning child')
+    pool.Return(child)
+
+  return web.PlainTextResponse(
+      'RESPONSE: %r\n\n(sleep %d)' % (resp, seconds))
+
+
 class HealthHandler(object):
   """
   Tests if the R process is up by sending it a request and having it echo it
@@ -77,33 +108,7 @@ class HealthHandler(object):
     # Concurrency:
     # Assume this gets called by different request threads
 
-    # TODO: Add request ID
-    logging.info('Waiting for child')
-    child = self.pool.Take()
-    try:
-
-      # For testing concurrency
-      # TODO: Do in R?
-      seconds = request.query.get('sleepSeconds', '0')
-      seconds = int(seconds)
-      seconds = min(seconds, 10)
-      if seconds:
-        logging.info('Sleeping %d seconds', seconds)
-        time.sleep(seconds)
-
-      req = {'route': 'health', 'request': {"a": 3}}
-      logging.info('Sending %r', req)
-      child.SendRequest(req)
-
-      resp = child.RecvResponse()
-      logging.info('RESP %r', resp)
-
-    finally:
-      logging.info('Returning child')
-      self.pool.Return(child)
-
-    return web.PlainTextResponse(
-        'RESPONSE: %r\n\n(sleep %d)' % (resp, seconds))
+    return ProcessHelper(self.pool, 'health', request)
 
 
 class OopsHandler(object):
