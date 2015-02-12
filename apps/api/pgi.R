@@ -32,7 +32,6 @@ log <- function(fmt, ...) {
 }
 
 .write.response <- function(response, f) {
-  #s <- tnet.dump(response)
   j = toJSON(response)
   # Must be on a single line!
   # We could also make it length-prefixed, but that introduces unicode issues.
@@ -73,8 +72,6 @@ pgi.loop <- function(handlers) {
 
     log("Got request line")
 
-    #pgi.request <- tnet.loadf(req.fifo)
-
     # This gives a vector
     req.vec = fromJSON(req.line)
     # Turn it into a list, so we can access fields with $
@@ -105,7 +102,7 @@ pgi.loop <- function(handlers) {
 
     request.handler <- handlers[[route.name]]
     if (is.null(request.handler)) {
-      pgi.response <- .make.dev.error(
+      pgi.response <- .make.dev.errorBLAH
                           paste("No request handler for route", route.name))
       .write.response(pgi.response, resp.fifo)
       next()
@@ -125,6 +122,7 @@ pgi.loop <- function(handlers) {
     log('app.request: ')
     str(app.request)  # prints to stdout
 
+    # TODO: try() here, return dev error
     log("Invoking handler")
     pgi.response = .invoke.handler(request.handler, app.request) 
 
@@ -136,4 +134,3 @@ pgi.loop <- function(handlers) {
     flush(stdout())
   }
 }
-

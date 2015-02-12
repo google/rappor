@@ -45,6 +45,10 @@ sleep() {
   get /sleep sleepSeconds=1
 }
 
+bad-sleep() {
+  get /sleep sleepSeconds=BLAH
+}
+
 readonly HEALTH_URL=http://localhost:8500/_ah/health
 
 parallel-test() {

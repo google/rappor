@@ -140,8 +140,12 @@ def Options():
   return p
 
 
+# TODO:
+# - Write logs to PID-numbered files, in --log-dir
+# - And then SERVE that dir with webutil (or App Engine)
+
 def InitPool(num_processes, pool):
-  # TODO: Keep track of PIDs?
+
   for i in xrange(num_processes):
     logging.info('Starting child %d', i)
 
