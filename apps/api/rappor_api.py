@@ -1,13 +1,10 @@
 #!/usr/bin/python
 """
-hello_web.py - A demo app exercising all the features of web.py.
-
-Its tests implicitly tests the web framework.  This is more straightforward
-than directly testing the framework.
+rappor_api.py
 
 TODO:
-  - Fuzz this app
-  - file parameters, etc.
+  - add CSV serialization
+  - maybe test out plots
 """
 
 import cgi
@@ -42,10 +39,14 @@ HOME = """
     <h1><a href="https://github.com/google/rappor">RAPPOR</a> API Server</h1>
 
     <h3>Handlers</h3>
+    POST /single-var <br/>
+
+    <h3>Debug</h3>
 
     <a href="/_ah/health">/_ah/health</a> <br/>
     <a href="/sleep">/sleep</a> <br/>
-    POST /single-var <br/>
+    <a href="/vars">/vars</a> <br/>
+    <a href="/logs">/logs</a> <br/>
   </body>
 </html>
 """
@@ -179,6 +180,9 @@ def CreateApp(opts, pool):
       ( web.ConstRoute('GET', '/'),           HomeHandler()),
       ( web.ConstRoute('GET', '/_ah/health'), HealthHandler(pool)),
       ( web.ConstRoute('GET', '/sleep'),      SleepHandler(pool)),
+      # JSON stats?
+      # Logs
+      # Work dir?
       ]
 
   return web.App(handlers)
