@@ -27,8 +27,8 @@ log <- function(fmt, ...) {
   cat(paste('PID ', pid, ': ', msg, '\n', sep = ''), file=stderr())
 }
 
-.make.dev.error <- function(message) {
-  list(dev_error=list(message=message))
+.make.dev.error <- function(message, error = NULL) {
+  list(dev_error=list(message=message, error = error))
 }
 
 .write.response <- function(response, f) {
@@ -102,7 +102,7 @@ pgi.loop <- function(handlers) {
 
     request.handler <- handlers[[route.name]]
     if (is.null(request.handler)) {
-      pgi.response <- .make.dev.errorBLAH
+      pgi.response <- .make.dev.error(
                           paste("No request handler for route", route.name))
       .write.response(pgi.response, resp.fifo)
       next()
@@ -122,9 +122,18 @@ pgi.loop <- function(handlers) {
     log('app.request: ')
     str(app.request)  # prints to stdout
 
-    # TODO: try() here, return dev error
     log("Invoking handler")
-    pgi.response = .invoke.handler(request.handler, app.request) 
+
+    result <- tryCatch(.invoke.handler(request.handler, app.request),
+                       error = function(e) e)
+    if (inherits(result, 'error')) {
+      log('IS ERROR')
+      str(result)
+      pgi.response = .make.dev.error('Error invoking handler', error = result)
+    } else {
+      log('IS NOT ERROR')
+      pgi.response = result
+    }
 
     log("Writing JSON response")
     .write.response(pgi.response, resp.fifo)
