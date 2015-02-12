@@ -22,7 +22,7 @@ sleep.handler <- function(state, request) {
   log('SleepHandler')
 
   query <- as.list(request$query)
-  n <- query$sleepSeconds
+  n <- query$seconds
   log('n: %s', n)
 
   if (!is.null(n)) {
