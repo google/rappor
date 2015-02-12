@@ -1,9 +1,9 @@
 #!/usr/bin/env Rscript
 #
-# Use whatever Rscript is in the path.
+# Use Rscript in PATH so we can use a locally compiled R.
 
-# TODO: Use realpath
-source('../pgi.R')
+src <- Sys.getenv('RAPPOR_SRC')  # required
+source(file.path(src, 'apps/api/pgi.R'))
 
 pid <- Sys.getpid()
 

@@ -129,7 +129,7 @@ def Options():
   p = optparse.OptionParser('mayord.py [options]') #, version='0.1')
 
   p.add_option(
-      '--tmp-dir', metavar='PATH', dest='tmp_dir', default='',
+      '--tmp-dir', metavar='PATH', dest='tmp_dir', default='/tmp',
       help='Store temporary request/response data in this directory.')
   p.add_option(
       '--log-dir', metavar='PATH', dest='log_dir', default='',
@@ -152,17 +152,19 @@ def Options():
 # TODO:
 # - And then SERVE log dir with webutil (or App Engine)
 
-def InitPool(num_processes, pool, log_dir=None):
+def InitPool(opts, pool):
 
-  for i in xrange(num_processes):
+  for i in xrange(opts.num_processes):
     logging.info('Starting child %d', i)
 
-    work_dir = 'w%d' % i
-    child.MakeDir(work_dir)
+    tmp_dir = os.path.join(opts.tmp_dir, 'w%d' % i)
+    child.MakeDirs(tmp_dir)
 
-    if log_dir:
-      # TODO: Make a directory per server invocation?
-      filename = os.path.join(log_dir, '%d.log' % i)
+    if opts.log_dir:
+      # Make a directory per server invocation.
+      log_subdir = os.path.join(opts.log_dir, 'rappor-api-%d' % os.getpid())
+      child.MakeDirs(log_subdir)
+      filename = os.path.join(log_subdir, '%d.log' % i)
       f = open(filename, 'w')
     else:
       f = None
@@ -170,8 +172,12 @@ def InitPool(num_processes, pool, log_dir=None):
     rappor_src = os.environ['RAPPOR_SRC']  # required
     applet = os.path.join(rappor_src, 'apps/api/pages.R')
 
-    c = child.Child([applet], cwd=work_dir, log_fd=f)
+    c = child.Child([applet], cwd=tmp_dir, log_fd=f)
     c.Start()
+
+    logging.info('Child %s logging to %s', c, filename)
+    logging.info('Child %s started in %s', c, tmp_dir)
+
     # Timeout: Do we need this?  I think we should just use a thread.
     if not c.SendHelloAndWait(10.0):
       raise RuntimeError('Failed to initialize child %s' % c)
@@ -206,7 +212,8 @@ def main(argv):
   if opts.test_mode:
     pool = child.ChildPool([])
     # Only want 1 process for test mode
-    InitPool(1, pool, log_dir=opts.log_dir)
+    opts.num_processes = 1
+    InitPool(opts, pool)
     app = CreateApp(opts, pool)
 
     url = argv[1]
@@ -231,7 +238,7 @@ def main(argv):
   # Start serving
   else:
     pool = child.ChildPool([])
-    InitPool(opts.num_processes, pool, log_dir=opts.log_dir)
+    InitPool(opts, pool)
     app = CreateApp(opts, pool)
 
     logging.info('Serving on port %d', opts.port)

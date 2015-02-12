@@ -20,10 +20,10 @@ class ReplicaTimeoutError(Exception):
   pass
 
 
-def MakeDir(d):
+def MakeDirs(d):
   """Make a directory, doing nothing if it already exists."""
   try:
-    os.mkdir(d)
+    os.makedirs(d)
   except OSError, e:
     # OK if it exists
     if e.errno != errno.EEXIST:
