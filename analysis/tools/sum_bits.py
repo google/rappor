@@ -20,14 +20,15 @@ filter by cohort.  This can then be analyzed by R.
 """
 
 import csv
+import json
 import sys
 
 import rappor
 
 
-def SumBits(params, stdin, stdout):
+def SumBits(params, stdin, csv_out_file, json_out_file):
   csv_in = csv.reader(stdin)
-  csv_out = csv.writer(stdout)
+  csv_out = csv.writer(csv_out_file)
 
   num_cohorts = params.num_cohorts
   num_bloombits = params.num_bloombits
@@ -63,6 +64,13 @@ def SumBits(params, stdin, stdout):
     row = [num_reports[cohort]] + sums[cohort]
     csv_out.writerow(row)
 
+  if json_out_file:
+    # TODO:
+    # - Fix key names
+    # - sums should be one dimensional, with row / col
+    obj = {'num_reports': num_reports, 'sums': sums}
+    json.dump(obj, json_out_file, indent=2)
+
 
 def main(argv):
   try:
@@ -75,7 +83,19 @@ def main(argv):
     except rappor.Error as e:
       raise RuntimeError(e)
 
-  SumBits(params, sys.stdin, sys.stdout)
+  try:
+    json_out_filename = argv[2]
+    json_out = open(json_out_filename, 'w')
+  except IndexError:
+    json_out_filename = None
+    json_out = None
+
+  # CSV to stdout.
+  SumBits(params, sys.stdin, sys.stdout, json_out)
+
+  if json_out:
+    json_out.close()
+    print >>sys.stderr, 'Wrote %s' % json_out_filename
 
 
 if __name__ == '__main__':

@@ -155,7 +155,7 @@ sum-bits() {
   shift
   local out=_tmp/${dist}_counts.csv
   PYTHONPATH=$CLIENT_DIR analysis/tools/sum_bits.py \
-    _tmp/${dist}_params.csv \
+    _tmp/${dist}_params.csv _tmp/${dist}_counts.json \
     < _tmp/${dist}_out.csv \
     > $out
   log "Wrote $out"
@@ -215,8 +215,6 @@ run-dist() {
 
 # TODO:
 # - hash-candidates could produce JSON (candidates.json)
-# - sum_bits could produce JSON (counts.json)
-# - rappor-sim should produce params.json
 # - then combine the 3
 # - or perhaps import them all as a module
 #   - import gen_sim_input, rappor_sim, hash_candidates, sum_bits, 
