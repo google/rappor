@@ -22,8 +22,9 @@ library(RJSONIO)  # fromJSON
 # For logging
 pid <- Sys.getpid()
 
-log <- function(msg) {
-  cat(paste(pid, ': ', msg, '\n', sep = ''), file=stderr())
+log <- function(fmt, ...) {
+  msg <- sprintf(fmt, ...)
+  cat(paste('PID ', pid, ': ', msg, '\n', sep = ''), file=stderr())
 }
 
 .make.dev.error <- function(message) {
@@ -121,10 +122,13 @@ pgi.loop <- function(handlers) {
       next()
     }
 
+    log('app.request: ')
+    str(app.request)  # prints to stdout
+
     log("Invoking handler")
     pgi.response = .invoke.handler(request.handler, app.request) 
 
-    log("Writing TNET response")
+    log("Writing JSON response")
     .write.response(pgi.response, resp.fifo)
 
     log("Handled request")

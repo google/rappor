@@ -14,7 +14,12 @@ health.handler <- function(state, request) {
 
 # For testing concurrency
 sleep.handler <- function(state, request) {
-  n <- request$sleepSeconds
+  log('SleepHandler')
+
+  query <- as.list(request$query)
+  n <- query$sleepSeconds
+  log('n: %s', n)
+
   if (!is.null(n)) {
     n = as.numeric(n)
     n = min(n, 5)  # don't let someone tie up this process for too long
@@ -24,6 +29,7 @@ sleep.handler <- function(state, request) {
   } else {
     msg <- "Didn't sleep"
   }
+
   body <- list(msg=msg, request=request, pid=pid)
   return(list(body_data=body))
 }
