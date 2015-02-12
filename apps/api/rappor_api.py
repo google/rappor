@@ -13,16 +13,15 @@ TODO:
 import cgi
 import errno
 import logging
-import re
+import json
 import optparse
 import os
 import sys
 import time
 
+import child
 import web
 import wsgiref_server
-
-import child
 
 
 # TODO:
@@ -62,7 +61,6 @@ def ProcessHelper(pool, route_name, request):
   logging.info('Waiting for child')
   child = pool.Take()
   try:
-
     # For testing concurrency
     # TODO: Do in R?
     seconds = request.query.get('sleepSeconds', '0')
@@ -84,8 +82,8 @@ def ProcessHelper(pool, route_name, request):
     logging.info('Returning child')
     pool.Return(child)
 
-  return web.PlainTextResponse(
-      'RESPONSE: %r\n\n(sleep %d)' % (resp, seconds))
+  # Caller may process JSON however they want
+  return resp
 
 
 class HealthHandler(object):
@@ -103,7 +101,8 @@ class HealthHandler(object):
   def __call__(self, request):
     # Concurrency:
     # Assume this gets called by different request threads
-    return ProcessHelper(self.pool, 'health', request)
+    resp = ProcessHelper(self.pool, 'health', request)
+    return web.PlainTextResponse(json.dumps(resp, indent=2))
 
 
 class SleepHandler(object):
@@ -119,7 +118,8 @@ class SleepHandler(object):
     self.pool = pool
 
   def __call__(self, request):
-    return ProcessHelper(self.pool, 'sleep', request)
+    resp = ProcessHelper(self.pool, 'sleep', request)
+    return web.JsonResponse(resp)
 
 
 def Options():
@@ -169,11 +169,9 @@ def CreateApp(opts, pool):
   static_dir = d(d(os.path.abspath(sys.argv[0])))
 
   handlers = [
-      ( web.ConstRoute('GET', '/_ah/health'), HealthHandler(pool)),
-
       ( web.ConstRoute('GET', '/'),           HomeHandler()),
-
-      ( web.ConstRoute('GET', '/sleep'), SleepHandler(pool)),
+      ( web.ConstRoute('GET', '/_ah/health'), HealthHandler(pool)),
+      ( web.ConstRoute('GET', '/sleep'),      SleepHandler(pool)),
       ]
 
   return web.App(handlers)
@@ -185,14 +183,30 @@ def main(argv):
   # Make this olok better?
   logging.basicConfig(level=logging.INFO)
 
-  pool = child.ChildPool([])
-  InitPool(opts.num_processes, pool)
-
-  app = CreateApp(opts, pool)
-
   if opts.test_mode:
+    pool = child.ChildPool([])
+    # Only want 1 process for test mode
+    InitPool(1, pool)
+    app = CreateApp(opts, pool)
     print app
+    url = argv[1]
+
+    wsgi_environ = {'REQUEST_METHOD': 'GET', 'PATH_INFO': url}
+    def start_response(status, headers):
+      print 'STATUS', status
+      print 'HEADERS', headers
+
+    try:
+      for chunk in app(wsgi_environ, start_response):
+        print chunk
+    finally:
+      pool.TakeAndKillAll()
+
   else:
+    pool = child.ChildPool([])
+    InitPool(opts.num_processes, pool)
+    app = CreateApp(opts, pool)
+
     logging.info('Serving on port %d', opts.port)
     # Returns after Ctrl-C
     wsgiref_server.ServeForever(app, port=opts.port)

@@ -174,7 +174,9 @@ class Child(object):
         raise errors.AppletError('%s: %s' % (self, e))
 
   def RecvResponse(self):
-    return self.response_f.readline()
+    s = self.response_f.readline()
+    # TODO: Parse error becomes dev error
+    return json.loads(s)
 
   def SendHelloAndWait(self, timeout):
     """

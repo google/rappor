@@ -13,7 +13,10 @@ health.handler <- function(state, request) {
 }
 
 sleep.handler <- function(state, request) {
-  body <- list(name='sleep', state=state, request=request, pid=pid)
+  n <- request$sleepSeconds
+  Sys.sleep(n)
+  msg <- sprintf('Slept %d seconds', n)
+  body <- list(msg=msg, request=request, pid=pid)
   return(list(body_data=body))
 }
 

@@ -110,7 +110,8 @@ pgi.loop <- function(handlers) {
       next()
     }
 
-    log('R3')
+    log('pgi.request: ')
+    str(pgi.request)  # prints to stdout
 
     app.request <- pgi.request$request
     if (is.null(app.request)) {
