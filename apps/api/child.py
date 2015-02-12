@@ -15,10 +15,8 @@ import signal
 import subprocess
 import time
 
-import errors
 
-
-class Error(Exception):
+class ReplicaTimeoutError(Exception):
   pass
 
 
@@ -159,19 +157,9 @@ class Child(object):
 
   def SendRequest(self, req):
     """Send a request to the child process via its input stream."""
-    try:
-      assert self.req_fifo_fd != -1
-      # NOTE: need a newline here
-      s = json.dumps(req) + '\n'
-      os.write(self.req_fifo_fd, s)
-    except IOError, e:
-      # TODO: If we get this broken pipe error, we should retry it instead of
-      # raising an error.  We can keep this replica out of the queue, try
-      # another one, and queue a work item to start a new replica to take its
-      # place.  We will assume the process has died and we don't need to kill
-      # it.
-      if e.errno == errno.EPIPE:
-        raise errors.AppletError('%s: %s' % (self, e))
+    # Request must be a single line.
+    s = json.dumps(req) + '\n'
+    os.write(self.req_fifo_fd, s)
 
   def RecvResponse(self):
     s = self.response_f.readline()
@@ -200,15 +188,6 @@ class Child(object):
       elapsed = time.time() - start_time
       logging.error(
           'BROKEN: Received EOF instead of init response (%.2fs)', elapsed)
-      return False
-    except errors.TimeoutError, e:
-      logging.error('TimeoutError: %s', e)
-
-      elapsed = time.time() - start_time
-      logging.error('Timed out after %.2fs', elapsed)
-
-      # BUG: Need to kill the process here; otherwise we can end up with 2
-      # copies of it
       return False
 
     response = json.loads(response_str)
@@ -264,7 +243,7 @@ class ChildPool(object):
       return self.children.get(block=True, timeout=self.timeout)
     except Queue.Empty, e:
       print e
-      raise errors.ReplicaTimeoutError(
+      raise ReplicaTimeoutError(
           'Waited %.2f seconds for an applet replica' % self.timeout)
 
   def Return(self, process):

@@ -3,6 +3,10 @@
 rappor_api.py
 
 TODO:
+  - do import
+    - ./rappor_api.py -e RAPPOR_SRC=SOME_DIR
+    - and then source() that
+    - analysis/R/analysis_lib, etc.
   - add CSV serialization, JSON -> CSV
   - add request ID
     - does that go in the framework?
@@ -25,12 +29,9 @@ import wsgiref_server
 
 
 # TODO:
-# - regular form (add unicode by default, make sure you can round trip it)
-# - AJAX JSON form
-#   - does webpipe have the JS to copy?  or vanillajs
-# - Go through all the input types, make sure you are using them and parsing
-# them 
-# http://www.w3schools.com/tags/tag_input.asp
+# - Add flags
+#   - not applicable in App Engine mode
+# - Add process IDs
 
 HOME = """
 <!DOCTYPE html>
@@ -169,7 +170,8 @@ def InitPool(num_processes, pool, log_dir=None):
     c = child.Child(['../pages.R'], cwd=work_dir, log_fd=f)
     c.Start()
     # Timeout: Do we need this?  I think we should just use a thread.
-    c.SendHelloAndWait(10.0)
+    if not c.SendHelloAndWait(10.0):
+      raise RuntimeError('Failed to initialize child %s' % c)
 
     pool.Return(c)
 
