@@ -167,7 +167,10 @@ def InitPool(num_processes, pool, log_dir=None):
     else:
       f = None
 
-    c = child.Child(['../pages.R'], cwd=work_dir, log_fd=f)
+    rappor_src = os.environ['RAPPOR_SRC']  # required
+    applet = os.path.join(rappor_src, 'apps/api/pages.R')
+
+    c = child.Child([applet], cwd=work_dir, log_fd=f)
     c.Start()
     # Timeout: Do we need this?  I think we should just use a thread.
     if not c.SendHelloAndWait(10.0):

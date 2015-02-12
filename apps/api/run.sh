@@ -32,9 +32,16 @@ install-r-packages() {
   R -e 'install.packages(c("RJSONIO", "glmnet", "optparse"), repos="http://cran.rstudio.com/")'
 }
 
+#
+# Tests
+#
+
+readonly RAPPOR_SRC=$(cd $PWD/../.. && pwd)
+
 # Run the server in batch mode
 get() {
-  ./rappor_api.py --log-dir _tmp/log --test "$@"
+  export RAPPOR_SRC
+  rappor-api --log-dir _tmp/log --test "$@"
   #./rappor_api.py --test "$@"
 }
 
@@ -61,8 +68,26 @@ smoke-test() {
   time seq 3 | xargs -P2 -n1 -I{} --verbose -- curl $HEALTH_URL
 }
 
+#
+# Misc
+#
+
 count() {
   wc -l *.py *.R
+}
+
+#
+# Serve
+#
+
+rappor-api() {
+  # R code needs to be able to find other modules
+  export RAPPOR_SRC
+  ./rappor_api.py "$@"
+}
+
+serve() {
+  rappor-api --log-dir _tmp/log
 }
 
 "$@"
