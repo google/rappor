@@ -45,6 +45,7 @@ HOME = """
     <h3>Handlers</h3>
 
     <a href="/_ah/health">/_ah/health</a> <br/>
+    <a href="/sleep">/sleep</a> <br/>
     POST /single-var <br/>
   </body>
 </html>
@@ -99,23 +100,26 @@ class HealthHandler(object):
   def __init__(self, pool):
     self.pool = pool
 
-    # TODO:
-    # - Block until all processes have been initialized
-    # - Why does the R process not die when you hit Ctrl-C?  Should be in the
-    # same process group?
-
   def __call__(self, request):
     # Concurrency:
     # Assume this gets called by different request threads
-
     return ProcessHelper(self.pool, 'health', request)
 
 
-class OopsHandler(object):
+class SleepHandler(object):
+  """
+  Tests if the R process is up by sending it a request and having it echo it
+  back.
+
+  TODO: Add startup, we should send a request to all threads?  Block until they
+  wake up.
+  """
+
+  def __init__(self, pool):
+    self.pool = pool
 
   def __call__(self, request):
-    # NameError
-    foo
+    return ProcessHelper(self.pool, 'sleep', request)
 
 
 def Options():
@@ -169,7 +173,7 @@ def CreateApp(opts, pool):
 
       ( web.ConstRoute('GET', '/'),           HomeHandler()),
 
-      ( web.ConstRoute('GET', '/oops'), OopsHandler()),
+      ( web.ConstRoute('GET', '/sleep'), SleepHandler(pool)),
       ]
 
   return web.App(handlers)

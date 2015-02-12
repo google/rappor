@@ -13,7 +13,7 @@ health.handler <- function(state, request) {
 }
 
 sleep.handler <- function(state, request) {
-  body <- list(state=state, request=request, pid=pid)
+  body <- list(name='sleep', state=state, request=request, pid=pid)
   return(list(body_data=body))
 }
 
