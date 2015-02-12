@@ -182,7 +182,7 @@ def InitPool(opts, pool):
       f = None
 
     rappor_src = os.environ['RAPPOR_SRC']  # required
-    applet = os.path.join(rappor_src, 'apps/api/pages.R')
+    applet = os.path.join(rappor_src, 'apps/api/handlers.R')
 
     c = child.Child([applet], cwd=tmp_dir, log_fd=f)
     c.Start()
