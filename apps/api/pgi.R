@@ -114,6 +114,7 @@ pgi.loop <- function(handlers) {
     str(pgi.request)  # prints to stdout
 
     app.request <- pgi.request$request
+
     if (is.null(app.request)) {
       pgi.response <- .make.dev.error("Expected 'request' field in PGI request")
       .write.response(pgi.response, resp.fifo)

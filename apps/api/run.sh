@@ -33,8 +33,16 @@ install-r-packages() {
 }
 
 # Run the server in batch mode
-r-smoke-test() {
-  ./rappor_api.py --test /_ah/health
+get() {
+  ./rappor_api.py --test "$@"
+}
+
+health() {
+  get /_ah/health
+}
+
+sleep() {
+  get /sleep sleepSeconds=1
 }
 
 readonly HEALTH_URL=http://localhost:8500/_ah/health

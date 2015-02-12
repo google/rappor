@@ -61,17 +61,13 @@ def ProcessHelper(pool, route_name, request):
   logging.info('Waiting for child')
   child = pool.Take()
   try:
-    # For testing concurrency
-    # TODO: Do in R?
-    seconds = request.query.get('sleepSeconds', '0')
-    seconds = int(seconds)
-    seconds = min(seconds, 10)
-    if seconds:
-      logging.info('Sleeping %d seconds', seconds)
-      time.sleep(seconds)
-
-    # TODO: How to dispatch on route?
-    req = {'route': route_name, 'request': {"a": 3}}
+    # Construct JSON request from web.Request.
+    req = {
+        'route': route_name,
+        'request': {
+          'query': request.query
+          }
+        }
     logging.info('Sending %r', req)
     child.SendRequest(req)
 
@@ -190,8 +186,14 @@ def main(argv):
     app = CreateApp(opts, pool)
     print app
     url = argv[1]
+    if len(argv) >= 3:
+      query = argv[2]
+    else:
+      query = ''
 
-    wsgi_environ = {'REQUEST_METHOD': 'GET', 'PATH_INFO': url}
+    wsgi_environ = {
+        'REQUEST_METHOD': 'GET', 'PATH_INFO': url, 'QUERY_STRING': query}
+
     def start_response(status, headers):
       print 'STATUS', status
       print 'HEADERS', headers
