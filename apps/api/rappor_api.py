@@ -61,47 +61,8 @@ class HomeHandler(object):
     return web.HtmlResponse(HOME)
 
 
-class ChildHandler(object):
-  """Abstract base class which lets you communicate with a child process.
-
-  Handlers which need a child process will generally hold one of these.  Then
-  they can do custom serialization.
-  """
-  def __init__(self, pool, route_name, wrapper):
-    self.pool = pool
-    self.route_name = route_name
-    self.wrapper = wrapper  # handler that takes a child
-
-  def __call__(self, request):
-    logging.info('Waiting for child')
-
-    # NOTE: another way to express this would be with context manager
-    #
-    # with GetChild(self.pool) as child:
-    #
-    child = self.pool.Take()
-    try:
-      app_req = self.wrapper.MakeRequest(child, request)
-      req_line = {
-          'route': self.route_name,  # protocol.R dispatch
-          'request': app_req,
-          }
-
-      logging.info('Sending %r', req_line)
-      child.SendRequest(req_line)
-
-      # TODO: Handle dev error properly.  That shouldn't go to the sub handler.
-      resp_line = child.RecvResponse()
-      logging.info('Received %r', resp_line)
-
-      response = self.wrapper.MakeResponse(child, resp_line)
-    finally:
-      logging.info('Returning child')
-      self.pool.Return(child)
-    return response
-
-
-class ProcWrap(object):
+class ChildWrapper(object):
+  """Wraps a process pool.  Ensures the right route name is passed."""
 
   def __init__(self, pool, route_name):
     self.pool = pool
@@ -155,44 +116,24 @@ class ProcWrap(object):
     return app_resp
 
 
-# TODO: Delete
-def ProcessHelper(pool, route_name, request):
-  # Concurrency:
-  # This will get called concurrently by different request threads
+class SleepHandler(object):
+  """
+  Tests if the R process is up by sending it a request and having it echo it
+  back.
 
-  # TODO: Add request ID
-  logging.info('Waiting for child')
-  child = pool.Take()
+  TODO: Add startup, we should send a request to all threads?  Block until they
+  wake up.
+  """
 
-  # Write files into the working path / tmp dir
-  tmp_dir = child.WorkingDirPath('params.csv')
-  logging.info('PARAMS %s', tmp_dir)
+  def __init__(self, wrapper):
+    self.wrapper = wrapper
 
-  try:
-    # Construct single-line JSON request from web.Request.
-    # The protocol.R loop sees the top level data.  Handler sees 'request'
-    # level stuff.  TODO: rename to 'handler'?
-    req_line = {
-        'route': route_name,
-        'request': {
-            'query': request.query
-            }
-        }
-    logging.info('Sending %r', req_line)
-    child.SendRequest(req_line)
-
-    resp = child.RecvResponse()
-    logging.info('RESP %r', resp)
-
-  finally:
-    logging.info('Returning child')
-    pool.Return(child)
-
-  # Caller may process JSON however they want
-  return resp
+  def __call__(self, request):
+    app_req = {'query': request.query}
+    resp = self.wrapper(app_req)
+    return web.JsonResponse(resp)
 
 
-# TODO: Delete
 class HealthHandler(object):
   """
   Tests if the R process is up by sending it a request and having it echo it
@@ -207,90 +148,6 @@ class HealthHandler(object):
   def __call__(self, request):
     app_req = {'query': request.query}
     resp = self.wrapper(app_req)
-    return web.JsonResponse(resp)
-
-
-class HealthWrapper(object):
-  """Wrapper for health request that passes through to R.
-
-  NOTE: We're only checking one R process!  Could check more than one.
-  """
-  def MakeRequest(self, child, request):
-    """Given a web.Request, make a R JSON line."""
-    # Need query params
-    return {'query': request.query}
-
-  def MakeResponse(self, child, response):
-    """Given an R JSON line, make a web.Response."""
-    return web.JsonResponse(response)
-
-
-class DistWrapper(object):
-  """Wrapper for health request that passes through to R.
-
-  NOTE: We're only checking one R process!  Could check more than one.
-  """
-  def MakeRequest(self, child, request):
-    """Given a web.Request, make a R JSON line."""
-
-    print '!!', request.json
-
-    p = child.WorkingDirPath('params.csv')
-    c = child.WorkingDirPath('counts.csv')
-    m = child.WorkingDirPath('map.csv')
-
-    with open(p, 'w') as f:
-      f.write('a,b\n')
-      f.write('1,2\n')
-
-    # TODO:
-    # - request.json.params -> CSV
-    # - request.json.counts -> CSV
-    # - request.json.candidates -> CSV
-    #
-    # Put pointers to them
-
-    # Need query params
-    return {'query': request.query}
-
-  def MakeResponse(self, child, response):
-    """Given an R JSON line, make a web.Response."""
-
-    # Read dist.csv -> put in response JSON
-    #
-    # Delete it
-
-    # Also delete params, counts, candidates
-    # Where to save it?  Maybe you should also get the request?
-    # or state
-
-    d = child.WorkingDirPath('dist.csv')
-    with open(d) as f:
-      dist = f.read()
-
-    response['dist'] = dist
-
-    p = child.WorkingDirPath('params.csv')
-    c = child.WorkingDirPath('counts.csv')
-    m = child.WorkingDirPath('map.csv')
-
-    return web.JsonResponse(response)
-
-
-class SleepHandler(object):
-  """
-  Tests if the R process is up by sending it a request and having it echo it
-  back.
-
-  TODO: Add startup, we should send a request to all threads?  Block until they
-  wake up.
-  """
-
-  def __init__(self, pool):
-    self.pool = pool
-
-  def __call__(self, request):
-    resp = ProcessHelper(self.pool, 'sleep', request)
     return web.JsonResponse(resp)
 
 
@@ -407,20 +264,18 @@ def CreateApp(opts, pool):
   static_dir = d(d(os.path.abspath(sys.argv[0])))
 
   handlers = [
-      ( web.ConstRoute('GET', '/'),           HomeHandler()),
-      ( web.ConstRoute('GET', '/sleep'),      SleepHandler(pool)),
+      ( web.ConstRoute('GET', '/'),
+        HomeHandler() ),
+
+      ( web.ConstRoute('GET', '/sleep'),
+        SleepHandler(ChildWrapper(pool, 'sleep')) ),
 
       ( web.ConstRoute('GET', '/_ah/health'),
-        HealthHandler(ProcWrap(pool, 'health')) ),
+        HealthHandler(ChildWrapper(pool, 'health')) ),
 
       ( web.ConstRoute('POST', '/dist'),
-        DistHandler(ProcWrap(pool, 'dist')) ),
+        DistHandler(ChildWrapper(pool, 'dist')) ),
 
-      ( web.ConstRoute('GET', '/_ah/health2'),
-        ChildHandler(pool, 'health', HealthWrapper()) ),
-
-      ( web.ConstRoute('POST', '/dist-new'),
-        ChildHandler(pool, 'dist', DistWrapper()) ),
       # JSON stats/vars?
       # Logs
       # Work dir?

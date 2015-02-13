@@ -52,7 +52,7 @@ health() {
 }
 
 sleep() {
-  get /sleep sleepSeconds=1
+  get /sleep seconds=1
 }
 
 bad-sleep() {
