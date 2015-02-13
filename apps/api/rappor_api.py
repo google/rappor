@@ -246,8 +246,7 @@ def main(argv):
   # Construct a fake request, send it to the app, print response, and exit
   if opts.test_get or opts.test_post:
     pool = child.ChildPool([])
-    # Only want 1 process for test mode
-    opts.num_processes = 1
+    opts.num_processes = 1  # Only 1 process for test mode
     InitPool(opts, pool)
     app = CreateApp(opts, pool)
 
@@ -262,10 +261,11 @@ def main(argv):
           'REQUEST_METHOD': 'GET', 'PATH_INFO': url, 'QUERY_STRING': query
           }
     elif opts.test_post:
-      body = sys.stdin.read()
+      body = sys.stdin.read()  # request body on stdin
       content_length = len(body)
       wsgi_environ = {
-          'REQUEST_METHOD': 'POST', 'PATH_INFO': url,
+          'REQUEST_METHOD': 'POST',
+          'PATH_INFO': url,
           'CONTENT_TYPE': 'application/json',
           'CONTENT_LENGTH': content_length,
           'wsgi.input': cStringIO.StringIO(body),
