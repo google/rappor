@@ -46,6 +46,7 @@ HOME = """
     <h3>Debug</h3>
 
     <a href="/_ah/health">/_ah/health</a> <br/>
+    <a href="/_ah/health2">/_ah/health2</a> <br/>
     <a href="/sleep">/sleep</a> <br/>
     <a href="/sleep?seconds=1">/sleep?seconds=1</a> <br/>
     <a href="/vars">/vars</a> <br/>
@@ -58,6 +59,41 @@ class HomeHandler(object):
 
   def __call__(self, request):
     return web.HtmlResponse(HOME)
+
+
+class ChildHandler(object):
+  """Abstract base class which lets you communicate with a child process.
+
+  Handlers which need a child process will generally hold one of these.  Then
+  they can do custom serialization.
+  """
+  def __init__(self, pool, route_name, sub_handler):
+    self.pool = pool
+    self.route_name = route_name
+    self.sub_handler = sub_handler  # handler that takes a child
+
+  def __call__(self, request):
+    logging.info('Waiting for child')
+    child = self.pool.Take()
+    try:
+      app_req = self.sub_handler.MakeRequest(child, request)
+      req_line = {
+          'route': self.route_name,
+          'request': app_req,
+          }
+
+      logging.info('Sending %r', req_line)
+      child.SendRequest(req_line)
+
+      # TODO: Handle dev error properly.  That shouldn't go to the sub handler.
+      resp_line = child.RecvResponse()
+      logging.info('Receieved %r', resp_line)
+
+      response = self.sub_handler.MakeResponse(child, resp_line)
+    finally:
+      logging.info('Returning child')
+      self.pool.Return(child)
+    return response
 
 
 def ProcessHelper(pool, route_name, request):
@@ -111,6 +147,21 @@ class HealthHandler(object):
   def __call__(self, request):
     resp = ProcessHelper(self.pool, 'health', request)
     return web.PlainTextResponse(json.dumps(resp, indent=2))
+
+
+class HealthWrapper(object):
+  """Wrapper for health request that passes through to R.
+
+  NOTE: We're only checking one R process!  Could check more than one.
+  """
+  def MakeRequest(self, child, request):
+    """Given a web.Request, make a R JSON line."""
+    # Need query params
+    return {'query': request.query}
+
+  def MakeResponse(self, child, response):
+    """Given an R JSON line, make a web.Response."""
+    return web.JsonResponse(response)
 
 
 class SleepHandler(object):
@@ -237,6 +288,8 @@ def CreateApp(opts, pool):
   handlers = [
       ( web.ConstRoute('GET', '/'),           HomeHandler()),
       ( web.ConstRoute('GET', '/_ah/health'), HealthHandler(pool)),
+      ( web.ConstRoute('GET', '/_ah/health2'),
+        ChildHandler(pool, "health", HealthWrapper()) ),
       ( web.ConstRoute('GET', '/sleep'),      SleepHandler(pool)),
       ( web.ConstRoute('POST', '/dist'),      DistHandler(pool)),
       # JSON stats/vars?
