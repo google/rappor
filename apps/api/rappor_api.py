@@ -117,13 +117,7 @@ class ChildWrapper(object):
 
 
 class SleepHandler(object):
-  """
-  Tests if the R process is up by sending it a request and having it echo it
-  back.
-
-  TODO: Add startup, we should send a request to all threads?  Block until they
-  wake up.
-  """
+  """Sleep in R, to test parallelism."""
 
   def __init__(self, wrapper):
     self.wrapper = wrapper
@@ -135,13 +129,8 @@ class SleepHandler(object):
 
 
 class HealthHandler(object):
-  """
-  Tests if the R process is up by sending it a request and having it echo it
-  back.
+  """Tests if an R process is up by having it echo the request."""
 
-  TODO: Add startup, we should send a request to all threads?  Block until they
-  wake up.
-  """
   def __init__(self, wrapper):
     self.wrapper = wrapper
 
@@ -217,9 +206,6 @@ def Options():
   return p
 
 
-# TODO:
-# - And then SERVE log dir with webutil (or App Engine)
-
 def InitPool(opts, pool):
 
   for i in xrange(opts.num_processes):
@@ -277,7 +263,7 @@ def CreateApp(opts, pool):
         DistHandler(ChildWrapper(pool, 'dist')) ),
 
       # JSON stats/vars?
-      # Logs
+      # Log dir
       # Work dir?
       ]
 
