@@ -107,9 +107,21 @@ class ProcWrap(object):
     self.pool = pool
     self.route_name = route_name
 
-  def __call__(self, app_req):
+  def __call__(self, app_req, in_files=None, out_files=None):
+    in_files = in_files or {}
+    out_files = out_files or []
+
     child = self.pool.Take()
     try:
+      # TODO:
+      # - request ID?
+      to_remove = []
+      for name, contents in in_files.iteritems():
+        path = child.WorkingDirPath(name)
+        with open(path, 'w') as f:
+          f.write(contents)
+        to_remove.append(path)
+
       req_line = {
           'route': self.route_name,  # protocol.R dispatch
           'request': app_req,
@@ -122,9 +134,24 @@ class ProcWrap(object):
       app_resp = resp_line
 
       logging.info('Received %r', resp_line)
+
+      # TODO: Read app_resp instead for names of files to read?
+      # 'dist': 'dist.csv'
+      #
+      # Maybe it should be out_keys instead?
+
+      for name in out_files:
+        path = child.WorkingDirPath(name)
+        with open(path) as f:
+          app_resp[path] = f.read()
+
     finally:
       logging.info('Returning child')
       self.pool.Return(child)
+      for path in to_remove:
+        logging.info('Removing %s', path)
+        os.unlink(path)
+
     return app_resp
 
 
@@ -288,8 +315,15 @@ class DistHandler(object):
     print 'JSON'
     print request.json.keys()
 
+    params = """
+a,b
+1,2
+"""
     app_req = request.json
-    resp = self.wrapper(app_req)
+    resp = self.wrapper(
+        app_req,
+        in_files={'params.csv': params},
+        out_files=['dist.csv'])
 
     # read CSV, convert to JSON
 
