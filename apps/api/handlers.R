@@ -46,7 +46,14 @@ dist.handler <- function(state, request) {
 
   body <- list(msg='dist', request=request, pid=pid)
   counts = ReadCountsFile('foo.csv')
-  return(list(body_data=body, counts=counts))
+
+  params = read.csv('params.csv')
+
+  # Return value.
+  dist = data.frame(x=8, y=9)
+  write.csv(dist, 'dist.csv')
+
+  return(list(body_data=body, counts=counts, params=params, dist='dist.csv'))
 }
 
 handlers <- list(
