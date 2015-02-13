@@ -101,6 +101,33 @@ class ChildHandler(object):
     return response
 
 
+class ProcWrap(object):
+
+  def __init__(self, pool, route_name):
+    self.pool = pool
+    self.route_name = route_name
+
+  def __call__(self, app_req):
+    child = self.pool.Take()
+    try:
+      req_line = {
+          'route': self.route_name,  # protocol.R dispatch
+          'request': app_req,
+          }
+      logging.info('Sending %r', req_line)
+      child.SendRequest(req_line)
+
+      resp_line = child.RecvResponse()
+      # TODO: Handle dev error properly.  That shouldn't be returned
+      app_resp = resp_line
+
+      logging.info('Received %r', resp_line)
+    finally:
+      logging.info('Returning child')
+      self.pool.Return(child)
+    return app_resp
+
+
 # TODO: Delete
 def ProcessHelper(pool, route_name, request):
   # Concurrency:
@@ -147,13 +174,13 @@ class HealthHandler(object):
   TODO: Add startup, we should send a request to all threads?  Block until they
   wake up.
   """
-
-  def __init__(self, pool):
-    self.pool = pool
+  def __init__(self, wrapper):
+    self.wrapper = wrapper
 
   def __call__(self, request):
-    resp = ProcessHelper(self.pool, 'health', request)
-    return web.PlainTextResponse(json.dumps(resp, indent=2))
+    app_req = {'query': request.query}
+    resp = self.wrapper(app_req)
+    return web.JsonResponse(resp)
 
 
 class HealthWrapper(object):
@@ -243,8 +270,8 @@ class SleepHandler(object):
 class DistHandler(object):
   """Distribution of single variable."""
 
-  def __init__(self, pool):
-    self.pool = pool
+  def __init__(self, wrapper):
+    self.wrapper = wrapper
 
   def __call__(self, request):
     # TODO:
@@ -261,7 +288,8 @@ class DistHandler(object):
     print 'JSON'
     print request.json.keys()
 
-    resp = ProcessHelper(self.pool, 'dist', request)
+    app_req = request.json
+    resp = self.wrapper(app_req)
 
     # read CSV, convert to JSON
 
@@ -346,13 +374,18 @@ def CreateApp(opts, pool):
 
   handlers = [
       ( web.ConstRoute('GET', '/'),           HomeHandler()),
-      ( web.ConstRoute('GET', '/_ah/health'), HealthHandler(pool)),
-      ( web.ConstRoute('GET', '/_ah/health2'),
-        ChildHandler(pool, 'health', HealthWrapper()) ),
       ( web.ConstRoute('GET', '/sleep'),      SleepHandler(pool)),
-      ( web.ConstRoute('POST', '/dist-old'),      DistHandler(pool)),
+
+      ( web.ConstRoute('GET', '/_ah/health'),
+        HealthHandler(ProcWrap(pool, 'health')) ),
 
       ( web.ConstRoute('POST', '/dist'),
+        DistHandler(ProcWrap(pool, 'dist')) ),
+
+      ( web.ConstRoute('GET', '/_ah/health2'),
+        ChildHandler(pool, 'health', HealthWrapper()) ),
+
+      ( web.ConstRoute('POST', '/dist-new'),
         ChildHandler(pool, 'dist', DistWrapper()) ),
       # JSON stats/vars?
       # Logs
