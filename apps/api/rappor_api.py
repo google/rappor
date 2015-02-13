@@ -67,16 +67,23 @@ def ProcessHelper(pool, route_name, request):
   # TODO: Add request ID
   logging.info('Waiting for child')
   child = pool.Take()
+
+  # Write files into the working path / tmp dir
+  tmp_dir = child.WorkingDirPath('params.csv')
+  logging.info('PARAMS %s', tmp_dir)
+
   try:
-    # Construct JSON request from web.Request.
-    req = {
+    # Construct single-line JSON request from web.Request.
+    # The protocol.R loop sees the top level data.  Handler sees 'request'
+    # level stuff.  TODO: rename to 'handler'?
+    req_line = {
         'route': route_name,
         'request': {
             'query': request.query
             }
         }
-    logging.info('Sending %r', req)
-    child.SendRequest(req)
+    logging.info('Sending %r', req_line)
+    child.SendRequest(req_line)
 
     resp = child.RecvResponse()
     logging.info('RESP %r', resp)
@@ -140,6 +147,9 @@ class DistHandler(object):
     # or really, counts is just a matrix.  We can make it in memory
     # no csv files needed really
     # or maybe it's more debuggable
+
+    print 'JSON'
+    print request.json.keys()
 
     resp = ProcessHelper(self.pool, 'dist', request)
 

@@ -59,8 +59,15 @@ bad-sleep() {
   get /sleep sleepSeconds=BLAH
 }
 
+make-dist-post() {
+  pushd $RAPPOR_SRC
+  apps/api/testdata.py exp > _tmp/exp_post.json
+  popd
+}
+
 dist() {
-  echo '{"foo": "bar"}' | post /dist
+  make-dist-post
+  cat $RAPPOR_SRC/_tmp/exp_post.json | post /dist
 }
 
 readonly HEALTH_URL=http://localhost:8500/_ah/health
