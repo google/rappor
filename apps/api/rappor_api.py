@@ -46,7 +46,6 @@ HOME = """
     <h3>Debug</h3>
 
     <a href="/_ah/health">/_ah/health</a> <br/>
-    <a href="/_ah/health2">/_ah/health2</a> <br/>
     <a href="/sleep">/sleep</a> <br/>
     <a href="/sleep?seconds=1">/sleep?seconds=1</a> <br/>
     <a href="/vars">/vars</a> <br/>
