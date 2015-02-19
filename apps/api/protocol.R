@@ -29,7 +29,9 @@ log <- function(fmt, ...) {
 }
 
 .write.response <- function(response, f) {
-  j = toJSON(response)
+  t = system.time( j <- toJSON(response) )
+  log('toJSON took %f seconds, got %d chars', t[['elapsed']], nchar(j))
+
   # Must be on a single line!
   # We could also make it length-prefixed, but that introduces unicode issues.
   # This is safe because JSON should not contain actual newlines.  They should
@@ -67,10 +69,12 @@ pgi.loop <- function(handlers) {
     # TODO: How does it handle errors?
     req.line <- readLines(req.fifo, n = 1)  # read 1 line
 
-    log("Got request line")
+    log('Got request line')
 
     # This gives a vector
-    req.vec = fromJSON(req.line)
+    t = system.time( req.vec <- fromJSON(req.line) )
+    log('fromJSON took %f seconds, %d chars', t[['elapsed']], nchar(req.line))
+
     # Turn it into a list, so we can access fields with $
     pgi.request = as.list(req.vec)
 
