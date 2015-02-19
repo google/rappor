@@ -3,13 +3,12 @@
 rappor_api.py
 
 TODO:
-  - add CSV serialization, JSON -> CSV
   - add request ID
     - does that go in the framework?
     - request.counter?  Then R can log it
-  - maybe test out plots
   - maybe make this module into a library, and then App Engine has its own
     module which just calls CreateApp()
+    - I think App Engine can't use flags
 """
 
 import cgi
@@ -25,11 +24,6 @@ import child
 import web
 import wsgiref_server
 
-
-# TODO:
-# - Add flags
-#   - not applicable in App Engine mode
-# - Add process IDs
 
 HOME = """
 <!DOCTYPE html>
@@ -147,15 +141,15 @@ class DistHandler(object):
 
   def __call__(self, request):
     # TODO:
-    # - process request.json
-    # - write to CSV
-    # - put filenames in the request
     # - maybe we should use @ as files?
     # - @params, @counts, @candidates -> @dist
 
     # or really, counts is just a matrix.  We can make it in memory
     # no csv files needed really
     # or maybe it's more debuggable
+
+    # maybe time the serialization in R, to see if it's too slow
+    # probably for
 
     print 'JSON'
     print request.json.keys()
@@ -177,8 +171,7 @@ a,b
 
 def Options():
   """Returns an option parser instance."""
-  # TODO: where to get version number from?  Hook up to autodeploy?
-  p = optparse.OptionParser('mayord.py [options]') #, version='0.1')
+  p = optparse.OptionParser('mayord.py [options]')
 
   p.add_option(
       '--tmp-dir', metavar='PATH', dest='tmp_dir', default='/tmp',
@@ -272,7 +265,7 @@ def CreateApp(opts, pool):
 def main(argv):
   (opts, argv) = Options().parse_args(argv)
 
-  # TODO: Make this look better?
+  # Make this look better?  How does App Engine deal with it?
   logging.basicConfig(level=logging.INFO)
 
   # Construct a fake request, send it to the app, print response, and exit
