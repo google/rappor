@@ -43,6 +43,12 @@ ErrorHandler <- function(state, request) {
   oops  # undefined
 }
 
+# Convert request input to a matrix.
+MakeCounts <- function(params, num_reports, sums) {
+  # convert 1D array to m * k matrix
+  dim(sums) <- c(params$m, params$k)
+}
+
 DistHandler <- function(state, request) {
   log('DistHandler')
 
@@ -50,12 +56,23 @@ DistHandler <- function(state, request) {
 
   str(request$sums)  # TODO: change to bit_counts, and flatten
 
-  str(request$candidates_path)
+  #str(request$candidates_path)
 
   # TODO: Right now these are at the top level, need to move
   str(request$params)
+  params = as.list(request$params)
+  str(params)
 
-  # TODO: Look at the files in read_input.R
+  # TODO: make this inLook at the files in read_input.R
+  counts = MakeCounts(params, request$num_reports, request$sums)
+
+  #ReadParameterFile(p)
+  #ReadCountsFile(c)
+  map <- ReadMapFile(request$candidates_path)$map
+  str(map)
+
+  rappor <- AnalyzeRAPPOR(params, counts, map,
+                          "FDR", 0.05, 1, date="01/01/01", date_num="100001")
 
   # Return value.
   dist = data.frame(x=8, y=9)
@@ -72,4 +89,6 @@ handlers <- list(
     ErrorHandler=ErrorHandler
     )
 
-pgi.loop(handlers)
+if (!interactive()) {  # allow source('handlers.R')
+  pgi.loop(handlers)
+}
