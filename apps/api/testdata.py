@@ -4,6 +4,7 @@ testdata.py - Simple Script to create a test POST.
 """
 
 import json
+import os
 import sys
 
 
@@ -19,6 +20,8 @@ def main(argv):
   # - Should it be JSON or a file?
 
   post_body = {}
+  # Relative path, taken relative to --state-dir
+  post_body['candidates_file'] = '%s_map.csv' % dist
   post_body.update(params)
   post_body.update(counts)
   json.dump(post_body, sys.stdout, indent=2)

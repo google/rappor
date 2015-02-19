@@ -46,7 +46,7 @@ ErrorHandler <- function(state, request) {
 DistHandler <- function(state, request) {
   log('DistHandler')
 
-  # TODO: Read request$csv
+  # TODO:Read request$csv
 
   body <- list(msg='dist', request=request, pid=pid)
   counts = ReadCountsFile('foo.csv')

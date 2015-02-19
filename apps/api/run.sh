@@ -32,6 +32,10 @@ install-r-packages() {
   R -e 'install.packages(c("RJSONIO", "glmnet", "optparse"), repos="http://cran.rstudio.com/")'
 }
 
+setup() {
+  mkdir -p --verbose ~/rappor-api/state
+}
+
 #
 # Tests
 #
@@ -65,7 +69,9 @@ bad-sleep() {
 
 make-dist-post() {
   pushd $RAPPOR_SRC
-  apps/api/testdata.py exp > _tmp/exp_post.json
+  local dist=${1:-exp}
+  apps/api/testdata.py $dist | tee _tmp/exp_post.json
+  cp --verbose _tmp/${dist}_map.csv ~/rappor-api/state
   popd
 }
 

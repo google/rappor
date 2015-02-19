@@ -148,7 +148,8 @@ class ErrorHandler(object):
 class DistHandler(object):
   """Distribution of single variable."""
 
-  def __init__(self, wrapper):
+  def __init__(self, state_dir, wrapper):
+    self.state_dir = state_dir
     self.wrapper = wrapper
 
   def __call__(self, request):
@@ -171,6 +172,20 @@ a,b
 1,2
 """
     app_req = request.json
+
+    filename = request.json['candidates_file']
+
+    if filename.endswith('.csv'):
+      # This is a CSV file that can be passed directly to the R process.
+      # It is immutable, so we can just pass the full path.
+      candidates_path = os.path.join(self.state_dir, filename)
+    else:
+      # Allow JSON?  Convert it to CSV first
+      candidates_path = None
+
+    app_req['candidates_path'] = candidates_path
+    logging.info('Candidates path: %s', candidates_path)
+
     resp = self.wrapper(
         app_req,
         in_files={'params.csv': params},
@@ -238,7 +253,7 @@ def CreateApp(opts, pool):
         HealthHandler(ChildWrapper(pool, 'HealthHandler')) ),
 
       ( web.ConstRoute('POST', '/dist'),
-        DistHandler(ChildWrapper(pool, 'DistHandler')) ),
+        DistHandler(opts.state_dir, ChildWrapper(pool, 'DistHandler')) ),
 
       # JSON stats/vars?
       # Log dir
@@ -256,8 +271,14 @@ def Options():
       '--tmp-dir', metavar='PATH', dest='tmp_dir', default='/tmp',
       help='Store temporary request/response data in this directory.')
   p.add_option(
-      '--log-dir', metavar='PATH', dest='log_dir', default='',
+      '--log-dir', metavar='PATH', dest='log_dir',
+      # Could put this in ~/rappor-api/logs
+      default='',
       help='Store child process logs in this directory')
+  p.add_option(
+      '--state-dir', metavar='PATH', dest='state_dir',
+      default=os.path.expanduser('~/rappor-api/state'),
+      help='Where state like candidates files are read from')
 
   p.add_option(
       '--port', metavar='NUM', dest='port', type=int, default=8500,
@@ -275,7 +296,6 @@ def Options():
            'JSON body should be on stdin.')
   # Shared secret?
   return p
-
 
 
 def main(argv):
