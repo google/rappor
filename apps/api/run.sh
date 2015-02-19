@@ -55,6 +55,10 @@ sleep() {
   get /sleep seconds=1
 }
 
+error() {
+  get /error
+}
+
 bad-sleep() {
   get /sleep sleepSeconds=BLAH
 }

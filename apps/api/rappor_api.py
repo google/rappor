@@ -133,6 +133,18 @@ class HealthHandler(object):
     return web.JsonResponse(resp)
 
 
+class ErrorHandler(object):
+  """Tests unhandled exception."""
+
+  def __init__(self, wrapper):
+    self.wrapper = wrapper
+
+  def __call__(self, request):
+    app_req = {'query': request.query}
+    resp = self.wrapper(app_req)
+    return web.JsonResponse(resp)
+
+
 class DistHandler(object):
   """Distribution of single variable."""
 
@@ -246,13 +258,16 @@ def CreateApp(opts, pool):
         HomeHandler() ),
 
       ( web.ConstRoute('GET', '/sleep'),
-        SleepHandler(ChildWrapper(pool, 'sleep')) ),
+        SleepHandler(ChildWrapper(pool, 'SleepHandler')) ),
+
+      ( web.ConstRoute('GET', '/error'),
+        ErrorHandler(ChildWrapper(pool, 'ErrorHandler')) ),
 
       ( web.ConstRoute('GET', '/_ah/health'),
-        HealthHandler(ChildWrapper(pool, 'health')) ),
+        HealthHandler(ChildWrapper(pool, 'HealthHandler')) ),
 
       ( web.ConstRoute('POST', '/dist'),
-        DistHandler(ChildWrapper(pool, 'dist')) ),
+        DistHandler(ChildWrapper(pool, 'DistHandler')) ),
 
       # JSON stats/vars?
       # Log dir

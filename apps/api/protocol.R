@@ -84,7 +84,6 @@ pgi.loop <- function(handlers) {
 
     route.name <- pgi.request$route
     if (is.null(route.name)) {
-      # error
       pgi.response <- .make.dev.error("No route name in request")
       .write.response(pgi.response, resp.fifo)
       next()
@@ -104,7 +103,7 @@ pgi.loop <- function(handlers) {
     app.request <- pgi.request$request
 
     if (is.null(app.request)) {
-      pgi.response <- .make.dev.error("Expected 'request' field in PGI request")
+      pgi.response <- .make.dev.error("Missing 'request' field")
       .write.response(pgi.response, resp.fifo)
       next()
     }

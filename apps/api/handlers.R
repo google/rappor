@@ -12,13 +12,13 @@ source(file.path(src, 'analysis/R/read_input.R'))
 
 pid <- Sys.getpid()
 
-health.handler <- function(state, request) {
+HealthHandler <- function(state, request) {
   body <- list(state=state, request=request, pid=pid)
   return(list(body_data=body))
 }
 
 # For testing concurrency
-sleep.handler <- function(state, request) {
+SleepHandler <- function(state, request) {
   log('SleepHandler')
 
   query <- as.list(request$query)
@@ -39,7 +39,11 @@ sleep.handler <- function(state, request) {
   return(list(body_data=body))
 }
 
-dist.handler <- function(state, request) {
+ErrorHandler <- function(state, request) {
+  oops  # undefined
+}
+
+DistHandler <- function(state, request) {
   log('DistHandler')
 
   # TODO: Read request$csv
@@ -56,10 +60,12 @@ dist.handler <- function(state, request) {
   return(list(body_data=body, counts=counts, params=params, dist='dist.csv'))
 }
 
+# Is there a shortcut for this?
 handlers <- list(
-    health=health.handler,
-    sleep=sleep.handler,
-    dist=dist.handler
+    HealthHandler=HealthHandler,
+    SleepHandler=SleepHandler,
+    DistHandler=DistHandler,
+    ErrorHandler=ErrorHandler
     )
 
 pgi.loop(handlers)
