@@ -67,8 +67,13 @@ def SumBits(params, stdin, csv_out_file, json_out_file):
   if json_out_file:
     # TODO:
     # - Fix key names
-    # - sums should be one dimensional, with row / col
-    obj = {'num_reports': num_reports, 'sums': sums}
+
+    # Convert from a list of lists to a one dimensional vector.
+    sum_vector = []
+    for row in sums:
+      sum_vector.extend(row)
+
+    obj = {'num_reports': num_reports, 'sums': sum_vector}
     json.dump(obj, json_out_file, indent=2)
 
 

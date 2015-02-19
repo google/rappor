@@ -19,7 +19,8 @@ library(RJSONIO)  # fromJSON, toJSON
 # For logging
 pid <- Sys.getpid()
 
-log <- function(fmt, ...) {
+# NOTE: Has to be capital 'Log' to avoid clobbering math log()!
+Log <- function(fmt, ...) {
   msg <- sprintf(fmt, ...)
   cat(paste('PID ', pid, ': ', msg, '\n', sep = ''), file=stderr())
 }
@@ -30,7 +31,7 @@ log <- function(fmt, ...) {
 
 .write.response <- function(response, f) {
   t = system.time( j <- toJSON(response) )
-  log('toJSON took %f seconds, got %d chars', t[['elapsed']], nchar(j))
+  Log('toJSON took %f seconds, got %d chars', t[['elapsed']], nchar(j))
 
   # Must be on a single line!
   # We could also make it length-prefixed, but that introduces unicode issues.
@@ -54,7 +55,7 @@ log <- function(fmt, ...) {
 # Args:
 #   handlers: list of name -> handler
 pgi.loop <- function(handlers) {
-  log("Hello from pgi.R (PGI 2 mode)")
+  Log("Hello from pgi.R (PGI 2 mode)")
 
   # Each applet is started in its own directory, and we use the standard name
   # 'request-fifo' for the input stream
@@ -63,17 +64,17 @@ pgi.loop <- function(handlers) {
   resp.fifo <- fifo('response-fifo', open='w')
 
   while (1) {
-    log('------------------------')
-    log('Waiting for request line')
+    Log('------------------------')
+    Log('Waiting for request line')
 
     # TODO: How does it handle errors?
     req.line <- readLines(req.fifo, n = 1)  # read 1 line
 
-    log('Got request line')
+    Log('Got request line')
 
     # This gives a vector
     t = system.time( req.vec <- fromJSON(req.line) )
-    log('fromJSON took %f seconds, %d chars', t[['elapsed']], nchar(req.line))
+    Log('fromJSON took %f seconds, %d chars', t[['elapsed']], nchar(req.line))
 
     # Turn it into a list, so we can access fields with $
     pgi.request = as.list(req.vec)
@@ -101,7 +102,7 @@ pgi.loop <- function(handlers) {
       next()
     }
 
-    log('pgi.request: ')
+    Log('pgi.request: ')
     str(pgi.request)  # prints to stdout
 
     app.request <- pgi.request$request
@@ -112,18 +113,24 @@ pgi.loop <- function(handlers) {
       next()
     }
 
-    log("Invoking handler")
+    Log("Invoking handler")
+
+    # Invoking it like this can show a better traceback than tryCatch
+    #pgi.response <- .invoke.handler(request.handler, app.request)
 
     result <- tryCatch(.invoke.handler(request.handler, app.request),
                        error = function(e) e)
     if (inherits(result, 'error')) {
+      msg = sprintf('ERROR invoking handler for route %s', route.name)
+      Log(msg)
       str(result)
-      pgi.response = .make.dev.error('Error invoking handler', error = result)
+      pgi.response = .make.dev.error(msg, error = result)
+      # traceback() doesn't work here, because we caught the error :(
     } else {
       pgi.response = result
     }
 
-    log("Writing JSON response")
+    Log("Writing JSON response")
     .write.response(pgi.response, resp.fifo)
 
     flush(stdout())

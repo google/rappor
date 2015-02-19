@@ -19,11 +19,11 @@ HealthHandler <- function(state, request) {
 
 # For testing concurrency
 SleepHandler <- function(state, request) {
-  log('SleepHandler')
+  Log('SleepHandler')
 
   query <- as.list(request$query)
   n <- query$seconds
-  log('n: %s', n)
+  Log('n: %s', n)
 
   if (!is.null(n)) {
     n = as.numeric(n)
@@ -45,12 +45,24 @@ ErrorHandler <- function(state, request) {
 
 # Convert request input to a matrix.
 MakeCounts <- function(params, num_reports, sums) {
-  # convert 1D array to m * k matrix
+  # convert 1D array to m * k matrix.
+  #
+  # dim will check the dimensions.  We make our to provide good error messages.
+
   dim(sums) <- c(params$m, params$k)
+  #sums[[, 1]] <- num_reports
+  sums
+
+  # cbind combines a matrix and vector like this:
+  #
+  # cbind( [7 8 9], [ 1 4  ) = [ 7 1 4
+  #                   2 5        8 2 5
+  #                   3 6 ]      9 3 6 ]
+  cbind(num_reports, sums)
 }
 
 DistHandler <- function(state, request) {
-  log('DistHandler')
+  Log('DistHandler')
 
   str(request$num_reports)
 
@@ -66,19 +78,28 @@ DistHandler <- function(state, request) {
   # TODO: make this inLook at the files in read_input.R
   counts = MakeCounts(params, request$num_reports, request$sums)
 
+  Log('COUNTS')
+  str(counts)
+  dim(counts)
+
   #ReadParameterFile(p)
   #ReadCountsFile(c)
+  Log('MAP')
   map <- ReadMapFile(request$candidates_path)$map
   str(map)
 
+  Log('ANALYZE RAPPOR')
   rappor <- AnalyzeRAPPOR(params, counts, map,
                           "FDR", 0.05, 1, date="01/01/01", date_num="100001")
+  str(rappor)
+
+  Log('WRITE DATA')
 
   # Return value.
   dist = data.frame(x=8, y=9)
   write.csv(dist, 'dist.csv')
 
-  return(list(dist='dist.csv'))
+  return(list(rappor=rappor, dist='dist.csv'))
 }
 
 # Is there a shortcut for this?
