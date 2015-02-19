@@ -181,35 +181,6 @@ a,b
     return web.JsonResponse(resp)
 
 
-def Options():
-  """Returns an option parser instance."""
-  p = optparse.OptionParser('mayord.py [options]')
-
-  p.add_option(
-      '--tmp-dir', metavar='PATH', dest='tmp_dir', default='/tmp',
-      help='Store temporary request/response data in this directory.')
-  p.add_option(
-      '--log-dir', metavar='PATH', dest='log_dir', default='',
-      help='Store child process logs in this directory')
-
-  p.add_option(
-      '--port', metavar='NUM', dest='port', type=int, default=8500,
-      help='Port to serve HTTP on')
-  p.add_option(
-      '--num-processes', metavar='NUM', dest='num_processes', type=int,
-      default=2,
-      help='Number of concurrent R processes to use (e.g. set to # of CPUs).')
-  p.add_option(
-      '--test-get', action='store_true', dest='test_get', default=False,
-      help="Serve GET request and exit.  e.g. 'rappor-api --test-get URL QUERY'")
-  p.add_option(
-      '--test-post', action='store_true', dest='test_post', default=False,
-      help="Serve POST request and exit.  e.g. 'rappor-api --test-post URL' "
-           'JSON body should be on stdin.')
-  # Shared secret?
-  return p
-
-
 def InitPool(opts, pool):
 
   for i in xrange(opts.num_processes):
@@ -275,6 +246,36 @@ def CreateApp(opts, pool):
       ]
 
   return web.App(handlers)
+
+
+def Options():
+  """Returns an option parser instance."""
+  p = optparse.OptionParser('mayord.py [options]')
+
+  p.add_option(
+      '--tmp-dir', metavar='PATH', dest='tmp_dir', default='/tmp',
+      help='Store temporary request/response data in this directory.')
+  p.add_option(
+      '--log-dir', metavar='PATH', dest='log_dir', default='',
+      help='Store child process logs in this directory')
+
+  p.add_option(
+      '--port', metavar='NUM', dest='port', type=int, default=8500,
+      help='Port to serve HTTP on')
+  p.add_option(
+      '--num-processes', metavar='NUM', dest='num_processes', type=int,
+      default=2,
+      help='Number of concurrent R processes to use (e.g. set to # of CPUs).')
+  p.add_option(
+      '--test-get', action='store_true', dest='test_get', default=False,
+      help="Serve GET request and exit.  e.g. 'rappor-api --test-get URL QUERY'")
+  p.add_option(
+      '--test-post', action='store_true', dest='test_post', default=False,
+      help="Serve POST request and exit.  e.g. 'rappor-api --test-post URL' "
+           'JSON body should be on stdin.')
+  # Shared secret?
+  return p
+
 
 
 def main(argv):
