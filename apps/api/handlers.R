@@ -90,7 +90,8 @@ DistHandler <- function(state, request) {
 
   Log('ANALYZE RAPPOR')
   rappor <- AnalyzeRAPPOR(params, counts, map,
-                          "FDR", 0.05, 1, date="01/01/01", date_num="100001")
+                          "FDR", 0.05, 1,
+                          date="01/01/01", date_num="100001")
   str(rappor)
 
   Log('WRITE DATA')
