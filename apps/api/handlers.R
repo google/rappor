@@ -46,18 +46,22 @@ ErrorHandler <- function(state, request) {
 DistHandler <- function(state, request) {
   log('DistHandler')
 
-  # TODO:Read request$csv
+  str(request$num_reports)
 
-  body <- list(msg='dist', request=request, pid=pid)
-  counts = ReadCountsFile('foo.csv')
+  str(request$sums)  # TODO: change to bit_counts, and flatten
 
-  params = read.csv('params.csv')
+  str(request$candidates_path)
+
+  # TODO: Right now these are at the top level, need to move
+  str(request$params)
+
+  # TODO: Look at the files in read_input.R
 
   # Return value.
   dist = data.frame(x=8, y=9)
   write.csv(dist, 'dist.csv')
 
-  return(list(body_data=body, counts=counts, params=params, dist='dist.csv'))
+  return(list(dist='dist.csv'))
 }
 
 # Is there a shortcut for this?
