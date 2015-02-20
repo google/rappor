@@ -50,15 +50,22 @@ MakeCounts <- function(params, num_reports, sums) {
   # dim will check the dimensions.  We make our to provide good error messages.
 
   dim(sums) <- c(params$m, params$k)
-  #sums[[, 1]] <- num_reports
-  sums
+
+  # 'sums' is in row major order, representing a matrix of m rows * k columns.
+  # We ultimately want a data frame of k columns to maintain compatibility.
+  # R is weird so you have to make a k * m matrix and then transpose it.
+
+  dim(sums) <- c(params$k, params$m)
+  sums = t(sums)
 
   # cbind combines a matrix and vector like this:
   #
   # cbind( [7 8 9], [ 1 4  ) = [ 7 1 4
   #                   2 5        8 2 5
   #                   3 6 ]      9 3 6 ]
-  cbind(num_reports, sums)
+  counts = cbind(num_reports, sums)
+  #counts
+  as.data.frame(counts)
 }
 
 DistHandler <- function(state, request) {
@@ -100,7 +107,8 @@ DistHandler <- function(state, request) {
   dist = data.frame(x=8, y=9)
   write.csv(dist, 'dist.csv')
 
-  return(list(rappor=rappor, dist='dist.csv'))
+  return(list(strings=rappor$strings, proportion=rappor$proportion,
+              dist='dist.csv'))
 }
 
 # Is there a shortcut for this?

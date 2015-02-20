@@ -66,12 +66,13 @@ LoadInputs <- function(prefix, ctx) {
   map <- ReadMapFile(m)$map
 
   # Debug
-  #cat('\nPARAMS\n')
-  #str(params)
-  #cat('\nCOUNTS\n')
-  #str(counts)
-  #cat('\nMAP\n')
-  #str(map)
+  cat('\nPARAMS\n')
+  str(params)
+  cat('\nCOUNTS\n')
+  str(counts)
+  print(dim(c))
+  cat('\nMAP\n')
+  str(map)
 
   # Calls AnalyzeRAPPOR to run the analysis code
   # Date(s) are some dummy dates

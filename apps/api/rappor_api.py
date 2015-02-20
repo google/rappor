@@ -9,6 +9,8 @@ TODO:
   - maybe make this module into a library, and then App Engine has its own
     module which just calls CreateApp()
     - I think App Engine can't use flags
+  - measure latency
+    - expose it on /vars
 """
 
 import cgi
