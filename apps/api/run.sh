@@ -33,7 +33,9 @@ install-r-packages() {
 }
 
 setup() {
-  mkdir -p --verbose ~/rappor-api/state
+  mkdir -p --verbose \
+    ~/rappor-api/state \
+    ~/rappor-api/logs
 }
 
 #
@@ -83,11 +85,13 @@ dist() {
 }
 
 curl-dist() {
+  local host_port=${1:-localhost:8500}
+
   time cat $EXP_POST | curl \
     --include \
     --header 'Content-Type: application/json' \
     --data @- \
-    http://localhost:8500/dist
+    http://$host_port/dist
 }
 
 readonly HEALTH_URL=http://localhost:8500/_ah/health
@@ -120,7 +124,7 @@ rappor-api() {
 }
 
 serve() {
-  rappor-api --log-dir _tmp/log
+  rappor-api "$@"
 }
 
 "$@"

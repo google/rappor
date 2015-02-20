@@ -274,8 +274,7 @@ def Options():
       help='Store temporary request/response data in this directory.')
   p.add_option(
       '--log-dir', metavar='PATH', dest='log_dir',
-      # Could put this in ~/rappor-api/logs
-      default='',
+      default=os.path.expanduser('~/rappor-api/logs'),
       help='Store child process logs in this directory')
   p.add_option(
       '--state-dir', metavar='PATH', dest='state_dir',
