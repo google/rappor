@@ -84,6 +84,10 @@ dist() {
   cat $EXP_POST | post /dist
 }
 
+publish() {
+  cp -v test.sh $EXP_POST /home/andychu/share/rappor
+}
+
 curl-dist() {
   local host_port=${1:-localhost:8500}
 

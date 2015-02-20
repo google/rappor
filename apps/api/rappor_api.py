@@ -194,8 +194,7 @@ a,b
 
     resp = self.wrapper(
         app_req,
-        in_files={'params.csv': params},
-        out_files=['dist.csv'])
+        in_files={'params.csv': params})
 
     # read CSV, convert to JSON
 
