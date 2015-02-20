@@ -67,7 +67,7 @@ bad-sleep() {
   get /sleep sleepSeconds=BLAH
 }
 
-make-dist-post() {
+make-dist-post-body() {
   pushd $RAPPOR_SRC
   local dist=${1:-exp}
   apps/api/testdata.py $dist | tee _tmp/exp_post.json
@@ -75,9 +75,19 @@ make-dist-post() {
   popd
 }
 
+readonly EXP_POST=$RAPPOR_SRC/_tmp/exp_post.json
+
 dist() {
-  make-dist-post
-  cat $RAPPOR_SRC/_tmp/exp_post.json | post /dist
+  make-dist-post-body
+  cat $EXP_POST | post /dist
+}
+
+curl-dist() {
+  time cat $EXP_POST | curl \
+    --include \
+    --header 'Content-Type: application/json' \
+    --data @- \
+    http://localhost:8500/dist
 }
 
 readonly HEALTH_URL=http://localhost:8500/_ah/health
