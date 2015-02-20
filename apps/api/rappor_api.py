@@ -92,21 +92,25 @@ class ChildWrapper(object):
       logging.info('Received %r', resp_line)
 
       # TODO: Read app_resp instead for names of files to read?
-      # 'dist': 'dist.csv'
-      #
       # Maybe it should be out_keys instead?
 
       for name in out_files:
         path = child.WorkingDirPath(name)
-        with open(path) as f:
-          app_resp[path] = f.read()
+        try:
+          with open(path) as f:
+            app_resp[path] = f.read()
+        except IOError, e:
+          logging.error('Error reading %s: %s', path, e)
 
     finally:
       logging.info('Returning child')
       self.pool.Return(child)
       for path in to_remove:
         logging.info('Removing %s', path)
-        os.unlink(path)
+        try:
+          os.unlink(path)
+        except OSError, e:
+          logging.error('Error reading %s: %s', path, e)
 
     return app_resp
 
