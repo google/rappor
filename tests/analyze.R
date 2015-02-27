@@ -117,12 +117,17 @@ ProcessAll = function(ctx) {
   rbind(r, a, z)
 }
 
+# Colors selected to be friendly to the color blind:
+# http://www.cookbook-r.com/Graphs/Colors_%28ggplot2%29/
+palette <- c("#E69F00", "#56B4E9")
+
 PlotAll <- function(d, title) {
   # NOTE: geom_bar makes a histogram by default; need stat = "identity"
   g <- ggplot(d, aes(x = index, y = proportion, fill = factor(dist)))
-  b <- geom_bar(stat = "identity", position = "dodge")
+  b <- geom_bar(stat = "identity", width = 0.7,
+                position = position_dodge(width = 0.8))
   t <- ggtitle(title)
-  g + b + t
+  g + b + t + scale_fill_manual(values=palette)
 }
 
 WritePlot <- function(p, outdir, width = 800, height = 600) {
