@@ -70,6 +70,10 @@ LoadInputs <- function(prefix, ctx) {
   if (is.null(ctx$rappor)) {
     stop("RAPPOR analysis failed.")
   }
+
+  print("MISSING")
+  print(ctx$rappor$missing)
+
   ctx$actual <- read.csv(h)
 }
 

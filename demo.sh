@@ -195,10 +195,10 @@ run-dist() {
   banner "Generating candidates ($dist)"
 
   # Example of removing candidates.
-  #print-candidates $dist 'v1|v2'  > _tmp/${dist}_candidates.txt
+  print-candidates $dist 'v1|v2'  > _tmp/${dist}_candidates.txt
 
   # Keep all candidates
-  print-candidates $dist '' > _tmp/${dist}_candidates.txt
+  #print-candidates $dist '' > _tmp/${dist}_candidates.txt
 
   banner "Hashing Candidates ($dist)"
   hash-candidates $dist
