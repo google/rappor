@@ -41,9 +41,11 @@ ValidateInput <- function(params, counts, map) {
   val
 }
 
-AnalyzeRAPPOR <- function(params, counts, map, correction, alpha, cv_step,
-                          experiment_name = "", map_name = "", config_name = "",
-                          date = NULL, date_num = NULL, ...) {
+AnalyzeRAPPOR <- function(params, counts, map, correction, alpha,
+                          cv_step = 1, experiment_name = "", map_name = "",
+                          config_name = "", date = NULL, date_num = NULL,
+                          ...) {
+
   val <- ValidateInput(params, counts, map)
   if (val != "valid") {
     cat(val, "\n")
