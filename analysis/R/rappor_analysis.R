@@ -37,7 +37,6 @@ if (!interactive()) {
     make_option("--counts", default="CO", help="Counts file"),
     make_option("--config", default="", help="Config file"),
     make_option("--output_dir", default="./", help="Output directory"),
-    make_option("--output_csv", default=FALSE, help="CSV or ColumnIO output"),
 
     make_option("--correction", default="FDR", help="Correction method"),
     make_option("--alpha", default=.05, help="Alpha level"),
@@ -79,11 +78,7 @@ RunOne <- function(opts) {
                                  paste(GetFN(opts$counts), GetFN(opts$map),
                                        GetFN(opts$config), sep = "_"))
 
-    if (opts$output_csv) {
-      write.csv(res, file = paste0(output_filename, ".csv"))
-    } else {
-      WriteColumnIO(res, paste0(output_filename, ".cio"))
-    }
+    write.csv(res, file = paste0(output_filename, ".csv"))
   }
 }
 
@@ -125,10 +120,10 @@ RunMany <- function(opts) {
     base_filename <- "chrome_rappor_experiments_"
     output_filename <-
       switch(as.character(opts$num_days),
-             "1" = paste0(base_filename, date, ".cio"),
-             "7" = paste0("weekly_", base_filename, date, ".cio"),
-             "28" = paste0("monthly_", base_filename, date, ".cio"),
-             paste0(opts$num_days, "_", base_filename, date, ".cio"))
+             "1" = paste0(base_filename, date, ".csv"),
+             "7" = paste0("weekly_", base_filename, date, ".csv"),
+             "28" = paste0("monthly_", base_filename, date, ".csv"),
+             paste0(opts$num_days, "_", base_filename, date, ".csv"))
 
     # Delete any existing files with the same name.
     unlink(file.path(output_dir, output_filename))
@@ -155,7 +150,7 @@ RunMany <- function(opts) {
       # Read one or more counts file.
       counts_file <- paste0(experiments[i, 1], "_counts.csv")
       trailing_dates <- as.character(seq(date - opts$num_days + 1, date, 1))
-      counts <- list()
+      counts_list <- list()
       for (j in 1:length(trailing_dates)) {
         counts_path = file.path(opts$counts_dir, trailing_dates[j], counts_file)
         Log("Reading counts %s", counts_path)
@@ -166,27 +161,26 @@ RunMany <- function(opts) {
         # be further aggregated to obtain counts for the number of cohorts
         # specified in the config file.
         if (!is.null(counts_j)) {
-          counts[[j]] <- apply(counts_j, 2, function(x) {
+          counts_list[[j]] <- apply(counts_j, 2, function(x) {
             tapply(x, rep(1:config$m, nrow(counts_j) / config$m), sum)
           })
         }
       }
-      Log('counts before:')
-      str(counts)
-
-      counts <- Reduce("+", counts)  # Turn list into matrix
-
-      Log('dim(counts) after:')
-      print(dim(counts))
+      counts <- Reduce("+", counts_list)  # Turn list into matrix
 
       # Perform the analysis.
 
-      Log("config")
+      Log("CONFIG")
       str(config)
-      Log("counts")
+      cat('\n')
+
+      Log("COUNTS")
       str(counts)
-      Log("map")
+      cat('\n')
+
+      Log("MAP")
       str(map$map)
+      cat('\n')
 
       exp_res <- AnalyzeRAPPOR(config, counts, map$map, opts$correction, opts$alpha,
                                experiment_name = experiment_name,
@@ -206,7 +200,6 @@ RunMany <- function(opts) {
     # Write out a single column IO file for each date.
     output <- do.call("rbind", res)
     if (!is.null(output) && nrow(output) > 0) {
-      #WriteColumnIO(output, file.path(output_dir, output_filename))
       path = file.path(output_dir, output_filename)
       write.csv(output, path)
       Log('Wrote %s', path)
