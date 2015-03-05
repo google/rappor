@@ -87,9 +87,11 @@ RunOne <- function(opts) {
   }
 }
 
+# Run multiple models.  There is a CSV experiments config file, and we invoke
+# AnalyzeRAPPOR once for each row in it.
 RunMany <- function(opts) {
-  # Run multiple models (one per each row of the experiments file).
-  # If date is not specified, run yesterday's analyses only.
+  
+  # If the date is not specified, run yesterday's analyses only.
   if (opts$start_date == "" && opts$end_date == "") {
     start_date <- Sys.Date() - 1
     end_date <- start_date
@@ -103,18 +105,18 @@ RunMany <- function(opts) {
   dates <- as.character(seq(start_date, end_date, 1))
 
   # List of experiments to analyze.
-  experiments <- read.csv(gfile(file.path(opts$config_dir,
-                                          opts$experiment_config)),
+  config_path = file.path(opts$config_dir, opts$experiment_config)
+  Log('Reading experiment config %s', config_path)
+  experiments <- read.csv(config_path,
                           header = FALSE, as.is = TRUE,
                           colClasses = "character", comment.char = "#")
 
   for (date in dates) {
-    cat(date, "\n")
+    Log("Date: %s", date)
     date <- as.Date(date)
     year <- format(date, "%Y")
     month <- format(date, "%m")
     day <- format(date, "%d")
-    Log("INFO %s", date)
 
     # Create an output directory.
     output_dir <- file.path(opts$release_dir, year, month, day)
@@ -142,8 +144,13 @@ RunMany <- function(opts) {
       config_file <- experiments[i, 4]
 
       # Read in input files specified in the experiments file.
-      config <- ReadParameterFile(file.path(opts$config_dir, config_file))
-      LoadMapFile(file.path(opts$map_dir, map_file))  # Loads the "map" object.
+      params_path = file.path(opts$config_dir, config_file)
+      Log('Reading params %s', params_path)
+      config <- ReadParameterFile(params_path)
+
+      map_path <- file.path(opts$map_dir, map_file)
+      Log('Loading map %s', map_path)
+      LoadMapFile(map_path)  # Loads the "map" object.
 
       # Read one or more counts file.
       counts_file <- paste0(experiments[i, 1], "_counts.csv")
@@ -151,7 +158,7 @@ RunMany <- function(opts) {
       counts <- list()
       for (j in 1:length(trailing_dates)) {
         counts_path = file.path(opts$counts_dir, trailing_dates[j], counts_file)
-        cat(paste0("COUNTS PATH ", counts_path, '\n'))
+        Log("Reading counts %s", counts_path)
 
         counts_j <- ReadCountsFile(file.path(opts$counts_dir,
                                              trailing_dates[j], counts_file))
@@ -164,7 +171,13 @@ RunMany <- function(opts) {
           })
         }
       }
-      counts <- Reduce("+", counts)
+      Log('counts before:')
+      str(counts)
+
+      counts <- Reduce("+", counts)  # Turn list into matrix
+
+      Log('dim(counts) after:')
+      print(dim(counts))
 
       # Perform the analysis.
 
