@@ -56,18 +56,14 @@ if (!interactive()) {
   opts <- parse_args(OptionParser(option_list = option_list))
 }
 
-#InitGoogle()
-#flags.check()
-
+# NOTE: This is in tests/analysis.R too
 Log <- function(...) {
   cat('rappor_analysis.R: ')
   cat(sprintf(...))
   cat('\n')
 }
 
-main = function(opts) {
-
-if (opts$counts != "" && opts$map != "" && opts$config != "") {
+RunOne <- function(opts) {
   # Run a single model of all inputs are specified.
   config <- ReadParameterFile(opts$config)
   counts <- ReadCountsFile(opts$counts)
@@ -89,7 +85,9 @@ if (opts$counts != "" && opts$map != "" && opts$config != "") {
       WriteColumnIO(res, paste0(output_filename, ".cio"))
     }
   }
-} else {
+}
+
+RunMany <- function(opts) {
   # Run multiple models (one per each row of the experiments file).
   # If date is not specified, run yesterday's analyses only.
   if (opts$start_date == "" && opts$end_date == "") {
@@ -202,6 +200,13 @@ if (opts$counts != "" && opts$map != "" && opts$config != "") {
     }
   }
 }
+
+main = function(opts) {
+  if (opts$counts != "" && opts$map != "" && opts$config != "") {
+    RunOne(opts)
+  } else {
+    RunMany(opts)
+  }
 }
 
 if (!interactive()) {
