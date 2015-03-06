@@ -46,6 +46,8 @@ die() {
 # Semi-automated demos
 #
 
+readonly NUM_VALUES=50  # number of actual values
+
 # This generates the simulated input s1 .. s<n> with 3 different distributions.
 gen-sim-input() {
   local dist=$1
@@ -73,7 +75,7 @@ gen-sim-input() {
   # 50 different client values are easier to plot (default is 100)
   time tests/gen_sim_input.py $flag \
     -n $num_clients \
-    -r 50 \
+    -r $NUM_VALUES \
     -o _tmp/$dist.csv
 }
 
@@ -105,18 +107,11 @@ rappor-sim-profile() {
 # By default, we generate v1..v50.  Add some more here.  We hope these are
 # estimated at 0.
 more-candidates() {
-  cat <<EOF
-v51
-v52
-v53
-v54
-v55
-v56
-v57
-v58
-v59
-v60
-EOF
+  local num_additional=$1
+  # e.g. if num_additional 20, show v51-v70
+
+  seq $(expr $NUM_VALUES + 1) $(expr $NUM_VALUES + $num_additional) \
+    | awk '{print "v" $1}'
 }
 
 # Args:
@@ -128,7 +123,8 @@ print-candidates() {
   # Assume that we know the set of true inputs EXACTLY
   #cp _tmp/${dist}_true_inputs.txt _tmp/${dist}_candidates.txt
   #
-  local to_remove="$2"  # true values we omitted from the candidates list.
+  local num_additional=$2
+  local to_remove="$3"  # true values we omitted from the candidates list.
 
   local in=_tmp/${dist}_true_inputs.txt
   if test -n "$to_remove"; then
@@ -136,7 +132,7 @@ print-candidates() {
   else
     cat $in  # include all true inputs
   fi
-  more-candidates
+  more-candidates $num_additional
 }
 
 hash-candidates() {
@@ -185,7 +181,8 @@ run-dist() {
   local dist=$1
   # TODO: parameterize output dirs by num_clients
   local num_clients=${2:-100000}
-  local to_remove=${3:-}  # empty by default, set to 'v1|v2' to remove
+  local num_additional=${3:-10}  # number of additional candidates
+  local to_remove=${4:-}  # empty by default, set to 'v1|v2' to remove
 
   banner "Generating simulated input data ($dist)"
   gen-sim-input $dist $num_clients
@@ -196,7 +193,7 @@ run-dist() {
   banner "Generating candidates ($dist)"
 
   # Keep all candidates
-  print-candidates $dist "$to_remove" > _tmp/${dist}_candidates.txt
+  print-candidates $dist $num_additional "$to_remove" > _tmp/${dist}_candidates.txt
 
   banner "Hashing Candidates ($dist)"
   hash-candidates $dist
@@ -253,6 +250,22 @@ _run() {
 # Main entry point.  Run it for all distributions, and time the result.
 run() {
   time _run "$@"
+}
+
+# Running the demo of the exponential distribution with 10000 reports (x7,
+# which is 70000 values).
+#
+# - There are 50 real values, but we add 1000 more candidates, to get 1050 candidates.
+# - And then we remove the two most common strings, v1 and v2.
+# - With the current analysis, we are getting sum(proportion) = 1.7
+
+bad-case() {
+  run-dist exp 10000 1000 'v1|v2'
+}
+
+# Only add 10 more candidates.  Then we properly get the 0.48 proportion.
+ok-case() {
+  run-dist exp 10000 10 'v1|v2'
 }
 
 "$@"
