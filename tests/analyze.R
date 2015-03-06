@@ -1,4 +1,4 @@
-#!/usr/bin/Rscript --vanilla
+#!/usr/bin/env Rscript
 #
 # Copyright 2014 Google Inc. All rights reserved.
 # 
@@ -105,12 +105,17 @@ ProcessAll = function(ctx) {
   rbind(r, a, z)
 }
 
+# Colors selected to be friendly to the color blind:
+# http://www.cookbook-r.com/Graphs/Colors_%28ggplot2%29/
+palette <- c("#E69F00", "#56B4E9")
+
 PlotAll <- function(d, title) {
   # NOTE: geom_bar makes a histogram by default; need stat = "identity"
   g <- ggplot(d, aes(x = index, y = proportion, fill = factor(dist)))
-  b <- geom_bar(stat = "identity", position = "dodge")
+  b <- geom_bar(stat = "identity", width = 0.7,
+                position = position_dodge(width = 0.8))
   t <- ggtitle(title)
-  g + b + t
+  g + b + t + scale_fill_manual(values=palette)
 }
 
 WritePlot <- function(p, outdir, width = 800, height = 600) {
@@ -132,6 +137,9 @@ main <- function(parsed) {
   theme_set(theme_grey(base_size = 16))
 
   ctx <- new.env()
+
+  # NOTE: It takes more than 2000+ ms to get here, while the analysis only
+  # takes 500 ms or so (as measured by system.time).
 
   LoadInputs(input_prefix, ctx)
   d <- ProcessAll(ctx)
