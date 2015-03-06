@@ -1,5 +1,7 @@
 #!/usr/bin/env Rscript
 #
+# IMPORTANT: This script should be deleted when the analysis server is ready.
+#
 # Generates daily Chrome RAPPOR feed. All experiments found in the
 # experiment_config flag are processed for each day.
 #
