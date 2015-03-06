@@ -61,15 +61,28 @@ LoadInputs <- function(prefix, ctx) {
   m <- paste0(prefix, '_map.csv')
   h <- paste0(prefix, '_hist.csv')
 
+  params <- ReadParameterFile(p)
+  counts <- ReadCountsFile(c)
+  map <- ReadMapFile(m)
+
   # Calls AnalyzeRAPPOR to run the analysis code
   # Date(s) are some dummy dates
-  ctx$rappor <- AnalyzeRAPPOR(ReadParameterFile(p),
-                              ReadCountsFile(c),
-                              ReadMapFile(m)$map, "FDR", 0.05, 1,
-                              date="01/01/01", date_num="100001")
-  if (is.null(ctx$rappor)) {
+  rappor <- AnalyzeRAPPOR(params, counts, map$map, "FDR", 0.05,
+                          date="01/01/01", date_num="100001")
+  if (is.null(rappor)) {
     stop("RAPPOR analysis failed.")
   }
+
+  Log("Analysis Results:")
+  str(rappor)
+
+  Log("sum(proportion)")
+  print(sum(rappor$proportion))
+
+  Log("sum(estimate)")
+  print(sum(rappor$estimate))
+
+  ctx$rappor <- rappor
   ctx$actual <- read.csv(h)
 }
 

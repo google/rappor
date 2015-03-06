@@ -85,9 +85,9 @@ RunOne <- function(opts) {
   LoadMapFile(opts$map)
   date <- as.character(Sys.Date())
   date_num <- as.numeric(format(Sys.Date(), "%Y%m%d"))
-  res <- AnalyzeRAPPOR(config, counts, map$map, opts$correction,
-                       opts$alpha, experiment_name = "",
-                       opts$map, opts$config, date, date_num)
+  res <- AnalyzeRAPPOR(config, counts, map$map, opts$correction, opts$alpha,
+                       map_name = opts$map, config_name = opts$config,
+                       date = date, date_num = date_num)
 
   Log("sum(proportion)")
   print(sum(res$proportion))

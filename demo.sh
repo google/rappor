@@ -185,6 +185,7 @@ run-dist() {
   local dist=$1
   # TODO: parameterize output dirs by num_clients
   local num_clients=${2:-100000}
+  local to_remove=${3:-}  # empty by default, set to 'v1|v2' to remove
 
   banner "Generating simulated input data ($dist)"
   gen-sim-input $dist $num_clients
@@ -194,11 +195,8 @@ run-dist() {
 
   banner "Generating candidates ($dist)"
 
-  # Example of removing candidates.
-  #print-candidates $dist 'v1|v2'  > _tmp/${dist}_candidates.txt
-
   # Keep all candidates
-  print-candidates $dist '' > _tmp/${dist}_candidates.txt
+  print-candidates $dist "$to_remove" > _tmp/${dist}_candidates.txt
 
   banner "Hashing Candidates ($dist)"
   hash-candidates $dist
