@@ -1,4 +1,4 @@
-#!/usr/bin/Rscript
+#!/usr/bin/env Rscript
 #
 # Copyright 2014 Google Inc. All rights reserved.
 # 
