@@ -109,10 +109,23 @@ TestFindFeasibleStrings <- function() {
   pairwise_candidates <- FindPairwiseCandidates(sim, N, ngram_params,
                                                 params)$candidate_strs
   cat("Found the pairwise candidates. \n")
+
   pairwise_candidates[[1]] <- rbind(pairwise_candidates[[1]], c("ab", "le"))
+
   if (is.null(pairwise_candidates)) {
     return (FALSE)
   }
+
+  conn <- file('graph.txt', 'w+')
+  WriteKPartiteGraph(conn,
+                     pairwise_candidates,
+                     sim$pairings,
+                     ngram_params$num_ngrams,
+                     ngram_params$ngram_size)
+
+  close(conn)
+  cat("Wrote graph.txt\n")
+
   found_candidates <- FindFeasibleStrings(pairwise_candidates,
                                           sim$pairings,
                                           ngram_params$num_ngrams,

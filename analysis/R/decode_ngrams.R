@@ -25,14 +25,14 @@ FindPairwiseCandidates <- function(report_data, N, ngram_params, params) {
   #   report_data: Object containing data relevant to reports:
   #       $inds: The indices of reports collected using various pairs
   #       $cohorts: The cohort of each report
-  #       $map: THe map used for all the ngrams
+  #       $map: The map used for all the ngrams
   #       $reports: The reports used for each ngram and full string
   #   N: Number of reports collected
   #   ngram_params: Parameters related to ngram size
   #   params: Parameter list.
   #
   # Returns:
-  #   List: list of candidate strings, list of pairwise distributions.
+  #   List: list of matrices, list of pairwise distributions.
 
   inds <- report_data$inds
   cohorts <- report_data$cohorts
@@ -82,26 +82,38 @@ FindPairwiseCandidates <- function(report_data, N, ngram_params, params) {
 
   # Filter joints to remove infrequently co-occurring ngrams.
   candidate_strs <- lapply(1:num_candidate_ngrams, function(i) {
-    edges <- which(dists[[i]]$fit > threshold, arr.ind = TRUE, FALSE)
+    fit <- dists[[i]]$fit
+    edges <- which(fit > threshold, arr.ind = TRUE, FALSE)
 
     # Recover the list of strings that seem significant
     found_candidates <- sapply(1:ncol(edges), function(x) {
-      chunks <- sapply(edges[, x], function(j)
-                       dimnames(dists[[i]]$fit)[[x]][j])
+      chunks <- sapply(edges[, x],
+                       function(j) dimnames(fit)[[x]][j])
       chunks
     })
+    # sapply returns either "character" vector (for n=1) or a matrix.  Convert
+    # it to a matrix.  This can be seen as follows:
+    #
+    # > class(sapply(1:5, function(x) "a"))
+    # [1] "character"
+    # > class(sapply(1:5, function(x) c("a", "b")))
+    # [1] "matrix"
+    found_candidates <- rbind(found_candidates)
+
     # Remove the "others"
     others <- which(found_candidates == "Other")
     if (length(others) > 0) {
-      found_candidates <- found_candidates[-which(
-          found_candidates == "Other", arr.ind = TRUE)[, 1], ]
+      other <- which(found_candidates == "Other", arr.ind = TRUE)[, 1]
+      # drop = FALSE necessary to keep it a matrix
+      found_candidates <- found_candidates[-other, , drop = FALSE]
     }
+
     found_candidates
   })
-
   if (any(lapply(found_candidates, function(x) length(x)) == 0)) {
     return (NULL)
   }
+
   list(candidate_strs = candidate_strs, dists = dists)
 }
 
@@ -134,8 +146,6 @@ FindFeasibleStrings <- function(found_candidates, pairings, num_ngrams,
   active_cands <- found_candidates[[adjacent_pairs[1]]]
   if (class(active_cands) == "list") {
     return (list())
-  } else if (class(active_cands) == "character") {
-    active_cands <- t(as.data.frame(active_cands))
   } else {
     active_cands <- as.data.frame(active_cands)
   }
@@ -147,11 +157,7 @@ FindFeasibleStrings <- function(found_candidates, pairings, num_ngrams,
       return (list())
     }
     new_cands <- found_candidates[[adjacent_pairs[i]]]
-    if (class(new_cands) == "character") {
-      new_cands <- t(as.data.frame(new_cands))
-    } else {
-      new_cands <- as.data.frame(new_cands)
-    }
+    new_cands <- as.data.frame(new_cands)
     # Builds the set of possible candidates based only on ascending
     #     candidate pairs
     active_cands <- BuildCandidates(active_cands, new_cands)
@@ -167,11 +173,7 @@ FindFeasibleStrings <- function(found_candidates, pairings, num_ngrams,
 
   for (i in remaining) {
     new_cands <- found_candidates[[i]]
-    if (class(new_cands) == "character") {
-      new_cands <- t(as.data.frame(new_cands))
-    } else {
-      new_cands <- as.data.frame(new_cands)
-    }
+    new_cands <- as.data.frame(new_cands)
     # Prune out all candidates that do not agree with new_cands
     active_cands <- PruneCandidates(active_cands, pairings[i, ],
                                     ngram_size,
@@ -285,7 +287,6 @@ PruneCandidates <- function(active_cands, pairing, ngram_size, new_cands) {
   active_cands
 }
 
-
 EstimateDictionary <- function(report_data, N, ngram_params, params) {
   # Takes in a list of report data and returns a list of string
   #     estimates of the dictionary.
@@ -318,3 +319,59 @@ EstimateDictionary <- function(report_data, N, ngram_params, params) {
   list(found_candidates = found_candidates,
        pairwise_candidates = pairwise_candidates)
 }
+
+WriteKPartiteGraph <- function(conn, pairwise_candidates, pairings, num_ngrams,
+                               ngram_size) {
+  # Args:
+  #  conn: R connection to write to.  Should be opened with mode w+.
+  #  pairwise_candidates: list of matrices.  Each matrix represents a subgraph;
+  #    it contains the edges between partitions i and j, so there are (k choose
+  #    2) matrices.  Each matrix has dimension 2 x E, where E is the number of
+  #    edges.
+  #  pairings: 2 x (k choose 2) matrix of character positions.  Each row
+  #    corresponds to a subgraph; it has 1-based character index of partitions
+  #    i and j.
+  #  num_ngrams: length of pairwise_candidates, or the number of partitions in
+  #    the k-partite graph
+
+  # File Format:
+  #
+  # num_partitions 3
+  # ngram_size 2
+  # 0.ab 1.cd
+  # 0.ab 2.ef
+  #
+  # The first line specifies the number of partitions (k).
+  # The remaining lines are edges, where each node is <partition>.<bigram>.
+  #
+  # Partitions are numbered from 0.  The partition of the left node will be
+  # less than the partition of the right node.
+
+  # First two lines are metadata
+  cat(sprintf('num_partitions %d\n', num_ngrams), file = conn)
+  cat(sprintf('ngram_size %d\n', ngram_size), file = conn)
+
+  for (i in 1:length(pairwise_candidates)) {
+    # The two pairwise_candidates for this subgraph.
+    # Turn 1-based character positions into 0-based partition numbers,
+    # e.g. (3, 5) -> (1, 2)
+
+    pos1 <- pairings[[i, 1]]
+    pos2 <- pairings[[i, 2]]
+    part1 <- (pos1 - 1) / ngram_size
+    part2 <- (pos2 - 1) / ngram_size
+    cat(sprintf("Writing partition (%d, %d)\n", part1, part2))
+
+    p <- pairwise_candidates[[i]]
+    # each row is an edge
+    for (j in 1:nrow(p)) {
+      n1 <- p[[j, 1]]
+      n2 <- p[[j, 2]]
+      line <- sprintf('edge %d.%s %d.%s\n', part1, n1, part2, n2)
+      # NOTE: It would be faster to preallocate 'lines', but we would have to
+      # make a two passes through pairwise_candidates.
+      cat(line, file = conn)
+    }
+  }
+}
+
