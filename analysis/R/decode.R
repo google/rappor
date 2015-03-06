@@ -17,6 +17,10 @@
 
 library(glmnet)
 
+# Test.  Change this to use pcls in alternative.R.
+#USE_PCLS <- TRUE
+USE_PCLS <- FALSE
+
 EstimateBloomCounts <- function(params, obs_counts) {
   # Estimates the number of times each bit in each cohort was set in original
   # Bloom filters.
@@ -115,8 +119,13 @@ PerformInference <- function(X, Y, N, mod, params, alpha, correction) {
   ESS <- resid_var * nrow(X)
 
   betas <- matrix(mod$coefs, ncol = 1)
-  mod_var <- summary(mod$fit)$sigma^2
-  betas_sd <- rep(sqrt(max(resid_var, mod_var) / (m * h)), length(betas))
+  if (!USE_PCLS) {
+    mod_var <- summary(mod$fit)$sigma^2
+    betas_sd <- rep(sqrt(max(resid_var, mod_var) / (m * h)), length(betas))
+  } else {
+    mod_var <- 0
+    betas_sd <- 1
+  }
   z_values <- betas / betas_sd
 
   # 1-sided t-test.
@@ -221,15 +230,33 @@ Decode <- function(counts, map, params, alpha = 0.05,
 
     # Fit regular linear model to obtain unbiased estimates.
     X <- as.data.frame(apply(as.matrix(map[, non_zero]), 2, as.numeric))
-    mod <- CustomLM(X, Y)
 
-    # Return complete vector of coefficients with 0's.
-    coefs <- rep(0, length(mod_lasso$coefs))
-    names(coefs) <- names(mod_lasso$coefs)
-    coefs[non_zero] <- mod$coef
-    coefs[is.na(coefs)] <- 0
-    mod$coefs <- coefs
+    if (!USE_PCLS) {
+
+      mod <- CustomLM(X, Y)
+
+      # Return complete vector of coefficients with 0's.
+      coefs <- rep(0, length(mod_lasso$coefs))
+      names(coefs) <- names(mod_lasso$coefs)
+      coefs[non_zero] <- mod$coef
+      coefs[is.na(coefs)] <- 0
+      mod$coefs <- coefs
+
+    } else {
+      print("CALLING newLM")
+
+      constrained_coefs <- newLM(X, Y)
+
+      # new coefs vector with same names and length as lasso coefs
+      coefs <- rep(0, length(mod_lasso$coefs))
+      names(coefs) <- names(mod_lasso$coefs)
+
+      mod = list()
+      coefs[non_zero] <- constrained_coefs
+      mod$coefs <- coefs
+    }
   } else {
+    print('Decode: CustomLM')
     mod <- CustomLM(as.data.frame(as.matrix(map)), Y)
     lasso <- NULL
   }

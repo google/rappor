@@ -22,6 +22,8 @@ source(file.path(rappor_root, "analysis/R/analysis_lib.R"))
 source(file.path(rappor_root, "analysis/R/read_input.R"))
 source(file.path(rappor_root, "analysis/R/decode.R"))
 
+source(file.path(rappor_root, "analysis/R/alternative.R"))  # newLM
+
 options(stringsAsFactors = FALSE)
 
 # Do command line parsing first to catch errors.  Loading libraries in R is
