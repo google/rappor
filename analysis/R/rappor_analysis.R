@@ -62,6 +62,11 @@ Log <- function(...) {
   cat('\n')
 }
 
+# Handle the case of redundant cohorts, i.e. the counts file needs to be
+# further aggregated to obtain counts for the number of cohorts specified in
+# the config file.
+#
+# NOTE: Why is this happening?
 AdjustCounts <- function(counts, params) {
   apply(counts, 2, function(x) {
     tapply(x, rep(1:params$m, nrow(counts) / params$m), sum)
@@ -170,9 +175,6 @@ RunMany <- function(opts) {
 
         counts_j <- ReadCountsFile(file.path(opts$counts_dir,
                                              trailing_dates[j], counts_file))
-        # Handle the case of redundant cohorts, i.e. the counts file needs to
-        # be further aggregated to obtain counts for the number of cohorts
-        # specified in the config file.
         if (!is.null(counts_j)) {
           counts_list[[j]] <- AdjustCounts(counts_j, config)
         }
