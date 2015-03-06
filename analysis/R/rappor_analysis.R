@@ -213,8 +213,11 @@ RunMany <- function(opts) {
     str(output)
     cat('\n')
 
-    Log("SUM")
+    Log("sum(proportion)")
     print(sum(output$proportion))
+
+    Log("sum(estimate)")
+    print(sum(output$estimate))
   }
 }
 
