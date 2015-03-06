@@ -13,9 +13,11 @@
 # limitations under the License.
 
 #
-# RAPPOR simulation library.
+# RAPPOR simulation library. Contains code for encoding simulated data and
+#     creating the map used to encode and decode reports.
 
 library(glmnet)
+library(parallel)  # mclapply
 
 SetOfStrings <- function(num_strings = 100) {
   # Generates a set of strings for simulation purposes.
@@ -53,7 +55,44 @@ GetSampleProbs <- function(params) {
   probs
 }
 
-CreateMap <- function(strs, params, generate_pos = TRUE) {
+EncodeAll <- function(x, cohorts, map, params, num_cores = 1) {
+  # Encodes the ground truth into RAPPOR reports.
+  #
+  # Args:
+  #   x: Observed strings for each report, Nx1 vector
+  #   cohort: Cohort assignment for each report, Nx1 vector
+  #   map: list of matrices encoding locations of hashes for each
+  #       string, for each cohort
+  #   params: System parameters
+  #
+  # Returns:
+  #   RAPPOR reports for each piece of data.
+
+  p <- params$p
+  q <- params$q
+  f <- params$f
+  k <- params$k
+
+  qstar <- (1 - f / 2) * q + (f / 2) * p
+  pstar <- (1 - f / 2) * p + (f / 2) * q
+
+  if (!all(x %in% colnames(map[[1]]))) {
+    stop("Some strings are not in the map: ",
+         paste(setdiff(unique(x), colnames(map[[1]]), collapse="_"),"\n"))
+  }
+  bfs <- mapply(function(x, y) y[, x], x, map[cohorts], SIMPLIFY = FALSE)
+  reports <- mclapply(bfs, function(x) {
+    noise <- sample(0:1, k, replace = TRUE, prob = c(1 - pstar, pstar))
+    ind <- which(x)
+    noise[ind] <- sample(0:1, length(ind), replace = TRUE,
+                         prob = c(1 - qstar, qstar))
+    noise
+  }, mc.cores = num_cores)
+
+  reports
+}
+
+CreateMap <- function(strs, params, generate_pos = TRUE, basic = FALSE) {
   # Creates a list of 0/1 matrices corresponding to mapping between the strs and
   # Bloom filters for each instance of the RAPPOR.
   # Ex. for 3 strings, 2 instances, 1 hash function and Bloom filter of size 4,
@@ -68,9 +107,12 @@ CreateMap <- function(strs, params, generate_pos = TRUE) {
   #   0 0 1 0
   #
   # Args:
-  #    - strs: a vector of strings
-  #    - params: a list of parameters in the following format:
+  #    strs: a vector of strings
+  #    params: a list of parameters in the following format:
   #         (k, h, m, p, q, f).
+  #    generate_pos: Tells whether to generate an object storing the
+  #        positions of the nonzeros in the matrix
+  #    basic: Tells whether to use basic RAPPOR (only works if h=1).
 
   M <- length(strs)
   map <- list()
@@ -79,7 +121,11 @@ CreateMap <- function(strs, params, generate_pos = TRUE) {
   m <- params$m
 
   for (i in 1:m) {
-    ones <- sample(1:k, M * h, replace = TRUE)
+    if (basic && (h == 1) && (k == M)) {
+      ones <- 1:M
+    } else {
+      ones <- sample(1:k, M * h, replace = TRUE)
+    }
     cols <- rep(1:M, each = h)
     map[[i]] <- sparseMatrix(ones, cols, dims = c(k, M))
     colnames(map[[i]]) <- strs
