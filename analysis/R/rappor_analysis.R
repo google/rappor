@@ -204,6 +204,17 @@ RunMany <- function(opts) {
       write.csv(output, path)
       Log('Wrote %s', path)
     }
+
+    Log("RES")
+    str(res)
+    cat('\n')
+
+    Log("OUTPUT")
+    str(output)
+    cat('\n')
+
+    Log("SUM")
+    print(sum(output$proportion))
   }
 }
 
