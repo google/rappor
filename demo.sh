@@ -257,10 +257,18 @@ run() {
 #
 # - There are 50 real values, but we add 1000 more candidates, to get 1050 candidates.
 # - And then we remove the two most common strings, v1 and v2.
-# - With the current analysis, we are getting sum(proportion) = 1.7
+# - With the current analysis, we are getting sum(proportion) = 1.1 to 1.7
+
+# TODO: Make this sharper by including only one real value?
 
 bad-case() {
-  run-dist exp 10000 1000 'v1|v2'
+  local num_additional=${1:-1000}
+  run-dist exp 10000 $num_additional 'v1|v2'
+}
+
+# Force it to be less than 1
+pcls-test() {
+  USE_PCLS=1 bad-case
 }
 
 # Only add 10 more candidates.  Then we properly get the 0.48 proportion.
