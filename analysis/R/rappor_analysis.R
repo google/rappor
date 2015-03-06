@@ -62,16 +62,29 @@ Log <- function(...) {
   cat('\n')
 }
 
+AdjustCounts <- function(counts, params) {
+  apply(counts, 2, function(x) {
+    tapply(x, rep(1:params$m, nrow(counts) / params$m), sum)
+  })
+}
+
 RunOne <- function(opts) {
   # Run a single model of all inputs are specified.
   config <- ReadParameterFile(opts$config)
   counts <- ReadCountsFile(opts$counts)
+  counts <- AdjustCounts(counts, config)
   LoadMapFile(opts$map)
   date <- as.character(Sys.Date())
   date_num <- as.numeric(format(Sys.Date(), "%Y%m%d"))
   res <- AnalyzeRAPPOR(config, counts, map$map, opts$correction,
                        opts$alpha, experiment_name = "",
                        opts$map, opts$config, date, date_num)
+
+  Log("sum(proportion)")
+  print(sum(res$proportion))
+
+  Log("sum(estimate)")
+  print(sum(res$estimate))
 
   if (!is.null(res)) {
     output_filename <- file.path(opts$output_dir,
@@ -161,9 +174,7 @@ RunMany <- function(opts) {
         # be further aggregated to obtain counts for the number of cohorts
         # specified in the config file.
         if (!is.null(counts_j)) {
-          counts_list[[j]] <- apply(counts_j, 2, function(x) {
-            tapply(x, rep(1:config$m, nrow(counts_j) / config$m), sum)
-          })
+          counts_list[[j]] <- AdjustCounts(counts_j, config)
         }
       }
       counts <- Reduce("+", counts_list)  # Turn list into matrix
