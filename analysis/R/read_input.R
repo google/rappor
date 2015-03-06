@@ -101,6 +101,8 @@ ReadMapFile <- function(map_file, params = NULL, quote = "") {
   list(map = map, strs = strs, map_pos = map_pos)
 }
 
+# This function caches the .csv as an .rda for faster loading.  NOTE: It
+# assumes the map csv file is immutable.
 LoadMapFile <- function(map_file, params = NULL, quote = "") {
   # Reads the map file and creates an R binary .rda.
   # If .rda file already exists, just loads that file.

@@ -41,7 +41,7 @@ ValidateInput <- function(params, counts, map) {
   val
 }
 
-AnalyzeRAPPOR <- function(params, counts, map, correction, alpha, cv_step,
+AnalyzeRAPPOR <- function(params, counts, map, correction, alpha,
                           experiment_name = "", map_name = "", config_name = "",
                           date = NULL, date_num = NULL, ...) {
   val <- ValidateInput(params, counts, map)
@@ -54,7 +54,7 @@ AnalyzeRAPPOR <- function(params, counts, map, correction, alpha, cv_step,
       "Number of cohorts: ", nrow(counts), "\n", sep = "")
 
   fit <- Decode(counts, map, params, correction = correction,
-                alpha = alpha, cv_step = cv_step, ...)
+                alpha = alpha, ...)
 
   if (nrow(fit$fit) > 0) {
     res <- fit$fit
