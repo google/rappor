@@ -68,7 +68,6 @@ LoadInputs <- function(prefix, ctx) {
   map <- ReadMapFile(m)
 
   # Calls AnalyzeRAPPOR to run the analysis code
-  # Date(s) are some dummy dates
   rappor <- AnalyzeRAPPOR(params, counts, map$map, "FDR", 0.05,
                           date="01/01/01", date_num="100001")
   if (is.null(rappor)) {
@@ -118,28 +117,28 @@ ProcessAll = function(ctx) {
   }
 
   # Report metrics to compare actual and rappor distr
-
   # Pad distributions with zeroes
-  diff_len <- length(actual$count) - length(rappor$proportion)
-  distr_len <- max(length(actual$count), length(rappor$proportion))
-  print("DIFF_LEN")
-  print(diff_len)
-  if (diff_len < 0) {
-    actual$count = c(actual$count, rep(0, -diff_len))
-  } else if (diff_len > 0) {
-    rappor$proportion <- c(rappor$proportion, rep(0.0, diff_len)) 
+  r_filled <- rbind(r, z)
+  
+  # Recover distributions
+  a_distr <- a$proportion
+  r_distr <- r_filled$proportion
+  
+  fp <- FALSE
+  # Presence of false positives
+  len_diff <- length(r_distr) - length(a_distr)
+  if (len_diff>0) {
+    fp <- TRUE
+    # Further pad a_distr
+    a_distr <- c(a_distr, rep(0.0, len_diff))
   }
-  # L1 distance between actual and rappor distributions
-  l1 <- sum(abs(actual$count/total - rappor$proportion))/distr_len
-  l2 <- sqrt(sum((actual$count/total - rappor$proportion)^2)/distr_len)
-  metric <- data.frame(l1 = l1, l2 = l2)
-  print("METRIC")
-  print(metric)
-  ret <- data.frame(data = rbind(r, a, z), metric = metric)
-  print("RET$DATA")
-  print(rbind(r, a, z))
-  print(ret$metric)
-  ret
+  
+  #L1 and L2 distance between actual and rappor distributions
+  l1 <- sum(abs(a_distr - r_distr))/length(a_distr)
+  l2 <- sqrt(sum((a_distr - r_distr)^2)/length(a_distr))
+  metrics <- data.frame(l1 = l1, l2 = l2, fp_detected = fp)
+  
+  list(data = rbind(r, a, z), metrics = metrics)
 }
 
 # Colors selected to be friendly to the color blind:
@@ -147,8 +146,6 @@ ProcessAll = function(ctx) {
 palette <- c("#E69F00", "#56B4E9")
 
 PlotAll <- function(d, title) {
-  print("D")
-  print(d)
   # NOTE: geom_bar makes a histogram by default; need stat = "identity"
   g <- ggplot(d, aes(x = index, y = proportion, fill = factor(dist)))
   b <- geom_bar(stat = "identity", width = 0.7,
