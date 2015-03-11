@@ -117,6 +117,8 @@ ProcessAll = function(ctx) {
     z <- data.frame()
   }
 
+  # TODO(ananthr@): Report metrics to compare actual and rappor distr
+
   rbind(r, a, z)
 }
 
