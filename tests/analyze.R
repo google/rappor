@@ -87,7 +87,7 @@ LoadInputs <- function(prefix, ctx) {
   ctx$actual <- read.csv(h)
 }
 
-# Prepare input data to be plotted.
+# Prepare input data to be plotted
 ProcessAll = function(ctx) {
   actual <- ctx$actual
   rappor <- ctx$rappor
@@ -105,40 +105,41 @@ ProcessAll = function(ctx) {
                   proportion = rappor$proportion,
                   dist = "rappor")
 
-  # Fill in zeros for values missing in RAPPOR.  It makes the ggplot bar plot
-  # look better.
+  # Fill in zeros for values missing in RAPPOR and in actual data
+  # Helps with false positive detection and makes the ggplot look better
   fill <- setdiff(actual$string, rappor$strings)
+  fpfill <- setdiff(rappor$strings, actual$string)
   if (length(fill) > 0) {
     z <- data.frame(index = StringToInt(fill),
                     proportion = 0.0,
                     dist = "rappor")
+    r <- rbind(r, z)
+  }
+  if (length(fpfill) > 0) {
+    # More strings detected in RAPPOR than present in actual distr
+    # These strings must be reported as false positives in metrics$fp_values
+    z <- data.frame(index = StringToInt(fpfill),
+                    proportion = 0.0,
+                    dist = "actual")
+    a <- rbind(a, z)
+    Log("False Positives:")
+    print(fpfill)
   } else {
-    z <- data.frame()
+    fpfill = ""
   }
 
   # Report metrics to compare actual and rappor distr
-  # Pad distributions with zeroes
-  r_filled <- rbind(r, z)
-  
   # Recover distributions
   a_distr <- a$proportion
-  r_distr <- r_filled$proportion
-  
-  fp <- FALSE
-  # Presence of false positives
-  len_diff <- length(r_distr) - length(a_distr)
-  if (len_diff>0) {
-    fp <- TRUE
-    # Further pad a_distr
-    a_distr <- c(a_distr, rep(0.0, len_diff))
-  }
+  r_distr <- r$proportion
   
   #L1 and L2 distance between actual and rappor distributions
   l1 <- sum(abs(a_distr - r_distr))/length(a_distr)
   l2 <- sqrt(sum((a_distr - r_distr)^2)/length(a_distr))
-  metrics <- data.frame(l1 = l1, l2 = l2, fp_detected = fp)
+  metrics <- data.frame(l1 = l1, l2 = l2, fp_values = fpfill)
   
-  list(data = rbind(r, a, z), metrics = metrics)
+  # Return data for plots and calculated metrics
+  list(data = rbind(r, a), metrics = metrics)
 }
 
 # Colors selected to be friendly to the color blind:
