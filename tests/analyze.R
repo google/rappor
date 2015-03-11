@@ -117,9 +117,29 @@ ProcessAll = function(ctx) {
     z <- data.frame()
   }
 
-  # TODO(ananthr@): Report metrics to compare actual and rappor distr
+  # Report metrics to compare actual and rappor distr
 
-  rbind(r, a, z)
+  # Pad distributions with zeroes
+  diff_len <- length(actual$count) - length(rappor$proportion)
+  distr_len <- max(length(actual$count), length(rappor$proportion))
+  print("DIFF_LEN")
+  print(diff_len)
+  if (diff_len < 0) {
+    actual$count = c(actual$count, rep(0, -diff_len))
+  } else if (diff_len > 0) {
+    rappor$proportion <- c(rappor$proportion, rep(0.0, diff_len)) 
+  }
+  # L1 distance between actual and rappor distributions
+  l1 <- sum(abs(actual$count/total - rappor$proportion))/distr_len
+  l2 <- sqrt(sum((actual$count/total - rappor$proportion)^2)/distr_len)
+  metric <- data.frame(l1 = l1, l2 = l2)
+  print("METRIC")
+  print(metric)
+  ret <- data.frame(data = rbind(r, a, z), metric = metric)
+  print("RET$DATA")
+  print(rbind(r, a, z))
+  print(ret$metric)
+  ret
 }
 
 # Colors selected to be friendly to the color blind:
@@ -127,6 +147,8 @@ ProcessAll = function(ctx) {
 palette <- c("#E69F00", "#56B4E9")
 
 PlotAll <- function(d, title) {
+  print("D")
+  print(d)
   # NOTE: geom_bar makes a histogram by default; need stat = "identity"
   g <- ggplot(d, aes(x = index, y = proportion, fill = factor(dist)))
   b <- geom_bar(stat = "identity", width = 0.7,
@@ -160,7 +182,7 @@ main <- function(parsed) {
 
   LoadInputs(input_prefix, ctx)
   d <- ProcessAll(ctx)
-  p <- PlotAll(d, options$title)
+  p <- PlotAll(d$data, options$title)
   WritePlot(p, output_dir)
 }
 
