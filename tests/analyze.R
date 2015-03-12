@@ -104,7 +104,16 @@ ProcessAll = function(ctx) {
   r <- data.frame(index = StringToInt(rappor$strings),
                   proportion = rappor$proportion,
                   dist = "rappor")
-
+  
+  # L1 distance between actual and rappor distributions
+  # Outer join
+  merged <- merge(r[,c('index', 'proportion')],
+                  a[,c('index', 'proportion')],
+                  by='index', all=TRUE)
+  # NA values set to 0.0
+  merged[is.na(merged)] <- 0
+  l1 <- sum(abs(merged$proportion.x - merged$proportion.y))
+  
   # Fill in zeros for values missing in RAPPOR and in actual data
   # Helps with false positive detection and makes the ggplot look better
   not_in_rappor <- setdiff(actual$string, rappor$strings)
@@ -123,20 +132,11 @@ ProcessAll = function(ctx) {
                     dist = "actual")
     a <- rbind(a, z)
   }
-
-  # Report metrics to compare actual and rappor distr
-  # Recover distributions
-  a_distr <- a$proportion
-  r_distr <- r$proportion
-  
-  # L1 and L2 distance between actual and rappor distributions
-  l1 <- sum(abs(a_distr - r_distr))/length(a_distr)
-  l2 <- sqrt(sum((a_distr - r_distr)^2)/length(a_distr))
   
   # Choose false positive strings and their proportion from rappor estimates
   fp <- rappor[rappor$strings %in% not_in_actual,
                       c('strings', 'proportion')]
-  metrics <- list(l1 = l1, l2 = l2, fp = fp)
+  metrics <- list(l1 = l1, fp = fp)
   Log("Metrics:")
   print(str(metrics))
   
