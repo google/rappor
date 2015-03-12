@@ -122,8 +122,6 @@ ProcessAll = function(ctx) {
                     proportion = 0.0,
                     dist = "actual")
     a <- rbind(a, z)
-    Log("False Positives:")
-    print(fpfill)
   } else {
     fpfill = ""
   }
@@ -133,10 +131,16 @@ ProcessAll = function(ctx) {
   a_distr <- a$proportion
   r_distr <- r$proportion
   
-  #L1 and L2 distance between actual and rappor distributions
+  # L1 and L2 distance between actual and rappor distributions
   l1 <- sum(abs(a_distr - r_distr))/length(a_distr)
   l2 <- sqrt(sum((a_distr - r_distr)^2)/length(a_distr))
-  metrics <- data.frame(l1 = l1, l2 = l2, fp_values = fpfill)
+  
+  # Choose false positive strings and their proportion from rappor estimates
+  fp <- rappor[rappor$strings %in% fpfill,
+                      c('strings', 'proportion')]
+  metrics <- list(l1 = l1, l2 = l2, fp = fp)
+  Log("Metrics:")
+  print(str(metrics))
   
   # Return data for plots and calculated metrics
   list(data = rbind(r, a), metrics = metrics)
