@@ -126,7 +126,7 @@ ProcessAll = function(ctx) {
   }
   if (length(not_in_actual) > 0) {
     # More strings detected in RAPPOR than present in actual distr
-    # These strings must be reported as false positives in metrics$fp_values
+    # These strings must be reported as false positives in metrics$fp
     z <- data.frame(index = StringToInt(not_in_actual),
                     proportion = 0.0,
                     dist = "actual")
