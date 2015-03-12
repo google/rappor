@@ -68,7 +68,6 @@ LoadInputs <- function(prefix, ctx) {
   map <- ReadMapFile(m)
 
   # Calls AnalyzeRAPPOR to run the analysis code
-  # Date(s) are some dummy dates
   rappor <- AnalyzeRAPPOR(params, counts, map$map, "FDR", 0.05,
                           date="01/01/01", date_num="100001")
   if (is.null(rappor)) {
@@ -88,7 +87,7 @@ LoadInputs <- function(prefix, ctx) {
   ctx$actual <- read.csv(h)
 }
 
-# Prepare input data to be plotted.
+# Prepare input data to be plotted
 ProcessAll = function(ctx) {
   actual <- ctx$actual
   rappor <- ctx$rappor
@@ -105,21 +104,44 @@ ProcessAll = function(ctx) {
   r <- data.frame(index = StringToInt(rappor$strings),
                   proportion = rappor$proportion,
                   dist = "rappor")
-
-  # Fill in zeros for values missing in RAPPOR.  It makes the ggplot bar plot
-  # look better.
-  fill <- setdiff(actual$string, rappor$strings)
-  if (length(fill) > 0) {
-    z <- data.frame(index = StringToInt(fill),
+  
+  # L1 distance between actual and rappor distributions
+  # Outer join
+  merged <- merge(r[,c('index', 'proportion')],
+                  a[,c('index', 'proportion')],
+                  by='index', all=TRUE)
+  # NA values set to 0.0
+  merged[is.na(merged)] <- 0
+  l1 <- sum(abs(merged$proportion.x - merged$proportion.y))
+  
+  # Fill in zeros for values missing in RAPPOR and in actual data
+  # Helps with false positive detection and makes the ggplot look better
+  not_in_rappor <- setdiff(actual$string, rappor$strings)
+  not_in_actual <- setdiff(rappor$strings, actual$string)
+  if (length(not_in_rappor) > 0) {
+    z <- data.frame(index = StringToInt(not_in_rappor),
                     proportion = 0.0,
                     dist = "rappor")
-  } else {
-    z <- data.frame()
+    r <- rbind(r, z)
   }
-
-  # TODO(ananthr@): Report metrics to compare actual and rappor distr
-
-  rbind(r, a, z)
+  if (length(not_in_actual) > 0) {
+    # More strings detected in RAPPOR than present in actual distr
+    # These strings must be reported as false positives in metrics$fp
+    z <- data.frame(index = StringToInt(not_in_actual),
+                    proportion = 0.0,
+                    dist = "actual")
+    a <- rbind(a, z)
+  }
+  
+  # Choose false positive strings and their proportion from rappor estimates
+  fp <- rappor[rappor$strings %in% not_in_actual,
+                      c('strings', 'proportion')]
+  metrics <- list(l1 = l1, fp = fp)
+  Log("Metrics:")
+  print(str(metrics))
+  
+  # Return data for plots and calculated metrics
+  list(plot_data = rbind(r, a), metrics = metrics)
 }
 
 # Colors selected to be friendly to the color blind:
@@ -160,7 +182,7 @@ main <- function(parsed) {
 
   LoadInputs(input_prefix, ctx)
   d <- ProcessAll(ctx)
-  p <- PlotAll(d, options$title)
+  p <- PlotAll(d$plot_data, options$title)
   WritePlot(p, output_dir)
 }
 
