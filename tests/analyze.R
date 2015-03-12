@@ -107,18 +107,18 @@ ProcessAll = function(ctx) {
 
   # Fill in zeros for values missing in RAPPOR and in actual data
   # Helps with false positive detection and makes the ggplot look better
-  fill <- setdiff(actual$string, rappor$strings)
-  fpfill <- setdiff(rappor$strings, actual$string)
-  if (length(fill) > 0) {
-    z <- data.frame(index = StringToInt(fill),
+  not_in_rappor <- setdiff(actual$string, rappor$strings)
+  not_in_actual <- setdiff(rappor$strings, actual$string)
+  if (length(not_in_rappor) > 0) {
+    z <- data.frame(index = StringToInt(not_in_rappor),
                     proportion = 0.0,
                     dist = "rappor")
     r <- rbind(r, z)
   }
-  if (length(fpfill) > 0) {
+  if (length(not_in_actual) > 0) {
     # More strings detected in RAPPOR than present in actual distr
     # These strings must be reported as false positives in metrics$fp_values
-    z <- data.frame(index = StringToInt(fpfill),
+    z <- data.frame(index = StringToInt(not_in_actual),
                     proportion = 0.0,
                     dist = "actual")
     a <- rbind(a, z)
@@ -134,7 +134,7 @@ ProcessAll = function(ctx) {
   l2 <- sqrt(sum((a_distr - r_distr)^2)/length(a_distr))
   
   # Choose false positive strings and their proportion from rappor estimates
-  fp <- rappor[rappor$strings %in% fpfill,
+  fp <- rappor[rappor$strings %in% not_in_actual,
                       c('strings', 'proportion')]
   metrics <- list(l1 = l1, l2 = l2, fp = fp)
   Log("Metrics:")
