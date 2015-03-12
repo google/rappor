@@ -122,8 +122,6 @@ ProcessAll = function(ctx) {
                     proportion = 0.0,
                     dist = "actual")
     a <- rbind(a, z)
-  } else {
-    fpfill = ""
   }
 
   # Report metrics to compare actual and rappor distr
@@ -143,7 +141,7 @@ ProcessAll = function(ctx) {
   print(str(metrics))
   
   # Return data for plots and calculated metrics
-  list(data = rbind(r, a), metrics = metrics)
+  list(plot_data = rbind(r, a), metrics = metrics)
 }
 
 # Colors selected to be friendly to the color blind:
@@ -184,7 +182,7 @@ main <- function(parsed) {
 
   LoadInputs(input_prefix, ctx)
   d <- ProcessAll(ctx)
-  p <- PlotAll(d$data, options$title)
+  p <- PlotAll(d$plot_data, options$title)
   WritePlot(p, output_dir)
 }
 
