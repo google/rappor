@@ -158,9 +158,11 @@ def get_rappor_masks(user_id, word, params, rand_funcs):
 
   assigned_cohort = rand_funcs.cohort_rand_fn(0, params.num_cohorts - 1)
   # Uniform bits for (*)
-  f_bits = rand_funcs.uniform_gen()
+  f_bits = rand_funcs.f_gen()
+  if f_bits is None:
+    raise AssertionError('Too many bits (k = %d)' % params.num_bloombits)
   # Mask indices are 1 with probability f.
-  mask_indices = rand_funcs.f_gen()
+  mask_indices = rand_funcs.uniform_gen()
 
   if params.flag_oneprr:                    # Restore state
     rand_funcs.rand.setstate(stored_state)
@@ -219,7 +221,6 @@ class Encoder(object):
     # bloom_bits_array if mask_indices = 0
 
     prr = (f_bits & mask_indices) | (bloom_bits_array & ~mask_indices)
-    #print 'prr', bin(prr)
 
     # Compute instantaneous randomized response:
     # If PRR bit is set, output 1 with probability q
