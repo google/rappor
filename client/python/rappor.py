@@ -158,6 +158,7 @@ def get_rappor_masks(user_id, word, params, rand_funcs):
 
   assigned_cohort = rand_funcs.cohort_rand_fn(0, params.num_cohorts - 1)
   uniform = rand_funcs.uniform_gen()
+  # fastrand only supports 64 bit masks.  It returns None if more are requested.
   if uniform is None:
     raise AssertionError('Too many bits (k = %d)' % params.num_bloombits)
   f_mask = rand_funcs.f_gen()
