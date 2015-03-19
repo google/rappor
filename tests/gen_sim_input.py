@@ -48,7 +48,7 @@ NUM_UNIQUE_VALUES = 100         # Range of client's values in reports
                                 # The default is strings "1" ... "100"
 DIST_PARAM = None               # Parameter to pass to distribution
 NUM_CLIENTS = 100000            # Number of simulated clients
-VALUES_PER_CLIENT = 7
+VALUES_PER_CLIENT = 1
 
 
 # NOTE: unused.  This is hard-coded now.

@@ -49,6 +49,7 @@ gen-sim-input-demo() {
     -d $dist \
     -n $num_clients \
     -r $num_unique_values \
+    -c 7 \
     -o _tmp/$dist.csv
 }
 
