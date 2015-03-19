@@ -131,11 +131,16 @@ Documentation
 
 - [RAPPOR Data Flow](http://google.github.io/rappor/doc/data-flow.html)
 
+Publications
+------------
+
+- [RAPPOR: Randomized Aggregatable Privacy-Preserving Ordinal Response](http://arxiv.org/abs/1407.6981)
+- [Building a RAPPOR with the Unknown: Privacy-Preserving Learning of Associations and Data Dictionaries](http://arxiv.org/abs/1503.01214)
+
 Links
 -----
 
 - [Google Blog Post about RAPPOR](http://googleresearch.blogspot.com/2014/10/learning-statistics-with-privacy-aided.html)
-- [RAPPOR paper](http://arxiv.org/abs/1407.6981)
 - [RAPPOR implementation in Chrome](http://www.chromium.org/developers/design-documents/rappor)
   - This is a production quality C++ implementation, but it's somewhat tied to
     Chrome, and doesn't support all privacy parameters (e.g. only a few values

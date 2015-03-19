@@ -18,8 +18,8 @@
 library(glmnet)
 
 # Test.  Change this to use pcls in alternative.R.
-#USE_PCLS <- TRUE
-USE_PCLS <- FALSE
+USE_PCLS <- Sys.getenv('USE_PCLS') == '1'
+#USE_PCLS <- TRUE  # force to true
 
 EstimateBloomCounts <- function(params, obs_counts) {
   # Estimates the number of times each bit in each cohort was set in original
