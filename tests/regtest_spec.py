@@ -19,7 +19,7 @@ INPUT_PARAMS = {
     'exp1': ('exp', 100, 100000, 7),
     'gauss1': ('gauss', 100, 100000, 7),
     'unif1': ('unif', 100, 100000, 7),
-    }
+}
 
 # For rappor_sim.py
 # 'k, h, m, p, q, f' as in params file.
@@ -33,7 +33,7 @@ RAPPOR_PARAMS = {
 
     # Original demo params
     'demo': (16, 2, 64, 0.5, 0.75, 0.5),
-    }
+}
 
 # For deriving candidates from true inputs.
 MAP_PARAMS = {
@@ -43,7 +43,7 @@ MAP_PARAMS = {
     # for RAPPOR to choose it.
     'demo': (20, []),
     'remove-top-2': (20, ['v1', 'v2']),
-    }
+}
 
 # test case name -> (input params name, RAPPOR params name, map params name)
 TEST_CASES = [
@@ -59,7 +59,7 @@ TEST_CASES = [
     ('chrome2-badcand', 'exp1', 'chrome2', 'remove-top-2'),
 
     # TODO: Use chrome params with real map from Alexa 1M ?
-    ]
+]
 
 #
 # END TEST CONFIGURATION

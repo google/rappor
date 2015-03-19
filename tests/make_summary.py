@@ -63,7 +63,7 @@ def main(argv):
         # See tests/regtest_spec.py for the definition of the spec row
         'name': case,
         'cell_html': cell_html,
-        }
+    }
     print ROW % data
 
   print '</tbody>'

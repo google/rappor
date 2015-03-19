@@ -149,7 +149,8 @@ def WriteParamsHtml(num_values, f):
 
 def main(argv):
   # All command line arguments are placed into global vars
-  global OUTFILE, NUM_UNIQUE_VALUES, DISTR, DIST_PARAM, NUM_CLIENTS, VALUES_PER_CLIENT
+  global (OUTFILE, NUM_UNIQUE_VALUES, DISTR, DIST_PARAM, NUM_CLIENTS,
+          VALUES_PER_CLIENT)
 
   # Get arguments
   try:
@@ -243,4 +244,3 @@ if __name__ == "__main__":
   except RuntimeError, e:
     print >>sys.stderr, e.args[0]
     sys.exit(1)
-
