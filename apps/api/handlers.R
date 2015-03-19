@@ -70,15 +70,9 @@ MakeCounts <- function(params, num_reports, sums) {
 
 DistHandler <- function(state, request) {
   Log('DistHandler')
+  #str(request$num_reports)
+  #str(request$sums)  # TODO: change to bit_counts, and flatten
 
-  str(request$num_reports)
-
-  str(request$sums)  # TODO: change to bit_counts, and flatten
-
-  #str(request$candidates_path)
-
-  # TODO: Right now these are at the top level, need to move
-  str(request$params)
   params = as.list(request$params)
   str(params)
 
@@ -89,26 +83,19 @@ DistHandler <- function(state, request) {
   str(counts)
   dim(counts)
 
-  #ReadParameterFile(p)
-  #ReadCountsFile(c)
   Log('MAP')
   map <- ReadMapFile(request$candidates_path)$map
   str(map)
 
   Log('ANALYZE RAPPOR')
-  rappor <- AnalyzeRAPPOR(params, counts, map,
-                          "FDR", 0.05, 1,
-                          date="01/01/01", date_num="100001")
+  t <- system.time(
+      rappor <- AnalyzeRAPPOR(params, counts, map,
+                              "FDR", 0.05, 1,
+                              date="01/01/01", date_num="100001"))
+  Log('AnalyzeRAPPOR took %f seconds', t)
   str(rappor)
 
-  Log('WRITE DATA')
-
-  # Return value.
-  dist = data.frame(x=8, y=9)
-  write.csv(dist, 'dist.csv')
-
-  return(list(strings=rappor$strings, proportion=rappor$proportion,
-              dist='dist.csv'))
+  list(strings=rappor$strings, proportion=rappor$proportion)
 }
 
 # Is there a shortcut for this?
