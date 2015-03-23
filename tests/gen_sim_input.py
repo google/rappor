@@ -89,7 +89,7 @@ def init_rand_precompute():
 
 
 def rand_sample_unif():
-  return random.randrange(1, NUM_UNIQUE_VALUES)
+  return random.randrange(1, NUM_UNIQUE_VALUES + 1)
 
 
 def rand_sample_gauss():
