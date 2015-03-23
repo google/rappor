@@ -164,6 +164,7 @@ make-summary() {
   popd >/dev/null
 
   log "Wrote $dir/results.html"
+  log "URL: file://$PWD/$dir/results.html"
 }
 
 # Helper to parse spec input with xargs
