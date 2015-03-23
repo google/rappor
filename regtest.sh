@@ -109,7 +109,8 @@ _run-one-case() {
 
   # Reuse demo.sh function
   ./demo.sh print-candidates \
-    $case_dir/case_true_inputs.txt $num_additional "$to_remove" \
+    $case_dir/case_true_inputs.txt $num_unique_values \
+    $num_additional "$to_remove" \
     > $case_dir/case_candidates.txt
 
   banner "Hashing candidates to get 'map'"
