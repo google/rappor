@@ -150,7 +150,7 @@ def WriteParamsHtml(num_values, f):
 def main(argv):
   # All command line arguments are placed into global vars
   global OUTFILE, NUM_UNIQUE_VALUES, DISTR, DIST_PARAM, NUM_CLIENTS, \
-          VALUES_PER_CLIENT
+      VALUES_PER_CLIENT
 
   # Get arguments
   try:
