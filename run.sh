@@ -4,6 +4,8 @@
 #
 # Usage:
 #   ./run.sh <function name>
+#   ./run.sh tests
+#       to run all python tests in client/python/
 
 set -o nounset
 set -o pipefail
@@ -23,6 +25,16 @@ count() {
   find . \
     -name \*.py -o -name \*.c -o -name \*.h -o -name \*.R -o -name \*.sh \
     | xargs wc -l
+}
+
+#
+# Run tests
+#
+
+tests() {
+  echo "Running tests ..."
+  readonly TEST_DIR=client/python/
+  find $TEST_DIR/*_test.py -maxdepth 1 -type f -exec python {} \;
 }
 
 #
