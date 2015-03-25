@@ -127,6 +127,9 @@ ProcessAll = function(ctx) {
 
   # L1 distance between actual and rappor distributions
   l1 <- sum(abs(a$proportion - r$proportion))
+  # The max L1 distance between two distributions is 2; the max total variation
+  # distance is 1.
+  total_variation <- l1 / 2
 
   # Choose false positive strings and their proportion from rappor estimates
   false_pos <- r[r$index %in% rappor_only, c('index', 'proportion')]
@@ -143,7 +146,7 @@ ProcessAll = function(ctx) {
       num_rappor = nrow(rappor),
       num_false_pos = nrow(false_pos),
       num_false_neg = nrow(false_neg),
-      l1 = l1,
+      total_variation = total_variation,
       sum_proportion = sum(rappor$proportion)
       )
 
