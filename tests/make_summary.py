@@ -36,6 +36,11 @@ DETAILS = """\
 """
 
 
+def Percent(n, d):
+  """Given numerator and denominator, return a percent string."""
+  return '%.1f%% (%d)' % (float(n) * 100 / d, n)
+
+
 def main(argv):
   base_dir = argv[1]
 
@@ -55,8 +60,30 @@ def main(argv):
       header = m.readline()
       metrics_row = m.readline().split(',')
 
+    # Format numbers and sum
+    (num_actual, num_rappor, num_false_pos, num_false_neg, total_variation,
+     sum_proportion) = metrics_row
+
+    num_actual = int(num_actual)
+    num_rappor = int(num_rappor)
+
+    num_false_pos = int(num_false_pos)
+    num_false_neg = int(num_false_neg)
+
+    total_variation = float(total_variation)
+    sum_proportion = float(sum_proportion)
+
+    metrics_row_str = [
+        str(num_actual),
+        str(num_rappor),
+        Percent(num_false_pos, num_actual),
+        Percent(num_false_neg, num_actual),
+        '%.3f' % total_variation,
+        '%.3f' % sum_proportion,
+        ]
+
     # first cell is test case name, which we already have
-    row = spec_row[1:] + metrics_row
+    row = spec_row[1:] + metrics_row_str
     cell_html = ' '.join('<td>%s</td>' % cell for cell in row)
 
     data = {
