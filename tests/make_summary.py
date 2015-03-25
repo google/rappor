@@ -80,7 +80,7 @@ def main(argv):
         Percent(num_false_neg, num_actual),
         '%.3f' % total_variation,
         '%.3f' % sum_proportion,
-        ]
+    ]
 
     # first cell is test case name, which we already have
     row = spec_row[1:] + metrics_row_str
