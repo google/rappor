@@ -84,10 +84,6 @@ dist() {
   cat $EXP_POST | post /dist
 }
 
-publish() {
-  cp -v test.sh $EXP_POST /home/andychu/share/rappor
-}
-
 curl-dist() {
   local host_port=${1:-localhost:8500}
 
@@ -96,6 +92,13 @@ curl-dist() {
     --header 'Content-Type: application/json' \
     --data @- \
     http://$host_port/dist
+}
+
+
+csv-to-json() {
+  . google.sh  # define vars
+
+  ./csv_to_json.py $PHISH
 }
 
 readonly HEALTH_URL=http://localhost:8500/_ah/health
@@ -131,6 +134,10 @@ serve() {
   rappor-api "$@"
 }
 
+#
+# Map files
+#
+
 # gsutil comes with Google Cloud SDK.  Need 'gcloud auth login'.
 gs-list() {
   gsutil ls
@@ -146,5 +153,14 @@ gs-download() {
   gsutil cp gs://chrome-maps/foo.txt foo2.txt
   cat foo2.txt
 }
+
+#
+# OLD
+#
+
+publish-test() {
+  cp -v test.sh $EXP_POST /home/andychu/share/rappor
+}
+
 
 "$@"
