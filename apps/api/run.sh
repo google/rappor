@@ -131,4 +131,20 @@ serve() {
   rappor-api "$@"
 }
 
+# gsutil comes with Google Cloud SDK.  Need 'gcloud auth login'.
+gs-list() {
+  gsutil ls
+}
+
+gs-upload() {
+  echo foo > foo.txt
+  gsutil cp foo.txt gs://chrome-maps
+}
+
+gs-download() {
+  echo foo > foo.txt
+  gsutil cp gs://chrome-maps/foo.txt foo2.txt
+  cat foo2.txt
+}
+
 "$@"
