@@ -7,14 +7,30 @@ Convert old CSV format to new JSON format.
 
 import csv
 import sys
+import json
 
 
 def main(argv):
+  post_body = {}
+  counts = []
+
+  # TODO: Add dimensions somewhere?  I guess that is implied by the params.
+
   with open(argv[1]) as f:
     c = csv.reader(f)
-    print c
     for row in c:
-      print row
+      counts.append(row)
+
+  post_body = {}
+  # Relative path, taken relative to --state-dir
+
+  post_body['candidates_file'] = 'TODO'
+
+  params = {}
+  post_body['params'] = params
+
+  post_body['counts'] = counts
+  json.dump(post_body, sys.stdout, indent=2)
 
 
 if __name__ == '__main__':
