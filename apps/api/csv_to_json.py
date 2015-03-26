@@ -9,6 +9,30 @@ import csv
 import sys
 import json
 
+# Chrome params from 2014
+CHROME1 = {
+    'numBits': 128,
+    'numHashes': 2,
+    'numCohorts': 512,
+    # TODO: probPrr
+    'f': 0.50,
+    # TODO: probZero, probOne?
+    'p': 0.25,
+    'q': 0.75,
+}
+
+# Chrome params from early 2015 -- changed to 8 bit reports.
+CHROME2 = {
+    'numBits': 8,
+    'numHashes': 2,
+    'numCohorts': 512,
+    # TODO: probPrr
+    'f': 0.50,
+    # TODO: probZero, probOne?
+    'p': 0.25,
+    'q': 0.75,
+}
+
 
 def main(argv):
   post_body = {}
@@ -26,8 +50,7 @@ def main(argv):
 
   post_body['candidates_file'] = 'TODO'
 
-  params = {}
-  post_body['params'] = params
+  post_body['params'] = CHROME2
 
   post_body['counts'] = counts
   json.dump(post_body, sys.stdout, indent=2)
