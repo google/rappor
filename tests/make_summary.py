@@ -18,6 +18,42 @@ ROW = """\
 </tr>
 """
 
+SUMMARY_ROW = """\
+<tfoot style="font-weight: bold; text-align: right">
+<tr>
+  <td>
+    Summary
+  </td>
+
+  <!-- input params -->
+  <td></td>
+  <td></td>
+  <td></td>
+  <td></td>
+
+  <!-- RAPPOR params -->
+  <td></td>
+  <td></td>
+  <td></td>
+  <td></td>
+  <td></td>
+  <td></td>
+
+  <!-- MAP params -->
+  <td></td>
+  <td></td>
+
+  <!-- Result metrics -->
+  <td></td>
+  <td></td>
+  <td></td>
+  <td></td>
+  <td>%(mean_tv)s</td>
+  <td></td>
+</tr>
+</tfoot>
+"""
+
 # Navigation and links to plot.
 DETAILS = """\
 <p style="text-align: right">
@@ -50,6 +86,8 @@ def main(argv):
   with open(path) as f:
     test_cases = [line.strip() for line in f]
 
+  tv_list = []  # total_variation for all test cases
+
   for case in test_cases:
     spec = os.path.join(base_dir, case, 'spec.txt')
     with open(spec) as s:
@@ -78,6 +116,8 @@ def main(argv):
     total_variation = float(total_variation)
     sum_proportion = float(sum_proportion)
 
+    tv_list.append(total_variation)
+
     metrics_row_str = [
         str(num_actual),
         str(num_rappor),
@@ -102,6 +142,10 @@ def main(argv):
         'cell_html': cell_html,
     }
     print ROW % data
+
+  mean_tv = sum(tv_list) / len(tv_list)
+  summary = {'mean_tv': '%.3f' % mean_tv}
+  print SUMMARY_ROW % summary
 
   print '</tbody>'
   print '</table>'
