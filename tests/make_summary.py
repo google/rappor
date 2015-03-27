@@ -55,6 +55,11 @@ def main(argv):
     with open(spec) as s:
       spec_row = s.readline().split()
 
+    # Second to last column is 'num_additional' -- the number of bogus
+    # candidates added
+    num_additional_str =  spec_row[-2]
+    num_additional = int(num_additional_str)
+
     metrics = os.path.join(base_dir, case + '_report', 'metrics.csv')
     with open(metrics) as m:
       header = m.readline()
@@ -76,7 +81,12 @@ def main(argv):
     metrics_row_str = [
         str(num_actual),
         str(num_rappor),
-        Percent(num_false_pos, num_actual),
+        # e.g. if there are 20 additional candidates added, and 1 false
+        # positive, the false positive rate is 5%.
+        Percent(num_false_pos, num_additional),
+        # e.g. if there are 100 strings in the true input, and 80 strings
+        # detected by RAPPOR, then we have 20 false negatives, and a false
+        # negative rate of 20%.
         Percent(num_false_neg, num_actual),
         '%.3f' % total_variation,
         '%.3f' % sum_proportion,
