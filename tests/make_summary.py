@@ -95,7 +95,7 @@ def main(argv):
 
     # Second to last column is 'num_additional' -- the number of bogus
     # candidates added
-    num_additional_str =  spec_row[-2]
+    num_additional_str = spec_row[-2]
     num_additional = int(num_additional_str)
 
     metrics = os.path.join(base_dir, case + '_report', 'metrics.csv')
