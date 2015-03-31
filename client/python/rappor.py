@@ -138,34 +138,36 @@ class SimpleRandFuncs(_RandFuncs):
     self.uniform_gen = SimpleRandom(0.5, self.num_bits, rand=rand)
 
 
-# Compute masks for rappor's Permanent Randomized Response
-# The i^th Bloom Filter bit B_i is set to be B'_i equals
-# 1  w/ prob f/2 -- (*) -- f_bits
-# 0  w/ prob f/2
-# B_i w/ prob 1-f -- (&) -- mask_indices set to 0 here, i.e., no mask
-# Output bit indices corresponding to (&) and bits 0/1 corresponding to (*)
 def get_rappor_masks(user_id, word, params, rand_funcs):
-  """
-  Call 3 random functions.  Seed deterministically beforehand if oneprr.
+  """Call 3 random functions.  Seed deterministically beforehand if oneprr.
+
   TODO:
+  - inline this function
   - Rewrite this to be clearer.  We can use a completely different Random()
     instance in the case of oneprr.
   - Expose it in the simulation.  It doesn't appear to be exercised now.
+
+  Returns:
+    assigned_cohort: integer cohort
+    uniform: bits set with probability 1/2
+    f_mask: bits set with probability f
   """
   if params.flag_oneprr:
     stored_state = rand_funcs.rand.getstate()  # Store state
     rand_funcs.rand.seed(user_id + word)  # Consistently seeded
 
   assigned_cohort = rand_funcs.cohort_rand_fn(0, params.num_cohorts - 1)
-  # Uniform bits for (*)
-  f_bits = rand_funcs.uniform_gen()
-  # Mask indices are 1 with probability f.
-  mask_indices = rand_funcs.f_gen()
+  uniform = rand_funcs.uniform_gen()
+  # fastrand generate numbers up to 64 bits, and returns None if more are
+  # requested.
+  if uniform is None:
+    raise AssertionError('Too many bits (k = %d)' % params.num_bloombits)
+  f_mask = rand_funcs.f_gen()
 
   if params.flag_oneprr:                    # Restore state
     rand_funcs.rand.setstate(stored_state)
 
-  return assigned_cohort, f_bits, mask_indices
+  return assigned_cohort, uniform, f_mask
 
 
 def get_bf_bit(input_word, cohort, hash_no, num_bloombits):
@@ -200,9 +202,9 @@ class Encoder(object):
     """Compute rappor (Instantaneous Randomized Response)."""
     params = self.params
 
-    cohort, f_bits, mask_indices = get_rappor_masks(self.user_id, word,
-                                                    params,
-                                                    self.rand_funcs)
+    cohort, uniform, f_mask = get_rappor_masks(self.user_id, word,
+                                               params,
+                                               self.rand_funcs)
 
     bloom_bits_array = 0
     # Compute Bloom Filter
@@ -213,13 +215,22 @@ class Encoder(object):
     # Both bit manipulations below use the following fact:
     # To set c = a if m = 0 or b if m = 1
     # c = (a & not m) | (b & m)
-    #
-    # Compute PRR as
-    # f_bits if mask_indices = 1
-    # bloom_bits_array if mask_indices = 0
 
-    prr = (f_bits & mask_indices) | (bloom_bits_array & ~mask_indices)
-    #print 'prr', bin(prr)
+    # Call bit i of the Bloom Filter B_i.  Then bit i of the PRR is defined as:
+    #
+    # 1   with prob f/2
+    # 0   with prob f/2
+    # B_i with prob 1-f
+
+    # uniform bits are 1 with probability 1/2, and f_mask bits are 1 with
+    # probability f.  So in the expression below:
+    #
+    # - Bits in (uniform & f_mask) are 1 with probability f/2.
+    # - (bloom_bits_array & ~f_mask) clears a bloom filter bit with probability
+    # f, so we get B_i with probability 1-f.
+    # - The remaining bits are 0, with remaining probability f/2.
+
+    prr = (uniform & f_mask) | (bloom_bits_array & ~f_mask)
 
     # Compute instantaneous randomized response:
     # If PRR bit is set, output 1 with probability q
@@ -227,9 +238,6 @@ class Encoder(object):
     p_bits = self.p_gen()
     q_bits = self.q_gen()
 
-    #print bin(f_bits), bin(mask_indices), bin(p_bits), bin(q_bits)
-
     irr = (p_bits & ~prr) | (q_bits & prr)
-    #print 'irr', bin(irr)
 
     return cohort, irr  # irr is the rappor
