@@ -37,18 +37,20 @@ RandomPartition <- function(total, weights){
     #   rnd_list = sample(strs, total, replace = TRUE, weights)
     #   apply(as.array(strs), 1, function(x) length(rnd_list[rnd_list == x]))
     #
-    # The following is much faster for larger totals. We can replace a loop with (tail) recusion, 
-    # but R chokes with the recursion depth > 850.
+    # The following is much faster for larger totals. We can replace a loop with
+    # (tail) recusion, but R chokes with the recursion depth > 850.
     
     result <- vector(length = bins)
     w <- sum(weights)
 
     for (i in 1:bins) {
       # invariant: w = sum(weights[i:bins]) 
-      # rather than computing sum every time leading to quadratic time, keep updating it
+      # rather than computing sum every time leading to quadratic time, keep 
+      # updating it
       if (w > 0) {
         p <- weights[i] / w
-        rnd_draw <- rbinom(n = 1, size = total, prob = p)  # draw the number of balls falling into the current bin
+        # draw the number of balls falling into the current bin
+        rnd_draw <- rbinom(n = 1, size = total, prob = p)
         result[i] <- rnd_draw  # push rnd_draw balls from total to result[i]
         total <- total - rnd_draw
         w <- w - weights[i]  
@@ -79,31 +81,41 @@ GenerateCounts <- function(params, total, true_map, weights = NULL){
               sep = " "))
   }
   
-  # Computes the number of clients reporting each string (according to the pre-specified distribution).
+  # Computes the number of clients reporting each string 
+  # according to the pre-specified distribution.
   actual <- RandomPartition(total, weights)
   
   # For each reporting type computes its allocation to cohorts.  
   # Output is an m x strs matrix.
-  cohorts <- as.matrix(apply(as.data.frame(actual), 1, function(count) RandomPartition(count, rep(1, params$m))))
+  cohorts <- as.matrix(
+                apply(as.data.frame(actual), 1, 
+                      function(count) RandomPartition(count, rep(1, params$m))))
   
-  # Expands to (m x k) x strs matrix, where each element (corresponding to the bit in the aggregate Bloom filter) is repeated k times. 
+  # Expands to (m x k) x strs matrix, where each element (corresponding to the 
+  # bit in the aggregate Bloom filter) is repeated k times. 
   expanded <- apply(cohorts, 2, function(vec) rep(vec, each = params$k))
   
-  # Computes the number of bits set to one BEFORE privacy-preserving transformations.
+  # Computes the number of bits set to one BEFORE privacy-preserving transform.
   counts_ones <- apply(expanded * true_map$map, 1, sum)
   
-  # Computes the number of bits set to zero BEFORE privacy-preserving transformations.
+  # Computes the number of bits set to zero BEFORE privacy-preserving transform.
   counts_zeros <- rep(apply(cohorts, 1, sum), each = params$k) - counts_ones
   
   p <- params$p
   q <- params$q
   f <- params$f
 
-  pstar <- (1 - f / 2) * q + (f / 2) * p  # probability that a true 1 is reported as "1"
-  qstar <- (1 - f / 2) * (1 - p) + (f / 2) * (1 - q)  # probability that a true 0 is reported as "0"
+  # probability that a true 1 is reported as "1"
+  pstar <- (1 - f / 2) * q + (f / 2) * p
+  # probability that a true 0 is reported as "0"
+  qstar <- (1 - f / 2) * (1 - p) + (f / 2) * (1 - q)
   
-  reported_ones <- unlist(lapply(counts_ones, function(x) rbinom(n = 1, size = x, prob = pstar))) + 
-                   unlist(lapply(counts_zeros, function(x) rbinom(n = 1, size = x, prob = qstar)))
+  reported_ones <- 
+    unlist(lapply(counts_ones, 
+                  function(x) rbinom(n = 1, size = x, prob = pstar))) + 
+    unlist(lapply(counts_zeros, 
+                  function(x) rbinom(n = 1, size = x, prob = qstar)))
   
-  cbind(apply(cohorts, 1, sum),matrix(reported_ones, nrow = params$m, ncol = params$k, byrow = TRUE))
+  cbind(apply(cohorts, 1, sum),
+        matrix(reported_ones, nrow = params$m, ncol = params$k, byrow = TRUE))
 }
