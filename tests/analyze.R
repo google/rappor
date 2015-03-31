@@ -23,9 +23,12 @@
 
 library(optparse)
 
+# For unit tests
+is_main <- (length(sys.frames) == 0)
+
 # Do command line parsing first to catch errors.  Loading libraries in R is
 # slow.
-if (!interactive()) {
+if (is_main) {
   option_list <- list(
      make_option(c("-t", "--title"), help="Plot Title")
      )
@@ -100,7 +103,7 @@ ProcessAll = function(ctx) {
   # False positives: AnalyzeRAPPOR attributed a proportion to a string in the
   # map that wasn't in the true input.
   rappor_only <- setdiff(rappor_values, actual_values)
-  
+
   total <- sum(actual$count)
   a <- data.frame(index = actual_values,
                   # Calculate the true proportion
@@ -125,8 +128,15 @@ ProcessAll = function(ctx) {
     r <- rbind(r, z)
   }
 
+  # IMPORTANT: Now a and r have the same rows, but in the wrong order.  Sort by index.
+  a <- a[order(a$index), ]
+  r <- r[order(r$index), ]
+
   # L1 distance between actual and rappor distributions
   l1 <- sum(abs(a$proportion - r$proportion))
+  # The max L1 distance between two distributions is 2; the max total variation
+  # distance is 1.
+  total_variation <- l1 / 2
 
   # Choose false positive strings and their proportion from rappor estimates
   false_pos <- r[r$index %in% rappor_only, c('index', 'proportion')]
@@ -143,7 +153,7 @@ ProcessAll = function(ctx) {
       num_rappor = nrow(rappor),
       num_false_pos = nrow(false_pos),
       num_false_neg = nrow(false_neg),
-      l1 = l1,
+      total_variation = total_variation,
       sum_proportion = sum(rappor$proportion)
       )
 
@@ -204,6 +214,6 @@ main <- function(parsed) {
   WritePlot(p, output_dir)
 }
 
-if (!interactive()) {
+if (is_main) {
   main(parsed)
 }
