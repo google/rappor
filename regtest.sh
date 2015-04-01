@@ -119,21 +119,17 @@ _run-one-case() {
 
   tests/gen_sim_input.py \
     -d $dist \
-    -n $num_clients \
-    -r $num_unique_values \
-    -c $values_per_client \
+    -c $num_clients \
+    -u $num_unique_values \
+    -v $values_per_client \
     -o $case_dir/case.csv
-
-  # NOTE: Have to name inputs and outputs by the test case name
-  # _tmp/test/t1
-  #./demo.sh gen-sim-input-demo $dist $num_clients $num_unique_values
 
   banner "Running RAPPOR client"
 
   tests/rappor_sim.py \
-    --bloombits $num_bits \
-    --hashes $num_hashes \
-    --cohorts $num_cohorts \
+    --num-bits $num_bits \
+    --num-hashes $num_hashes \
+    --num-cohorts $num_cohorts \
     -p $p \
     -q $q \
     -f $f \
