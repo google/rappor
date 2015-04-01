@@ -43,6 +43,7 @@ DISTR_EXP = 3            # Exponential
 
 # Command line arguments
 OUTFILE = ""                    # Output file name
+NUM_LINES = 0                   # Line mode instead of CSV mode
 DISTR = DISTR_UNIF              # Distribution: default is uniform
 NUM_UNIQUE_VALUES = 100         # Range of client's values in reports
                                 # The default is strings "1" ... "100"
@@ -64,14 +65,13 @@ def log(msg, *args):
   print >>sys.stderr, msg
 
 
-# Script usage scenario
 def usage(script_name):
-  sys.stdout.write("Usage: " + script_name + " -o <output file name>")
-  sys.stdout.write(" -r <range of values \"s1\"-\"sXX\">")
-  sys.stdout.write(" [-u|g|e|n|p]")
-
   sys.stdout.write("""
+  Usage: %s [flags]
 
+  -o        CSV output path (required).  Header is client, value.
+  -l        Output a value on each line, without a client
+  -r        number of unique values to generate (default 100)
   -d        Distribution (exp, gauss, or unif)
   -n        Number of users (default = 100,000)
   -p        Parameter
@@ -79,7 +79,7 @@ def usage(script_name):
             Std-dev for Gaussian
             Lambda for Exponential
 
-  """)
+  """ % script_name)
 
 
 def init_rand_precompute():
@@ -149,12 +149,12 @@ def WriteParamsHtml(num_values, f):
 
 def main(argv):
   # All command line arguments are placed into global vars
-  global OUTFILE, NUM_UNIQUE_VALUES, DISTR, DIST_PARAM, NUM_CLIENTS, \
-      VALUES_PER_CLIENT
+  global OUTFILE, NUM_LINES, NUM_UNIQUE_VALUES, DISTR, DIST_PARAM, \
+      NUM_CLIENTS, VALUES_PER_CLIENT
 
   # Get arguments
   try:
-    opts, args = getopt.getopt(argv[1:], "d:n:p:o:r:c:")
+    opts, args = getopt.getopt(argv[1:], "d:n:p:o:r:c:l:")
   except getopt.GetoptError:
     usage(argv[0])
     sys.exit(2)
@@ -163,6 +163,8 @@ def main(argv):
   for opt, arg in opts:
     if opt == "-o":
       OUTFILE = arg
+    if opt == "-l":
+      NUM_LINES = int(arg)
     elif opt == "-r":
       NUM_UNIQUE_VALUES = int(arg)
     elif opt == "-d":
@@ -177,7 +179,8 @@ def main(argv):
     elif opt == "-c":
       VALUES_PER_CLIENT = int(arg)
 
-  # Some sanity checking
+  # NOTE: Output file is required now (instead of using stdout) because it's
+  # also used to write sim params.
   if not OUTFILE:
     sys.stdout.write("Output file is required.\n")
     usage(argv[0])
@@ -217,16 +220,27 @@ def main(argv):
 
   # Printing values into file OUTFILE
   with open(OUTFILE, "w") as f:
-    c = csv.writer(f)
-    c.writerow(('client', 'true_value'))
-    for i in xrange(1, NUM_CLIENTS + 1):
-      if i % 10000 == 0:
-        elapsed = time.time() - start_time
-        log('Generated values for %d clients in %.2f seconds', i, elapsed)
+    if NUM_LINES:
+      # In this mode we're not outputting the client
+      for i in xrange(NUM_LINES):
+        if i % 10000 == 0:
+          elapsed = time.time() - start_time
+          log('Generated %d rows in %.2f seconds', i, elapsed)
 
-      for _ in xrange(VALUES_PER_CLIENT):  # A fixed number of values per user
         true_value = 'v%d' % rand_sample()
-        c.writerow((i, true_value))
+        print >>f, true_value
+
+    else:  # csv mode
+      c = csv.writer(f)
+      c.writerow(('client', 'true_value'))
+      for i in xrange(1, NUM_CLIENTS + 1):
+        if i % 10000 == 0:
+          elapsed = time.time() - start_time
+          log('Generated %d rows in %.2f seconds', i, elapsed)
+
+        for _ in xrange(VALUES_PER_CLIENT):  # A fixed number of values per user
+          true_value = 'v%d' % rand_sample()
+          c.writerow((i, true_value))
   log('Wrote %s', OUTFILE)
 
   prefix, _ = os.path.splitext(OUTFILE)
