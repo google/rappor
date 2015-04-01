@@ -93,9 +93,13 @@ python-lint() {
 py-lint() {
   which pep8 >/dev/null || die "pep8 not installed ('sudo apt-get install pep8' on Ubuntu)"
 
-  # Excluding setup.py, because it's a config file and uses "invalid" 'name =
+  # - Skip _tmp dir, because we are downloading cpplint.py there, and it has
+  # pep8 lint errors
+  # - Exclude setup.py, because it's a config file and uses "invalid" 'name =
   # 1' style (spaces around =).
-  find $REPO_ROOT -name \*.py \
+  find $REPO_ROOT \
+    \( -name _tmp -a -prune \) -o \
+    \( -name \*.py -a -print \) \
     | grep -v /setup.py \
     | xargs --verbose -- $0 python-lint
 }
