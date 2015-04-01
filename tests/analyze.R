@@ -23,9 +23,12 @@
 
 library(optparse)
 
+# For unit tests
+is_main <- (length(sys.frames) == 0)
+
 # Do command line parsing first to catch errors.  Loading libraries in R is
 # slow.
-if (!interactive()) {
+if (is_main) {
   option_list <- list(
      make_option(c("-t", "--title"), help="Plot Title")
      )
@@ -77,70 +80,87 @@ LoadInputs <- function(prefix, ctx) {
   Log("Analysis Results:")
   str(rappor)
 
-  Log("sum(proportion)")
-  print(sum(rappor$proportion))
-
-  Log("sum(estimate)")
-  print(sum(rappor$estimate))
-
   ctx$rappor <- rappor
   ctx$actual <- read.csv(h)
+  ctx$params <- params  # so we can write it out later
 }
 
 # Prepare input data to be plotted
 ProcessAll = function(ctx) {
-  actual <- ctx$actual
-  rappor <- ctx$rappor
+  actual <- ctx$actual  # from true input histogram output by rappor_sim.py
+  rappor <- ctx$rappor  # from output of AnalyzeRAPPOR
 
   # "s12" -> 12, for graphing
   StringToInt <- function(x) as.integer(substring(x, 2))
 
+  actual_values <- StringToInt(actual$string)
+  rappor_values <- StringToInt(rappor$strings)
+
+  # False negatives: AnalyzeRAPPOR failed to find this value (e.g. because it
+  # occurs too rarely)
+  actual_only <- setdiff(actual_values, rappor_values)
+
+  # False positives: AnalyzeRAPPOR attributed a proportion to a string in the
+  # map that wasn't in the true input.
+  rappor_only <- setdiff(rappor_values, actual_values)
+
   total <- sum(actual$count)
-  a <- data.frame(index = StringToInt(actual$string),
+  a <- data.frame(index = actual_values,
                   # Calculate the true proportion
                   proportion = actual$count / total,
                   dist = "actual")
 
-  r <- data.frame(index = StringToInt(rappor$strings),
+  r <- data.frame(index = rappor_values,
                   proportion = rappor$proportion,
                   dist = "rappor")
-  
-  # L1 distance between actual and rappor distributions
-  # Outer join
-  merged <- merge(r[,c('index', 'proportion')],
-                  a[,c('index', 'proportion')],
-                  by='index', all=TRUE)
-  # NA values set to 0.0
-  merged[is.na(merged)] <- 0
-  l1 <- sum(abs(merged$proportion.x - merged$proportion.y))
-  
-  # Fill in zeros for values missing in RAPPOR and in actual data
-  # Helps with false positive detection and makes the ggplot look better
-  not_in_rappor <- setdiff(actual$string, rappor$strings)
-  not_in_actual <- setdiff(rappor$strings, actual$string)
-  if (length(not_in_rappor) > 0) {
-    z <- data.frame(index = StringToInt(not_in_rappor),
-                    proportion = 0.0,
-                    dist = "rappor")
-    r <- rbind(r, z)
-  }
-  if (length(not_in_actual) > 0) {
-    # More strings detected in RAPPOR than present in actual distr
-    # These strings must be reported as false positives in metrics$fp
-    z <- data.frame(index = StringToInt(not_in_actual),
+
+  # Extend a and r with the values that they are missing.
+  if (length(rappor_only) > 0) {
+    z <- data.frame(index = rappor_only,
                     proportion = 0.0,
                     dist = "actual")
     a <- rbind(a, z)
   }
-  
+  if (length(actual_only) > 0) {
+    z <- data.frame(index = actual_only,
+                    proportion = 0.0,
+                    dist = "rappor")
+    r <- rbind(r, z)
+  }
+
+  # IMPORTANT: Now a and r have the same rows, but in the wrong order.  Sort by index.
+  a <- a[order(a$index), ]
+  r <- r[order(r$index), ]
+
+  # L1 distance between actual and rappor distributions
+  l1 <- sum(abs(a$proportion - r$proportion))
+  # The max L1 distance between two distributions is 2; the max total variation
+  # distance is 1.
+  total_variation <- l1 / 2
+
   # Choose false positive strings and their proportion from rappor estimates
-  fp <- rappor[rappor$strings %in% not_in_actual,
-                      c('strings', 'proportion')]
-  metrics <- list(l1 = l1, fp = fp)
+  false_pos <- r[r$index %in% rappor_only, c('index', 'proportion')]
+  false_neg <- a[a$index %in% actual_only, c('index', 'proportion')]
+
+  Log("False positives:")
+  str(false_pos)
+
+  Log("False negatives:")
+  str(false_neg)
+
+  metrics <- list(
+      num_actual = nrow(actual),  # data frames
+      num_rappor = nrow(rappor),
+      num_false_pos = nrow(false_pos),
+      num_false_neg = nrow(false_neg),
+      total_variation = total_variation,
+      sum_proportion = sum(rappor$proportion)
+      )
+
   Log("Metrics:")
-  print(str(metrics))
+  str(metrics)
   
-  # Return data for plots and calculated metrics
+  # Return plot data and metrics
   list(plot_data = rbind(r, a), metrics = metrics)
 }
 
@@ -165,6 +185,12 @@ WritePlot <- function(p, outdir, width = 800, height = 600) {
   Log('Wrote %s', filename)
 }
 
+WriteSummary <- function(metrics, outdir) {
+  filename <- file.path(outdir, 'metrics.csv')
+  write.csv(metrics, file = filename, row.names = FALSE)
+  Log('Wrote %s', filename)
+}
+
 main <- function(parsed) {
   args <- parsed$args
   options <- parsed$options
@@ -183,9 +209,11 @@ main <- function(parsed) {
   LoadInputs(input_prefix, ctx)
   d <- ProcessAll(ctx)
   p <- PlotAll(d$plot_data, options$title)
+
+  WriteSummary(d$metrics, output_dir)
   WritePlot(p, output_dir)
 }
 
-if (!interactive()) {
+if (is_main) {
   main(parsed)
 }
