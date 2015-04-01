@@ -17,28 +17,21 @@
 # Test automation script.
 #
 # Usage:
-#   run.sh <function name>
+#   test.sh <function name>
 #
 # Examples:
-#   $ tests/run.sh py-unit  # run Python unit tests
-#   $ tests/run.sh all      # all tests
+#   $ ./test.sh py-unit  # run Python unit tests
+#   $ ./test.sh all      # all tests
 
 set -o nounset
 set -o pipefail
 set -o errexit
 
+. util.sh
+
 readonly THIS_DIR=$(dirname $0)
-readonly REPO_ROOT=$THIS_DIR/..
+readonly REPO_ROOT=$THIS_DIR
 readonly CLIENT_DIR=$REPO_ROOT/client/python
-
-#
-# Utility functions
-#
-
-die() {
-  echo 1>&2 "$0: $@"
-  exit 1
-}
 
 #
 # Fully Automated Tests
@@ -66,11 +59,16 @@ py-unit() {
 
 # All tests
 all() {
+  banner "Running Python unit tests"
+
   py-unit
   echo
+
+  banner "Linting Python source files"
   py-lint
 
-  # TODO: Add R tests, end to end demo
+  banner "Running R unit tests"
+  r-unit
 }
 
 #
@@ -93,11 +91,25 @@ python-lint() {
 py-lint() {
   which pep8 >/dev/null || die "pep8 not installed ('sudo apt-get install pep8' on Ubuntu)"
 
-  # Excluding setup.py, because it's a config file and uses "invalid" 'name =
+  # - Skip _tmp dir, because we are downloading cpplint.py there, and it has
+  # pep8 lint errors
+  # - Exclude setup.py, because it's a config file and uses "invalid" 'name =
   # 1' style (spaces around =).
-  find $REPO_ROOT -name \*.py \
+  find $REPO_ROOT \
+    \( -name _tmp -a -prune \) -o \
+    \( -name \*.py -a -print \) \
     | grep -v /setup.py \
     | xargs --verbose -- $0 python-lint
+}
+
+r-unit() {
+  # This one wants to be in the root
+  tests/analyze_test.R
+
+  # The way we source requires changing dirs.
+  pushd analysis/test
+  ./run_tests.R
+  popd
 }
 
 doc-lint() {
