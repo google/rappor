@@ -77,9 +77,10 @@ Development
 
 To run tests:
 
-    $ tests/run.sh all
+    $ ./test.sh all
 
-This currently runs Python unit tests and lints the Python files.
+This currently runs Python unit tests, lints Python source files, and runs R
+unit tests.
 
 API
 ---
