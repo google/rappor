@@ -17,18 +17,18 @@
 # Test automation script.
 #
 # Usage:
-#   run.sh <function name>
+#   test.sh <function name>
 #
 # Examples:
-#   $ tests/run.sh py-unit  # run Python unit tests
-#   $ tests/run.sh all      # all tests
+#   $ ./test.sh py-unit  # run Python unit tests
+#   $ ./test.sh all      # all tests
 
 set -o nounset
 set -o pipefail
 set -o errexit
 
 readonly THIS_DIR=$(dirname $0)
-readonly REPO_ROOT=$THIS_DIR/..
+readonly REPO_ROOT=$THIS_DIR
 readonly CLIENT_DIR=$REPO_ROOT/client/python
 
 #
