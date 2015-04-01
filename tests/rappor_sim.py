@@ -25,6 +25,9 @@ files:
   - hist: histogram of actual input values.  Compare this with the histogram
     the RAPPOR analysis infers from the first 3 values.
 
+Input columns: client,true_value
+Ouput coumns: client,cohort,rappor
+
 See http://google.github.io/rappor/doc/data-flow.html for details.
 """
 
@@ -54,12 +57,14 @@ def log(msg, *args):
 def CreateOptionsParser():
   p = optparse.OptionParser()
 
+  # We are taking a path, and not using stdin, because we read it twice.
   p.add_option(
       '-i', dest='infile', metavar='PATH', type='str', default='',
       help='CSV input path.  Header is "client,true_value"')
   p.add_option(
-      '-o', dest='outfile', metavar='PATH', type='str', default='',
-      help='CSV output path.  Header is "client,cohort,rappor"')
+      '--out-prefix', dest='out_prefix', metavar='PATH', type='str',
+      default='',
+      help='Output prefix.')
 
   p.add_option(
       '--num-bits', type='int', metavar='INT', dest='num_bits', default=16,
@@ -94,44 +99,7 @@ def CreateOptionsParser():
   return p
 
 
-PARAMS_HTML = """
-  <h3>RAPPOR Parameters</h3>
-  <table align="center">
-    <tr>
-      <td><b>k</b></td>
-      <td>Size of Bloom filter in bits</td>
-      <td align="right">{}</td>
-    </tr>
-    <tr>
-      <td><b>h</b></td>
-      <td>Hash functions in Bloom filter</td>
-      <td align="right">{}</td>
-    </tr>
-    <tr>
-      <td><b>m</b></td>
-      <td>Number of Cohorts</td>
-      <td align="right">{}</td>
-    </tr>
-    <tr>
-      <td><b>p</b></td>
-      <td>Probability p</td>
-      <td align="right">{}</td>
-    </tr>
-    <tr>
-      <td><b>q</b></td>
-      <td>Probability q</td>
-      <td align="right">{}</td>
-    </tr>
-    <tr>
-      <td><b>f</b></td>
-      <td>Probability f</td>
-      <td align="right">{}</td>
-    </tr>
-  </table>
-"""
-
-
-def print_params(params, csv_out, html_out, json_out):
+def print_params(params, csv_out, json_out):
   """Print Rappor parameters to a text file."""
   c = csv.writer(csv_out)
   c.writerow(('k', 'h', 'm', 'p', 'q', 'f'))  # header
@@ -144,9 +112,6 @@ def print_params(params, csv_out, html_out, json_out):
       params.prob_f)
 
   c.writerow(row)
-
-  # NOTE: No HTML escaping since we're writing numbers
-  print >>html_out, PARAMS_HTML.format(*row)
 
   print >>json_out, params.to_json()
 
@@ -163,7 +128,7 @@ def make_histogram(csv_in):
 
 
 def print_histogram(word_hist, histfile):
-  """Write histogram of infile to histfile."""
+  """Write histogram of values to histfile."""
   # Print histograms of distributions
   sorted_words = sorted(word_hist.iteritems(), key=lambda pair: pair[1],
                         reverse=True)
@@ -189,6 +154,8 @@ def main(argv):
   (opts, argv) = CreateOptionsParser().parse_args(argv)
   if not opts.infile:
     raise RuntimeError('-i is required')
+  if not opts.out_prefix:
+    raise RuntimeError('--out-prefix is required')
 
   # Copy flags into params
   params = rappor.Params()
@@ -200,25 +167,18 @@ def main(argv):
   params.prob_f = opts.prob_f
   params.flag_oneprr = opts.oneprr
 
-  prefix, _ = os.path.splitext(opts.infile)
+  prefix = opts.out_prefix
 
-  # Output paths are derived from the input path.  NOTE: Could have --outdir,
-  # but we're not using it.
-  outfile = opts.outfile or prefix + "_out.csv"
+  outfile = prefix + "_out.csv"
   histfile = prefix + "_hist.csv"
-  mapfile = prefix + "_map.csv"
   true_inputs_file = prefix + "_true_inputs.txt"
   params_csv = prefix + "_params.csv"
-
-  base, _ = os.path.splitext(params_csv)
-  params_html = base + '.html'
-  params_json = base + '.json'
+  params_json = prefix + '_params.json'
 
   # Print parameters to parameters file -- needed for the R analysis tool.
   with open(params_csv, 'w') as csv_out:
-    with open(params_html, 'w') as html_out:
-      with open(params_json, 'w') as json_out:
-        print_params(params, csv_out, html_out, json_out)
+    with open(params_json, 'w') as json_out:
+      print_params(params, csv_out, json_out)
 
   with open(opts.infile) as f:
     csv_in = csv.reader(f)

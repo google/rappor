@@ -45,6 +45,10 @@ readonly NUM_SPEC_COLS=13
 # TODO: Get num cpus
 readonly NUM_PROCS=${NUM_PROCS:-12}
 
+print-true-inputs() {
+  local num_unique_values=$1
+  seq 1 $num_unique_values | awk '{print "v" $1}'
+}
 
 # Add some more candidates here.  We hope these are estimated at 0.
 # e.g. if add_start=51, and num_additional is 20, show v51-v70
@@ -110,31 +114,65 @@ _run-one-case() {
   local case_dir=$REGTEST_DIR/$test_case_id
   mkdir --verbose -p $case_dir
 
-  banner "Saving spec"
-
-  # The arguments are the test case spec
+  # Save the "spec" for showing in the summary.
   echo "$@" > $case_dir/spec.txt
 
-  banner "Generating input"
+  #local fast_counts=F
+  local fast_counts=T
 
-  tests/gen_sim_input.py \
-    -d $dist \
-    -c $num_clients \
-    -u $num_unique_values \
-    -v $values_per_client \
-    -o $case_dir/case.csv
+  if test $fast_counts = T; then
+    # Print params CSV.  No JSON.
+    local params_path=$case_dir/case_params.csv
+    echo 'k,h,m,p,q,f' > $params_path
+    echo "$num_bits,$num_hashes,$num_cohorts,$p,$q,$f" >> $params_path
 
-  banner "Running RAPPOR client"
+    print-true-inputs $num_unique_values > $case_dir/case_true_inputs.txt
 
-  tests/rappor_sim.py \
-    --num-bits $num_bits \
-    --num-hashes $num_hashes \
-    --num-cohorts $num_cohorts \
-    -p $p \
-    -q $q \
-    -f $f \
-    -i $case_dir/case.csv \
-    -o $case_dir/out.csv
+    local true_map_path=$case_dir/case_true_map.csv
+    analysis/tools/hash_candidates.py \
+      $params_path \
+      < $case_dir/case_true_inputs.txt \
+      > $true_map_path
+
+    dist=unif  # hack for now
+
+    local num_reports=$(expr $num_clients \* $values_per_client)
+
+    banner "Using gen_counts.R"
+    tests/gen_counts.R $params_path $true_map_path $dist $num_reports \
+                       "$case_dir/case"
+  else
+
+    banner "Generating input"
+
+    tests/gen_sim_input.py \
+      -d $dist \
+      -c $num_clients \
+      -u $num_unique_values \
+      -v $values_per_client \
+      > $case_dir/case.csv
+
+    banner "Running RAPPOR client"
+
+    # Writes encoded "out" file, true histogram, true inputs, params CSV and JSON
+    # to $case_dir.
+    tests/rappor_sim.py \
+      --num-bits $num_bits \
+      --num-hashes $num_hashes \
+      --num-cohorts $num_cohorts \
+      -p $p \
+      -q $q \
+      -f $f \
+      -i $case_dir/case.csv \
+      --out-prefix "$case_dir/case"
+
+    banner "Summing bits to get 'counts'"
+
+    analysis/tools/sum_bits.py \
+      $case_dir/case_params.csv \
+      < $case_dir/out.csv \
+      > $case_dir/case_counts.csv
+  fi
 
   banner "Constructing candidates"
 
@@ -150,13 +188,6 @@ _run-one-case() {
     $case_dir/case_params.csv \
     < $case_dir/case_candidates.txt \
     > $case_dir/case_map.csv
-
-  banner "Summing bits to get 'counts'"
-
-  analysis/tools/sum_bits.py \
-    $case_dir/case_params.csv \
-    < $case_dir/out.csv \
-    > $case_dir/case_counts.csv
 
   local out_dir=$REGTEST_DIR/${test_case_id}_report
   mkdir --verbose -p $out_dir
@@ -224,6 +255,8 @@ write-test-cases() {
 run-seq() {
   local spec_regex=$1  # grep -E format on the spec
   local html_filename=${2:-results.html}  # demo.sh changes it to demo.sh
+
+  mkdir --verbose -p $REGTEST_DIR
 
   local spec_list=$REGTEST_DIR/spec-list.txt
   tests/regtest_spec.py | grep -E $spec_regex > $spec_list

@@ -82,42 +82,9 @@ class RandExp(object):
     return rand_val
 
 
-PARAMS_HTML = """
-  <h3>Simulation Input</h3>
-  <table align="center">
-    <tr>
-      <td>Number of clients</td>
-      <td align="right">{num_clients:,}</td>
-    </tr>
-    <tr>
-      <td>Total values reported / obfuscated</td>
-      <td align="right">{num_values:,}</td>
-    </tr>
-    <tr>
-      <td>Unique values reported / obfuscated</td>
-      <td align="right">{num_unique_values}</td>
-    </tr>
-  </table>
-"""
-
-
-def WriteParamsHtml(opts, f):
-  num_values = opts.num_clients * opts.values_per_client
-  d = {
-      'num_clients': opts.num_clients,
-      'num_unique_values': opts.num_unique_values,
-      'num_values': num_values
-  }
-  # NOTE: No HTML escaping since we're writing numbers
-  print >>f, PARAMS_HTML.format(**d)
-
-
 def CreateOptionsParser():
   p = optparse.OptionParser()
 
-  p.add_option(
-      '-o', dest='outfile', metavar='PATH', type='str', default='',
-      help='CSV output path.  Header is "client,value"')
   # This will be used for the C++ client
   p.add_option(
       '-l', type='int', metavar='INT', dest='num_lines', default=0,
@@ -151,11 +118,6 @@ def CreateOptionsParser():
 def main(argv):
   (opts, argv) = CreateOptionsParser().parse_args(argv)
 
-  # NOTE: Output file is required now (instead of using stdout) because it's
-  # also used to write sim params.
-  if not opts.outfile:
-    raise RuntimeError('-o is required.')
-
   if opts.num_unique_values < 2:
     raise RuntimeError('-u should be at least 2.')
 
@@ -179,36 +141,29 @@ def main(argv):
   start_time = time.time()
 
   # Printing values into file OUTFILE
-  with open(opts.outfile, "w") as f:
-    if opts.num_lines:
-      # In this mode we're not outputting the client
-      for i in xrange(opts.num_lines):
-        if i % 10000 == 0:
-          elapsed = time.time() - start_time
-          log('Generated %d rows in %.2f seconds', i, elapsed)
+  f = sys.stdout
 
+  if opts.num_lines:  # line mode, not writing the client column
+    for i in xrange(opts.num_lines):
+      if i % 10000 == 0:
+        elapsed = time.time() - start_time
+        log('Generated %d rows in %.2f seconds', i, elapsed)
+
+      true_value = 'v%d' % rand_sample()
+      print >>f, true_value
+
+  else:  # csv mode
+    c = csv.writer(f)
+    c.writerow(('client', 'true_value'))
+    for i in xrange(1, opts.num_clients + 1):
+      if i % 10000 == 0:
+        elapsed = time.time() - start_time
+        log('Generated %d rows in %.2f seconds', i, elapsed)
+
+      # A fixed number of values per user
+      for _ in xrange(opts.values_per_client):
         true_value = 'v%d' % rand_sample()
-        print >>f, true_value
-
-    else:  # csv mode
-      c = csv.writer(f)
-      c.writerow(('client', 'true_value'))
-      for i in xrange(1, opts.num_clients + 1):
-        if i % 10000 == 0:
-          elapsed = time.time() - start_time
-          log('Generated %d rows in %.2f seconds', i, elapsed)
-
-        # A fixed number of values per user
-        for _ in xrange(opts.values_per_client):
-          true_value = 'v%d' % rand_sample()
-          c.writerow((i, true_value))
-  log('Wrote %s', opts.outfile)
-
-  prefix, _ = os.path.splitext(opts.outfile)
-  params_filename = prefix + '_sim_params.html'
-  with open(params_filename, 'w') as f:
-    WriteParamsHtml(opts, f)
-  log('Wrote %s', params_filename)
+        c.writerow((i, true_value))
 
 
 if __name__ == "__main__":
