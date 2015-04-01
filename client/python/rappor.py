@@ -53,7 +53,7 @@ class Params(object):
 
   def to_json(self):
     """Convert this instance to JSON.
-    
+
     TODO: The names should be compatible with apps/api.
     """
     return json.dumps({
@@ -63,7 +63,7 @@ class Params(object):
         'p': self.prob_p,
         'q': self.prob_q,
         'f': self.prob_f,
-        })
+    })
 
   # NOTE:
   # - from_csv is currently used in sum_bits.py

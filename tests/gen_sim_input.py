@@ -238,7 +238,8 @@ def main(argv):
           elapsed = time.time() - start_time
           log('Generated %d rows in %.2f seconds', i, elapsed)
 
-        for _ in xrange(VALUES_PER_CLIENT):  # A fixed number of values per user
+        # A fixed number of values per user
+        for _ in xrange(VALUES_PER_CLIENT):
           true_value = 'v%d' % rand_sample()
           c.writerow((i, true_value))
   log('Wrote %s', OUTFILE)

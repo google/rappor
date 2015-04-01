@@ -40,11 +40,46 @@ readonly REGTEST_DIR=_tmp/regtest
 # All the Python tools need this
 export PYTHONPATH=$CLIENT_DIR
 
-readonly NUM_SPEC_COLS=${NUM_PROCS:-13}
+readonly NUM_SPEC_COLS=13
 
 # TODO: Get num cpus
 readonly NUM_PROCS=${NUM_PROCS:-12}
 
+
+# Add some more candidates here.  We hope these are estimated at 0.
+# e.g. if add_start=51, and num_additional is 20, show v51-v70
+more-candidates() {
+  local last_true=$1
+  local num_additional=$2
+
+  local begin
+  local end
+  begin=$(expr $last_true + 1)
+  end=$(expr $last_true + $num_additional)
+
+  seq $begin $end | awk '{print "v" $1}'
+}
+
+# Args:
+#   true_inputs: File of true inputs
+#   last_true: last true input, e.g. 50 if we generated "v1" .. "v50".
+#   num_additional: additional candidates to generate (starting at 'last_true')
+#   to_remove: Regex of true values to omit from the candidates list, or the
+#     string 'NONE' if none should be.  (Our values look like 'v1', 'v2', etc. so
+#     there isn't any ambiguity.)
+print-candidates() {
+  local true_inputs=$1
+  local last_true=$2
+  local num_additional=$3 
+  local to_remove=$4
+
+  if test $to_remove = NONE; then
+    cat $true_inputs  # include all true inputs
+  else
+    egrep -v $to_remove $true_inputs  # remove some true inputs
+  fi
+  more-candidates $last_true $num_additional
+}
 
 # Run a single test case, specified by a line of the test spec.
 # This is a helper function for 'run-all'.
@@ -108,7 +143,7 @@ _run-one-case() {
   banner "Constructing candidates"
 
   # Reuse demo.sh function
-  ./demo.sh print-candidates \
+  print-candidates \
     $case_dir/case_true_inputs.txt $num_unique_values \
     $num_additional "$to_remove" \
     > $case_dir/case_candidates.txt
@@ -192,6 +227,7 @@ write-test-cases() {
 # run-all should take regex?
 run-seq() {
   local spec_regex=$1  # grep -E format on the spec
+  local html_filename=${2:-results.html}  # demo.sh changes it to demo.sh
 
   local spec_list=$REGTEST_DIR/spec-list.txt
   tests/regtest_spec.py | grep -E $spec_regex > $spec_list
@@ -203,7 +239,7 @@ run-seq() {
 
   log "Done running all test cases"
 
-  make-summary $REGTEST_DIR
+  make-summary $REGTEST_DIR $html_filename
 }
 
 run-all() {
