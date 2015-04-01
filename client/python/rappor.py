@@ -21,6 +21,7 @@ Note that we use SHA1 for the Bloom filter hash function.
 """
 import csv
 import hashlib
+import json
 import random
 
 
@@ -50,6 +51,23 @@ class Params(object):
   def __repr__(self):
     return repr(self.__dict__)
 
+  def to_json(self):
+    """Convert this instance to JSON.
+    
+    TODO: The names should be compatible with apps/api.
+    """
+    return json.dumps({
+        'k': self.num_bloombits,
+        'h': self.num_hashes,
+        'm': self.num_cohorts,
+        'p': self.prob_p,
+        'q': self.prob_q,
+        'f': self.prob_f,
+        })
+
+  # NOTE:
+  # - from_csv is currently used in sum_bits.py
+  # - to_csv is in rappor_sim.print_params
   @staticmethod
   def from_csv(f):
     """Read the RAPPOR parameters from a CSV file.
