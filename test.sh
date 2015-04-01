@@ -27,18 +27,11 @@ set -o nounset
 set -o pipefail
 set -o errexit
 
+. util.sh
+
 readonly THIS_DIR=$(dirname $0)
 readonly REPO_ROOT=$THIS_DIR
 readonly CLIENT_DIR=$REPO_ROOT/client/python
-
-#
-# Utility functions
-#
-
-die() {
-  echo 1>&2 "$0: $@"
-  exit 1
-}
 
 #
 # Fully Automated Tests
@@ -66,11 +59,16 @@ py-unit() {
 
 # All tests
 all() {
+  banner "Running Python unit tests"
+
   py-unit
   echo
+
+  banner "Linting Python source files"
   py-lint
 
-  # TODO: Add R tests, end to end demo
+  banner "Running R unit tests"
+  r-unit
 }
 
 #
@@ -102,6 +100,16 @@ py-lint() {
     \( -name \*.py -a -print \) \
     | grep -v /setup.py \
     | xargs --verbose -- $0 python-lint
+}
+
+r-unit() {
+  # This one wants to be in the root
+  tests/analyze_test.R
+
+  # The way we source requires changing dirs.
+  pushd analysis/test
+  ./run_tests.R
+  popd
 }
 
 doc-lint() {
