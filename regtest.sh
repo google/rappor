@@ -174,8 +174,11 @@ multi() {
 }
 
 test-error() {
-  local spec_regex=$1
-  log "Some cases failed, or none matched pattern '$spec_regex'"
+  local spec_regex=${1:-}
+  log "Some test cases failed"
+  if test -n "$spec_regex"; then
+    log "(Perhaps none matched pattern '$spec_regex')"
+  fi
   exit 1
 }
 
@@ -228,7 +231,7 @@ run-all() {
   write-test-cases
 
   head -n $max_cases $spec_list \
-    | multi -P $NUM_PROCS -- $0 $func || test-error $spec_regex
+    | multi -P $NUM_PROCS -- $0 $func || test-error
 
   log "Done running all test cases"
 
