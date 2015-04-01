@@ -153,6 +153,7 @@ show-help() {
 
 make-summary() {
   local dir=$1
+  local filename=${2:-results.html}
 
   tests/make_summary.py $dir > $dir/rows.html
 
@@ -160,12 +161,12 @@ make-summary() {
 
   cat ../../tests/regtest.html \
     | sed -e '/TABLE_ROWS/ r rows.html' \
-    > results.html
+    > $filename
 
   popd >/dev/null
 
-  log "Wrote $dir/results.html"
-  log "URL: file://$PWD/$dir/results.html"
+  log "Wrote $dir/$filename"
+  log "URL: file://$PWD/$dir/$filename"
 }
 
 # Helper to parse spec input with xargs
