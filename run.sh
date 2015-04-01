@@ -9,20 +9,20 @@ set -o nounset
 set -o pipefail
 set -o errexit
 
-log() {
-  echo 1>&2 "$@"
-}
-
-die() {
-  log "FATAL: $@"
-  exit 1
-}
+. util.sh
 
 # Count lines of code
 count() {
+  # exclude _tmp dirs, and include Python, C, C++, R, shell
   find . \
-    -name \*.py -o -name \*.c -o -name \*.h -o -name \*.R -o -name \*.sh \
-    | xargs wc -l
+    \( -name _tmp -a -prune \) -o \
+    \( -name \*.py -a -print \) -o \
+    \( -name \*.c -a -print \) -o \
+    \( -name \*.h -a -print \) -o \
+    \( -name \*.cc -a -print \) -o \
+    \( -name \*.R -a -print \) -o \
+    \( -name \*.sh -a -print \) \
+    | xargs wc -l | sort -n
 }
 
 #
