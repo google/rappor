@@ -135,18 +135,31 @@ main <- function(argv) {
   true_map <- ReadMapFile(true_map_file)
   # print(true_map$strs)
 
+  num_unique_values <- length(true_map$strs)
+
   # These are the three distributions in gen_sim_input.py
   if (dist == 'exp') {
-    weights <- c()
+    # NOTE: gen_sim_input.py hard-codes lambda = N/5 for 'exp'
+    weights <- dexp(1:num_unique_values, rate = num_unique_values / 5)
   } else if (dist == 'gauss') {
-    weights <- c()
+    # NOTE: gen_sim_input.py hard-codes stddev = N/6 for 'exp'
+    #half <- num_unique_values / 2
+    #left <- -half + 1
+    #weights <- dnorm(left : half, sd = num_unique_values / 6)
+
+    # I think the above should work, but it doesn't.  Stub it out with unif.
+    weights <- rep(1, num_unique_values)
   } else if (dist == 'unif') {
-    weights <- rep(1, length(true_map$strs))  # ones vector
+    # e.g. for N = 4, weights are [0.25, 0.25, 0.25, 0.25]
+    #weights <- dunif(1:num_unique_values, max = num_unique_values)
+
+    # I think the above should work, but it doesn't.  Stub it out with unif.
+    weights <- rep(1, num_unique_values)
   } else {
     stop(sprintf("Invalid distribution '%s'", dist))
   }
-
-  str(params)
+  print("weights")
+  print(weights)
 
   if (length(true_map$strs) != length(weights)) {
     stop(cat("Dimensions of weights do not match:",
