@@ -101,8 +101,8 @@ GenerateCounts <- function(params, true_map, partition) {
 
   # probability that a true 1 is reported as "1"
   pstar <- (1 - f / 2) * q + (f / 2) * p
-  # probability that a true 0 is reported as "0"
-  qstar <- (1 - f / 2) * (1 - p) + (f / 2) * (1 - q)
+  # probability that a true 0 is reported as "1"
+  qstar <- (1 - f / 2) * p + (f / 2) * q
   
   reported_ones <- 
     unlist(lapply(counts_ones, 
@@ -133,7 +133,7 @@ main <- function(argv) {
   params <- ReadParameterFile(params_file)
 
   true_map <- ReadMapFile(true_map_file)
-  print(true_map$strs)
+  # print(true_map$strs)
 
   # These are the three distributions in gen_sim_input.py
   if (dist == 'exp') {

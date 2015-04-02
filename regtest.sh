@@ -117,8 +117,8 @@ _run-one-case() {
   # Save the "spec" for showing in the summary.
   echo "$@" > $case_dir/spec.txt
 
-  #local fast_counts=F
   local fast_counts=T
+  # local fast_counts=T
 
   if test $fast_counts = T; then
     # Print params CSV.  No JSON.
@@ -170,7 +170,7 @@ _run-one-case() {
 
     analysis/tools/sum_bits.py \
       $case_dir/case_params.csv \
-      < $case_dir/out.csv \
+      < $case_dir/case_out.csv \
       > $case_dir/case_counts.csv
   fi
 
