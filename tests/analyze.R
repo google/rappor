@@ -24,7 +24,7 @@
 library(optparse)
 
 # For unit tests
-is_main <- (length(sys.frames) == 0)
+is_main <- (length(sys.frames()) == 0)
 
 # Do command line parsing first to catch errors.  Loading libraries in R is
 # slow.
