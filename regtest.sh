@@ -134,8 +134,6 @@ _run-one-case() {
       < $case_dir/case_true_inputs.txt \
       > $true_map_path
 
-    dist=unif  # hack for now
-
     local num_reports=$(expr $num_clients \* $values_per_client)
 
     banner "Using gen_counts.R"
