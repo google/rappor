@@ -35,21 +35,21 @@ RandomPartition <- function(total, weights) {
   bins <- length(weights)
   result <- rep(0, bins)
   
-  if (total > 0) {  # if total == 0, nothing else to do  
-    # idiomatic way:
-    #   rnd_list <- sample(strs, total, replace = TRUE, weights)
-    #   apply(as.array(strs), 1, function(x) length(rnd_list[rnd_list == x]))
-    #
-    # The following is much faster for larger totals. We can replace a loop with
-    # (tail) recusion, but R chokes with the recursion depth > 850.
-    
-    w <- sum(weights)
+  # idiomatic way:
+  #   rnd_list <- sample(strs, total, replace = TRUE, weights)
+  #   apply(as.array(strs), 1, function(x) length(rnd_list[rnd_list == x]))
+  #
+  # The following is much faster for larger totals. We can replace a loop with
+  # (tail) recusion, but R chokes with the recursion depth > 850.
+  
+  w <- sum(weights)
 
-    for (i in 1:bins) {
+  for (i in 1:bins) 
+    if (total > 0) {  # if total == 0, nothing else to do  
       # invariant: w = sum(weights[i:bins]) 
       # rather than computing sum every time leading to quadratic time, keep 
       # updating it
-
+  
       # The probability p is clamped to [0, 1] to avoid under/overflow errors.
       p <- min(max(weights[i] / w, 0), 1) 
       # draw the number of balls falling into the current bin
@@ -57,9 +57,8 @@ RandomPartition <- function(total, weights) {
       result[i] <- rnd_draw  # push rnd_draw balls from total to result[i]
       total <- total - rnd_draw
       w <- w - weights[i]  
-    }
   }
-  
+
   return(result)
 }
 
