@@ -117,7 +117,7 @@ _run-one-case() {
   # Save the "spec" for showing in the summary.
   echo "$@" > $case_dir/spec.txt
 
-  local fast_counts=T
+  local fast_counts=F
   # local fast_counts=T
 
   if test $fast_counts = T; then
