@@ -26,43 +26,40 @@ RandomPartition <- function(total, weights) {
   # Example:
   #   > RandomPartition(100, c(3, 2, 1, 0, 1))
   #   [1] 47 24 15  0 14
+  if (any(weights < 0))
+    stop("Weights cannot be negative")
+  
+  if (sum(weights) == 0)
+    stop("Weights cannot sum up to 0")
+  
   bins <- length(weights)
+  result <- rep(0, bins)
+  
+  # idiomatic way:
+  #   rnd_list <- sample(strs, total, replace = TRUE, weights)
+  #   apply(as.array(strs), 1, function(x) length(rnd_list[rnd_list == x]))
+  #
+  # The following is much faster for larger totals. We can replace a loop with
+  # (tail) recusion, but R chokes with the recursion depth > 850.
+  
+  w <- sum(weights)
 
-  if (total == 0) {
-    result <- rep(0, bins)
-  } else {
-    if (any(weights < 0))
-      stop("Weights cannot be negative")
-    
-    if (sum(weights) == 0)
-      stop("Weights cannot sum up to 0")
-      
-    # idiomatic way:
-    #   rnd_list <- sample(strs, total, replace = TRUE, weights)
-    #   apply(as.array(strs), 1, function(x) length(rnd_list[rnd_list == x]))
-    #
-    # The following is much faster for larger totals. We can replace a loop with
-    # (tail) recusion, but R chokes with the recursion depth > 850.
-    
-    result <- vector(length = bins)
-    w <- sum(weights)
-
-    for (i in 1:bins) {
+  for (i in 1:bins) 
+    if (total > 0) {  # if total == 0, nothing else to do  
       # invariant: w = sum(weights[i:bins]) 
       # rather than computing sum every time leading to quadratic time, keep 
       # updating it
-      if (w > 0) {
-        p <- weights[i] / w
-        # draw the number of balls falling into the current bin
-        rnd_draw <- rbinom(n = 1, size = total, prob = p)
-        result[i] <- rnd_draw  # push rnd_draw balls from total to result[i]
-        total <- total - rnd_draw
-        w <- w - weights[i]  
-      }
-    }
-  }
   
-  result
+      # The probability p is clamped to [0, 1] to avoid under/overflow errors.
+      p <- min(max(weights[i] / w, 0), 1) 
+      # draw the number of balls falling into the current bin
+      rnd_draw <- rbinom(n = 1, size = total, prob = p)
+      result[i] <- rnd_draw  # push rnd_draw balls from total to result[i]
+      total <- total - rnd_draw
+      w <- w - weights[i]  
+  }
+
+  return(result)
 }
 
 GenerateCounts <- function(params, true_map, partition) {
@@ -140,21 +137,15 @@ main <- function(argv) {
   # These are the three distributions in gen_sim_input.py
   if (dist == 'exp') {
     # NOTE: gen_sim_input.py hard-codes lambda = N/5 for 'exp'
-    weights <- dexp(1:num_unique_values, rate = num_unique_values / 5)
+    weights <- dexp(1:num_unique_values, rate = 5 / num_unique_values)
   } else if (dist == 'gauss') {
     # NOTE: gen_sim_input.py hard-codes stddev = N/6 for 'exp'
-    #half <- num_unique_values / 2
-    #left <- -half + 1
-    #weights <- dnorm(left : half, sd = num_unique_values / 6)
-
-    # I think the above should work, but it doesn't.  Stub it out with unif.
-    weights <- rep(1, num_unique_values)
+    half <- num_unique_values / 2
+    left <- -half + 1
+    weights <- dnorm(left : half, sd = num_unique_values / 6)  
   } else if (dist == 'unif') {
     # e.g. for N = 4, weights are [0.25, 0.25, 0.25, 0.25]
-    #weights <- dunif(1:num_unique_values, max = num_unique_values)
-
-    # I think the above should work, but it doesn't.  Stub it out with unif.
-    weights <- rep(1, num_unique_values)
+    weights <- dunif(1:num_unique_values, max = num_unique_values)
   } else {
     stop(sprintf("Invalid distribution '%s'", dist))
   }
