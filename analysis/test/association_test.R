@@ -231,7 +231,7 @@ TestComputeDistributionEM <- function() {
   # Should have mass roughly 1/4e and 1/4e each
   checkTrue(abs(dist$fit["3", "3"] - dist$fit["3", "4"]) < 0.03)
 
-  # Check for lack of correlation
+  # Check for lack of probability mass
   checkTrue(dist$fit["1", "3"] < 0.01)
   checkTrue(dist$fit["2", "1"] < 0.01)
   checkTrue(dist$fit["3", "1"] < 0.01)
