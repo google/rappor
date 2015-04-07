@@ -241,7 +241,7 @@ TestComputeDistributionEM <- function() {
 
   if (print_dist) {
     # dist$fit[dist$fit<1e-4] <- 0
-    # Sort by row names and column names to visaully see correlation
+    # Sort by row names and column names to visually see correlation
     print(dist$fit[sort(rownames(dist$fit)), sort(colnames(dist$fit))])
   }
 
