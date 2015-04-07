@@ -45,7 +45,7 @@ SamplePopulations <- function(N, num_variables = 1, params,
   num_strings <- variable_opts$num_strings
 
   if (variable_opts$deterministic) {
-    # If a deterministic distribution is desired, evenly distribute
+    # If a deterministic assignment is desired, evenly distribute
     #     strings across all cohorts.
 
     reps <- ceiling(N / num_strings)
@@ -57,34 +57,22 @@ SamplePopulations <- function(N, num_variables = 1, params,
                       function(i) rep(1:m, ceiling(N / m))[1:N])
   } else {
     # Otherwise, draw from a Poisson random variable
-    variables <- lapply(1:num_variables, function(i) rpois(N, 1)+1)
+    variables <- lapply(1:num_variables, function(i) rpois(N, 1) + 1)
+    
+    # Randomly assign cohorts in each dimension
+    cohorts <- lapply(1:num_variables,
+                      function(i) sample(1:params$m, N, replace = TRUE))
+    
     if (!variable_opts$independent) {
-      # If user wants dependent RVs, take the cumulative sum of num_variables
-      # independent random variables.
-      # variables <- as.list(data.frame(t(apply(do.call("rbind",
-      #                                                variables),
-      #                                        2, cumsum))))
+      # If user wants dependent RVs, subsequent variables are closely correlated
+      # with the first variable in the foll. manner:
+      #   variable_i ~ variable_1 + (i-1) Bernoulli(0.5)
 
-      # Otherwise, draw the first variable from a Poisson distribution (+1
-      # to avoid 0 index errors)
-      # Subsequent variables are closely correlated with the first variable
-      # in the foll. manner
-      #   variable_i ~ variable_1 + (i-1).U(0, 1)
-      # where U(0, 1) is a random coin flip (p(0) = 1/2, p(1) = 1/2)
-
-      variables[2:num_variables] <- lapply(2:num_variables,
-                                      function(i) variables[[1]] +
-                                      (i-1) * sample(c(0, 1), N, replace = TRUE))
-
-      # Use the same cohort assignment in all num_variables dimensions so the
-      #     correlations are preserved
-      cohort <- sample(1:params$m, N, replace = TRUE)
-      cohorts <- lapply(1:num_variables,
-                        function(i) cohort)
-    } else {
-      # Randomly assign cohorts in each dimension
-      cohorts <- lapply(1:num_variables,
-                        function(i) sample(1:params$m, N, replace = TRUE))
+      bernoulli_corr <- function(x) {
+        variables[[1]] + (x - 1) * sample(c(0, 1), N, replace = TRUE)}
+      
+      variables[2:num_variables] <- lapply(2:num_variables, 
+                                           function(x) bernoulli_corr(x))
     }
   }
   list(variables = variables, cohorts = cohorts)
@@ -226,11 +214,21 @@ TestComputeDistributionEM <- function() {
                                 params, marginals = NULL,
                                 estimate_var = FALSE)
 
-  print_dist <- FALSE  # to print joint distribution, set to TRUE
+  print_dist <- TRUE  # to print joint distribution, set to TRUE
 
-  # Check for correlations
-  checkTrue(abs(dist$fit["1", "1"] - dist$fit["1", "2"]) < 0.03)
-  checkTrue(abs(dist$fit["2", "2"] - dist$fit["2", "3"]) < 0.03)
+  if (print_dist) {
+    # dist$fit[dist$fit<1e-4] <- 0
+    # Sort by row names and column names to visually see correlation
+    print(dist$fit[sort(rownames(dist$fit)), sort(colnames(dist$fit))])
+  }
+  
+  # Check for correlations (constants chosen heuristically to get good
+  # test confidence with small # of samples)
+  # Should have mass roughly 1/2e and 1/2e each
+  checkTrue(abs(dist$fit["1", "1"] - dist$fit["1", "2"]) < 0.05)
+  checkTrue(abs(dist$fit["2", "2"] - dist$fit["2", "3"]) < 0.05)
+  
+  # Should have mass roughly 1/4e and 1/4e each
   checkTrue(abs(dist$fit["3", "3"] - dist$fit["3", "4"]) < 0.03)
 
   # Check for lack of correlation
@@ -238,12 +236,6 @@ TestComputeDistributionEM <- function() {
   checkTrue(dist$fit["2", "1"] < 0.01)
   checkTrue(dist$fit["3", "1"] < 0.01)
   checkTrue(dist$fit["3", "2"] < 0.01)
-
-  if (print_dist) {
-    # dist$fit[dist$fit<1e-4] <- 0
-    # Sort by row names and column names to visually see correlation
-    print(dist$fit[sort(rownames(dist$fit)), sort(colnames(dist$fit))])
-  }
 
 }
 
