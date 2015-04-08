@@ -233,7 +233,9 @@ TestComputeDistributionEM <- function() {
 
   # Check for lack of probability mass
   checkTrue(dist$fit["1", "3"] < 0.01)
+  checkTrue(dist$fit["1", "4"] < 0.01)
   checkTrue(dist$fit["2", "1"] < 0.01)
+  checkTrue(dist$fit["2", "4"] < 0.01)
   checkTrue(dist$fit["3", "1"] < 0.01)
   checkTrue(dist$fit["3", "2"] < 0.01)
 
