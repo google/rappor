@@ -25,12 +25,15 @@ files:
   - hist: histogram of actual input values.  Compare this with the histogram
     the RAPPOR analysis infers from the first 3 values.
 
+Input columns: client,true_value
+Ouput coumns: client,cohort,rappor
+
 See http://google.github.io/rappor/doc/data-flow.html for details.
 """
 
 import csv
 import collections
-import getopt
+import optparse
 import os
 import random
 import sys
@@ -45,176 +48,58 @@ except ImportError:
   fastrand = None
 
 
-# Error flags
-PARSE_SUCCESS = 0
-PARSE_ERROR = 1
-
-
 def log(msg, *args):
   if args:
     msg = msg % args
   print >>sys.stderr, msg
 
 
-class SimOptions(object):
-  """Simulation options."""
-  def __init__(self):
-    self.params = rappor.Params()
+def CreateOptionsParser():
+  p = optparse.OptionParser()
 
-    self.infile = ""             # Input file name; must be user-provided
-    self.outfile = ""            # Output file name
-    self.histfile = ""           # Output histogram file
-    self.mapfile = ""            # Output BF map file
-    self.true_inputs_file = ""   # File that contains unique client inputs
-    self.paramsfile = ""         # Output params file
-    self.randomness_seed = None  # Randomness seed
-                                 # For debugging purposes only
+  # We are taking a path, and not using stdin, because we read it twice.
+  p.add_option(
+      '-i', dest='infile', metavar='PATH', type='str', default='',
+      help='CSV input path.  Header is "client,true_value"')
+  p.add_option(
+      '--out-prefix', dest='out_prefix', metavar='PATH', type='str',
+      default='',
+      help='Output prefix.')
 
-    # TODO: Add orthogonal flag for crytographic randomness.
-    self.random_mode = 'fast'    # simple/fast.
+  p.add_option(
+      '--num-bits', type='int', metavar='INT', dest='num_bits', default=16,
+      help='Number of bloom filter bits.')
+  p.add_option(
+      '--num-hashes', type='int', metavar='INT', dest='num_hashes', default=2,
+      help='Number of hashes.')
+  p.add_option(
+      '--num-cohorts', type='int', metavar='INT', dest='num_cohorts',
+      default=64, help='Number of cohorts.')
 
-  # For testing
-  def __eq__(self, other):
-    return self.__dict__ == other.__dict__
+  p.add_option(
+      '-p', type='float', metavar='FLOAT', dest='prob_p', default=1,
+      help='Probability p')
+  p.add_option(
+      '-q', type='float', metavar='FLOAT', dest='prob_q', default=1,
+      help='Probability q')
+  p.add_option(
+      '-f', type='float', metavar='FLOAT', dest='prob_f', default=1,
+      help='Probability f')
 
-  def __repr__(self):
-    return repr(self.__dict__)
+  p.add_option(
+      '--oneprr', dest='oneprr', action='store_true', default=False,
+      help='Use a consistent PRR.')
 
+  choices = ['simple', 'fast']
+  p.add_option(
+      '-r', type='choice', metavar='STR',
+      dest='random_mode', default='fast', choices=choices,
+      help='Random algorithm (%s)' % '|'.join(choices))
 
-def parse_args(argv):
-  """Parse and validate flags."""
-  try:
-    opts, args = getopt.getopt(
-        argv[1:], "i:o:p:q:f:c:nh:hf:m:pf:s:r:",
-        ["input=", "output=", "cohorts=",
-         "hashes=", "bloombits=", "oneprr",
-         "mapfile=", "rseed="])
-  except getopt.GetoptError:
-    usage(argv[0])
-    sys.exit(2)
-
-  inst = SimOptions()
-  for opt, arg in opts:
-    if opt in ("-i", "--input"):
-      inst.infile = arg
-    elif opt in ("-o", "--output"):
-      inst.outfile = arg
-
-    # Privacy params
-    elif opt in ("-b", "--bloombits"):
-      inst.params.num_bloombits = int(arg)
-    elif opt in ("-nh", "--hashes"):
-      inst.params.num_hashes = int(arg)
-    elif opt in ("-c", "--cohorts"):
-      inst.params.num_cohorts = int(arg)
-    elif opt == "-p":
-      inst.params.prob_p = float(arg)
-    elif opt == "-q":
-      inst.params.prob_q = float(arg)
-    elif opt == "-f":
-      inst.params.prob_f = float(arg)
-    # Pseudo-param
-    elif opt == "--oneprr":
-      inst.params.flag_oneprr = True
-
-    elif opt == "-r":
-      VALID = ('simple', 'fast')
-      arg = arg.strip()
-      if arg not in VALID:
-        raise RuntimeError('random most must be one of: %s' % ' '.join(VALID))
-      inst.random_mode = arg
-    elif opt == "-hf":
-      inst.histfile = arg
-    elif opt in ("-m", "--mapfile"):
-      inst.mapfile = arg
-    elif opt == "-pf":
-      inst.paramsfile = arg
-    elif opt in ("-s", "--rseed"):
-      inst.randomness_seed = arg
-
-  # Warn anyone that accidentally turns on the flag
-  if inst.randomness_seed is not None:
-    sys.stdout.write("""
-
-    WARNING! Randomness should be seeded with time or good entropy sources to
-    ensure freshness. -s/--seed command line flag is for debugging purposes
-    only.
-
-    \n""")
-
-  if not inst.infile:
-    return inst, PARSE_ERROR
-
-  prefix, _ = os.path.splitext(inst.infile)
-  inst.outfile = inst.outfile or (prefix + "_out.csv")
-  inst.histfile = inst.histfile or (prefix + "_hist.csv")
-  inst.mapfile = inst.mapfile or (prefix + "_map.csv")
-  inst.true_inputs_file = inst.true_inputs_file or (
-      prefix + "_true_inputs.txt")
-  inst.paramsfile = inst.paramsfile or (prefix + "_params.csv")
-
-  return inst, PARSE_SUCCESS
+  return p
 
 
-def usage(script_name):
-  sys.stdout.write("Usage: " + script_name + " --input/-i <input file name>")
-  sys.stdout.write(" [-o|c|nh|p|q|f|b] [--oneprr]")
-
-  sys.stdout.write("""
-
-  -o or --output        Output file name
-  -r simple/fast        Random algorithm
-  -c or --cohorts       Number of cohorts
-  -nh or --hashes       Number of hashes
-  -p                    Probability p
-  -q                    Probability q
-  -f                    Probability f
-  -b or --bloombits     Size of bloom filter in bits
-  -pf                   Parameters file
-  -m or --mapfile       Bloom filter map file
-  --oneprr              Include flag to set one PRR for each (user,word)
-
-""")
-
-
-PARAMS_HTML = """
-  <h3>RAPPOR Parameters</h3>
-  <table align="center">
-    <tr>
-      <td><b>k</b></td>
-      <td>Size of Bloom filter in bits</td>
-      <td align="right">{}</td>
-    </tr>
-    <tr>
-      <td><b>h</b></td>
-      <td>Hash functions in Bloom filter</td>
-      <td align="right">{}</td>
-    </tr>
-    <tr>
-      <td><b>m</b></td>
-      <td>Number of Cohorts</td>
-      <td align="right">{}</td>
-    </tr>
-    <tr>
-      <td><b>p</b></td>
-      <td>Probability p</td>
-      <td align="right">{}</td>
-    </tr>
-    <tr>
-      <td><b>q</b></td>
-      <td>Probability q</td>
-      <td align="right">{}</td>
-    </tr>
-    <tr>
-      <td><b>f</b></td>
-      <td>Probability f</td>
-      <td align="right">{}</td>
-    </tr>
-  </table>
-"""
-
-
-def print_params(params, csv_out, html_out, json_out):
+def print_params(params, csv_out, json_out):
   """Print Rappor parameters to a text file."""
   c = csv.writer(csv_out)
   c.writerow(('k', 'h', 'm', 'p', 'q', 'f'))  # header
@@ -227,9 +112,6 @@ def print_params(params, csv_out, html_out, json_out):
       params.prob_f)
 
   c.writerow(row)
-
-  # NOTE: No HTML escaping since we're writing numbers
-  print >>html_out, PARAMS_HTML.format(*row)
 
   print >>json_out, params.to_json()
 
@@ -246,7 +128,7 @@ def make_histogram(csv_in):
 
 
 def print_histogram(word_hist, histfile):
-  """Write histogram of infile to histfile."""
+  """Write histogram of values to histfile."""
   # Print histograms of distributions
   sorted_words = sorted(word_hist.iteritems(), key=lambda pair: pair[1],
                         reverse=True)
@@ -269,52 +151,59 @@ def bit_string(irr, num_bloombits):
 
 
 def main(argv):
-  inst, ret_val = parse_args(argv)
-  if ret_val == PARSE_ERROR:
-    usage(argv[0])
-    sys.exit(2)
+  (opts, argv) = CreateOptionsParser().parse_args(argv)
+  if not opts.infile:
+    raise RuntimeError('-i is required')
+  if not opts.out_prefix:
+    raise RuntimeError('--out-prefix is required')
 
-  params = inst.params
+  # Copy flags into params
+  params = rappor.Params()
+  params.num_bloombits = opts.num_bits
+  params.num_hashes = opts.num_hashes
+  params.num_cohorts = opts.num_cohorts
+  params.prob_p = opts.prob_p
+  params.prob_q = opts.prob_q
+  params.prob_f = opts.prob_f
+  params.flag_oneprr = opts.oneprr
 
-  params_csv = inst.paramsfile
-  base, _ = os.path.splitext(params_csv)
-  params_html = base + '.html'
-  params_json = base + '.json'
+  prefix = opts.out_prefix
+
+  outfile = prefix + "_out.csv"
+  histfile = prefix + "_hist.csv"
+  true_inputs_file = prefix + "_true_inputs.txt"
+  params_csv = prefix + "_params.csv"
+  params_json = prefix + '_params.json'
 
   # Print parameters to parameters file -- needed for the R analysis tool.
   with open(params_csv, 'w') as csv_out:
-    with open(params_html, 'w') as html_out:
-      with open(params_json, 'w') as json_out:
-        print_params(params, csv_out, html_out, json_out)
+    with open(params_json, 'w') as json_out:
+      print_params(params, csv_out, json_out)
 
-  with open(inst.infile) as f:
+  with open(opts.infile) as f:
     csv_in = csv.reader(f)
     word_hist = make_histogram(csv_in)
 
   # Print true histograms.
-  with open(inst.histfile, 'w') as f:
+  with open(histfile, 'w') as f:
     print_histogram(word_hist, f)
 
   all_words = sorted(word_hist)  # unique words
 
   # Print all true values, one per line.  This file can be further processed to
   # simulate inaccurate candidate lists.
-  with open(inst.true_inputs_file, 'w') as f:
+  with open(true_inputs_file, 'w') as f:
     for word in all_words:
       print >>f, word
 
   rand = random.Random()  # default Mersenne Twister randomness
   #rand = random.SystemRandom()  # cryptographic randomness from OS
 
-  if inst.randomness_seed is not None:
-    rand.seed(inst.randomness_seed)  # Seed with cmd line arg
-    log('Seeded to %r', inst.randomness_seed)
-  else:
-    rand.seed()  # Default: seed with sys time
+  rand.seed()  # Default: seed with sys time
 
-  if inst.random_mode == 'simple':
+  if opts.random_mode == 'simple':
     rand_funcs = rappor.SimpleRandFuncs(params, rand)
-  elif inst.random_mode == 'fast':
+  elif opts.random_mode == 'fast':
     if fastrand:
       log('Using fastrand extension')
       # NOTE: This doesn't take 'rand'
@@ -327,7 +216,7 @@ def main(argv):
     raise AssertionError
 
   # Do RAPPOR transformation.
-  with open(inst.infile) as f_in, open(inst.outfile, 'w') as f_out:
+  with open(opts.infile) as f_in, open(outfile, 'w') as f_out:
     csv_in = csv.reader(f_in)
     csv_out = csv.writer(f_out)
 

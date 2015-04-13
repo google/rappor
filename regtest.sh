@@ -40,11 +40,50 @@ readonly REGTEST_DIR=_tmp/regtest
 # All the Python tools need this
 export PYTHONPATH=$CLIENT_DIR
 
-readonly NUM_SPEC_COLS=${NUM_PROCS:-13}
+readonly NUM_SPEC_COLS=13
 
 # TODO: Get num cpus
 readonly NUM_PROCS=${NUM_PROCS:-12}
 
+print-true-inputs() {
+  local num_unique_values=$1
+  seq 1 $num_unique_values | awk '{print "v" $1}'
+}
+
+# Add some more candidates here.  We hope these are estimated at 0.
+# e.g. if add_start=51, and num_additional is 20, show v51-v70
+more-candidates() {
+  local last_true=$1
+  local num_additional=$2
+
+  local begin
+  local end
+  begin=$(expr $last_true + 1)
+  end=$(expr $last_true + $num_additional)
+
+  seq $begin $end | awk '{print "v" $1}'
+}
+
+# Args:
+#   true_inputs: File of true inputs
+#   last_true: last true input, e.g. 50 if we generated "v1" .. "v50".
+#   num_additional: additional candidates to generate (starting at 'last_true')
+#   to_remove: Regex of true values to omit from the candidates list, or the
+#     string 'NONE' if none should be.  (Our values look like 'v1', 'v2', etc. so
+#     there isn't any ambiguity.)
+print-candidates() {
+  local true_inputs=$1
+  local last_true=$2
+  local num_additional=$3 
+  local to_remove=$4
+
+  if test $to_remove = NONE; then
+    cat $true_inputs  # include all true inputs
+  else
+    egrep -v $to_remove $true_inputs  # remove some true inputs
+  fi
+  more-candidates $last_true $num_additional
+}
 
 # Run a single test case, specified by a line of the test spec.
 # This is a helper function for 'run-all'.
@@ -75,40 +114,68 @@ _run-one-case() {
   local case_dir=$REGTEST_DIR/$test_case_id
   mkdir --verbose -p $case_dir
 
-  banner "Saving spec"
-
-  # The arguments are the test case spec
+  # Save the "spec" for showing in the summary.
   echo "$@" > $case_dir/spec.txt
 
-  banner "Generating input"
+  local fast_counts=F
+  # local fast_counts=T
 
-  tests/gen_sim_input.py \
-    -d $dist \
-    -n $num_clients \
-    -r $num_unique_values \
-    -c $values_per_client \
-    -o $case_dir/case.csv
+  if test $fast_counts = T; then
+    # Print params CSV.  No JSON.
+    local params_path=$case_dir/case_params.csv
+    echo 'k,h,m,p,q,f' > $params_path
+    echo "$num_bits,$num_hashes,$num_cohorts,$p,$q,$f" >> $params_path
 
-  # NOTE: Have to name inputs and outputs by the test case name
-  # _tmp/test/t1
-  #./demo.sh gen-sim-input-demo $dist $num_clients $num_unique_values
+    print-true-inputs $num_unique_values > $case_dir/case_true_inputs.txt
 
-  banner "Running RAPPOR client"
+    local true_map_path=$case_dir/case_true_map.csv
+    analysis/tools/hash_candidates.py \
+      $params_path \
+      < $case_dir/case_true_inputs.txt \
+      > $true_map_path
 
-  tests/rappor_sim.py \
-    --bloombits $num_bits \
-    --hashes $num_hashes \
-    --cohorts $num_cohorts \
-    -p $p \
-    -q $q \
-    -f $f \
-    -i $case_dir/case.csv \
-    -o $case_dir/out.csv
+    local num_reports=$(expr $num_clients \* $values_per_client)
+
+    banner "Using gen_counts.R"
+    tests/gen_counts.R $params_path $true_map_path $dist $num_reports \
+                       "$case_dir/case"
+  else
+
+    banner "Generating input"
+
+    tests/gen_sim_input.py \
+      -d $dist \
+      -c $num_clients \
+      -u $num_unique_values \
+      -v $values_per_client \
+      > $case_dir/case.csv
+
+    banner "Running RAPPOR client"
+
+    # Writes encoded "out" file, true histogram, true inputs, params CSV and JSON
+    # to $case_dir.
+    tests/rappor_sim.py \
+      --num-bits $num_bits \
+      --num-hashes $num_hashes \
+      --num-cohorts $num_cohorts \
+      -p $p \
+      -q $q \
+      -f $f \
+      -i $case_dir/case.csv \
+      --out-prefix "$case_dir/case"
+
+    banner "Summing bits to get 'counts'"
+
+    analysis/tools/sum_bits.py \
+      $case_dir/case_params.csv \
+      < $case_dir/case_out.csv \
+      > $case_dir/case_counts.csv
+  fi
 
   banner "Constructing candidates"
 
   # Reuse demo.sh function
-  ./demo.sh print-candidates \
+  print-candidates \
     $case_dir/case_true_inputs.txt $num_unique_values \
     $num_additional "$to_remove" \
     > $case_dir/case_candidates.txt
@@ -119,13 +186,6 @@ _run-one-case() {
     $case_dir/case_params.csv \
     < $case_dir/case_candidates.txt \
     > $case_dir/case_map.csv
-
-  banner "Summing bits to get 'counts'"
-
-  analysis/tools/sum_bits.py \
-    $case_dir/case_params.csv \
-    < $case_dir/out.csv \
-    > $case_dir/case_counts.csv
 
   local out_dir=$REGTEST_DIR/${test_case_id}_report
   mkdir --verbose -p $out_dir
@@ -153,6 +213,7 @@ show-help() {
 
 make-summary() {
   local dir=$1
+  local filename=${2:-results.html}
 
   tests/make_summary.py $dir > $dir/rows.html
 
@@ -160,12 +221,12 @@ make-summary() {
 
   cat ../../tests/regtest.html \
     | sed -e '/TABLE_ROWS/ r rows.html' \
-    > results.html
+    > $filename
 
   popd >/dev/null
 
-  log "Wrote $dir/results.html"
-  log "URL: file://$PWD/$dir/results.html"
+  log "Wrote $dir/$filename"
+  log "URL: file://$PWD/$dir/$filename"
 }
 
 # Helper to parse spec input with xargs
@@ -174,8 +235,11 @@ multi() {
 }
 
 test-error() {
-  local spec_regex=$1
-  log "Some cases failed, or none matched pattern '$spec_regex'"
+  local spec_regex=${1:-}
+  log "Some test cases failed"
+  if test -n "$spec_regex"; then
+    log "(Perhaps none matched pattern '$spec_regex')"
+  fi
   exit 1
 }
 
@@ -188,6 +252,9 @@ write-test-cases() {
 # run-all should take regex?
 run-seq() {
   local spec_regex=$1  # grep -E format on the spec
+  local html_filename=${2:-results.html}  # demo.sh changes it to demo.sh
+
+  mkdir --verbose -p $REGTEST_DIR
 
   local spec_list=$REGTEST_DIR/spec-list.txt
   tests/regtest_spec.py | grep -E $spec_regex > $spec_list
@@ -199,7 +266,7 @@ run-seq() {
 
   log "Done running all test cases"
 
-  make-summary $REGTEST_DIR
+  make-summary $REGTEST_DIR $html_filename
 }
 
 run-all() {
@@ -228,7 +295,7 @@ run-all() {
   write-test-cases
 
   head -n $max_cases $spec_list \
-    | multi -P $NUM_PROCS -- $0 $func || test-error $spec_regex
+    | multi -P $NUM_PROCS -- $0 $func || test-error
 
   log "Done running all test cases"
 
