@@ -166,8 +166,9 @@ _run-one-case() {
 
     banner "Summing bits to get 'counts'"
 
+    # Output both JSON and CSV counts.  JSON is used for analysis server.
     analysis/tools/sum_bits.py \
-      $case_dir/case_params.csv \
+      $case_dir/case_params.csv $case_dir/case_counts.json \
       < $case_dir/case_out.csv \
       > $case_dir/case_counts.csv
   fi

@@ -73,7 +73,8 @@ make-dist-post-body() {
   pushd $RAPPOR_SRC
   local dist=${1:-exp}
   apps/api/testdata.py $dist | tee _tmp/exp_post.json
-  cp --verbose _tmp/${dist}_map.csv ~/rappor-api/state
+  # TODO: This should be replaced with gsutil
+  cp --verbose _tmp/regtest/demo-${dist}/case_map.csv ~/rappor-api/state
   popd
 }
 
