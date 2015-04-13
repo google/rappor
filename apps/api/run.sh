@@ -69,16 +69,16 @@ bad-sleep() {
   get /sleep sleepSeconds=BLAH
 }
 
+readonly EXP_POST=$RAPPOR_SRC/_tmp/exp_post.json
+
 make-dist-post-body() {
   pushd $RAPPOR_SRC
   local dist=${1:-exp}
-  apps/api/testdata.py $dist | tee _tmp/exp_post.json
+  apps/api/testdata.py $dist | tee $EXP_POST
   # TODO: This should be replaced with gsutil
   cp --verbose _tmp/regtest/demo-${dist}/case_map.csv ~/rappor-api/state
   popd
 }
-
-readonly EXP_POST=$RAPPOR_SRC/_tmp/exp_post.json
 
 dist() {
   make-dist-post-body
