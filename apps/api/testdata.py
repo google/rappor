@@ -10,8 +10,8 @@ import sys
 
 def main(argv):
   dist = argv[1]
-  with open('_tmp/%s_params.json' % dist) as p:
-    with open('_tmp/%s_counts.json' % dist) as c:
+  with open('_tmp/regtest/demo-%s/case_params.json' % dist) as p:
+    with open('_tmp/regtest/demo-%s/case_counts.json' % dist) as c:
       params = json.load(p)
       counts = json.load(c)
 
