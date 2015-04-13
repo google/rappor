@@ -95,6 +95,10 @@ curl-dist() {
     http://$host_port/dist
 }
 
+curl-vm() {
+  . google.sh
+  curl-dist $VM_HOST_PORT
+}
 
 csv-to-json() {
   . google.sh  # define vars
