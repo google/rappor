@@ -71,7 +71,7 @@ bad-sleep() {
 
 readonly EXP_POST=$RAPPOR_SRC/_tmp/exp_post.json
 
-make-dist-post-body() {
+make-exp-post-body() {
   pushd $RAPPOR_SRC
   local dist=${1:-exp}
   apps/api/testdata.py $dist exp_map.csv | tee $EXP_POST
@@ -80,15 +80,21 @@ make-dist-post-body() {
   popd
 }
 
+exp-demo() {
+  make-exp-post-body
+  dist $EXP_POST
+}
+
 dist() {
-  make-dist-post-body
-  cat $EXP_POST | post /dist
+  local req_file=$1
+  cat $req_file | post /dist
 }
 
 curl-dist() {
-  local host_port=${1:-localhost:8500}
+  local req_file=${1:-$EXP_POST}
+  local host_port=${2:-localhost:8500}
 
-  time cat $EXP_POST | curl \
+  time cat $req_file | curl \
     --include \
     --header 'Content-Type: application/json' \
     --data @- \
@@ -97,7 +103,7 @@ curl-dist() {
 
 curl-vm() {
   . google.sh
-  curl-dist $VM_HOST_PORT
+  curl-dist $EXP_POST $VM_HOST_PORT
 }
 
 readonly HEALTH_URL=http://localhost:8500/_ah/health

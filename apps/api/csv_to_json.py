@@ -31,12 +31,15 @@ CHROME2 = {
 
 
 def main(argv):
+  counts_csv = argv[1]
+  map_file = argv[2]
+
   post_body = {}
   counts = []
 
   # TODO: Add dimensions somewhere?  I guess that is implied by the params.
 
-  with open(argv[1]) as f:
+  with open(counts_csv) as f:
     c = csv.reader(f)
     for row in c:
       counts.append(row)
@@ -44,7 +47,8 @@ def main(argv):
   post_body = {}
   # Relative path, taken relative to --state-dir
 
-  post_body['candidates_file'] = 'TODO'
+  # TODO: map is the HASHED candidates.
+  post_body['candidates_file'] = map_file
 
   post_body['params'] = CHROME2
 
