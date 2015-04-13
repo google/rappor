@@ -26,20 +26,26 @@ source("../analysis/R/association.R")
 # assumes the map csv file is immutable.
 # Modified from analysis/R/read_input.R to load 2 or more map files
 # into the environment
-LoadMapFile <- function(map_file, map_var, params = NULL, quote = "") {
+LoadMapFiles <- function(map_file, map_file2, params = NULL, quote = "") {
   # Reads the map file and creates an R binary .rda.
   # If .rda file already exists, just loads that file.
   
-  rda_file <- sub(".csv", ".rda", map_file, fixed = TRUE)
+  rda_file1 <- sub(".csv", "", map_file, fixed = TRUE)
+  rda_file2 <- sub(".csv", ".rda", map_file2, fixed = TRUE)
+  rda_file <- paste(rda_file1, rda_file2, sep = "_")
   
   # file.info() is not implemented yet by the gfile package. One must delete
   # the .rda file manually when the .csv file is updated.
   # csv_updated <- file.info(map_file)$mtime > file.info(rda_file)$mtime
   
   if (!file.exists(rda_file)) {
-    cat("Parsing", map_file, "...\n")
-    map_var <- ReadMapFile(map_file, params = params, quote = quote)
-    save(map_var, file = file.path(tempdir(), basename(rda_file)))
+    cat("Parsing", map_file, "and", map_file2, "...\n")
+    map1 <- ReadMapFile(map_file, params = params, quote = quote)
+    map2 <- ReadMapFile(map_file2, params = params, quote = quote)
+    map <- list()
+    map[[1]] <- map1
+    map[[2]] <- map2
+    save(map, file = file.path(tempdir(), basename(rda_file)))
     file.copy(file.path(tempdir(), basename(rda_file)), rda_file,
               overwrite = TRUE)
   }
@@ -69,9 +75,25 @@ if (is.null(opt$params))  {opt$params = "params.csv"}
 if (is.null(opt$reports)) {opt$reports = "reports.csv"}
 
 params <- ReadParameterFile(opt$params)
-map1 = list()
-map2 = list()
-LoadMapFile(opt$map1, map1)
-LoadMapFile(opt$map2, map2)
+LoadMapFiles(opt$map1, opt$map2)
+reportsObj <- read.csv(opt$reports, colClasses = c("integer",
+                                                   "character",
+                                                   "integer",
+                                                   "character"),
+                       header = FALSE)
+# Parsing reportsObj
+cohorts <- list()
+cohorts[[1]] <- as.list(reportsObj[1])
+cohorts[[2]] <- as.list(reportsObj[3])
+reports <- list()
+reports[[1]] <- as.list(reportsObj[2])
+reports[[2]] <- as.list(reportsObj[4])
 
-
+# Split strings into bit arrays (as required by assoc analysis)
+reports <- lapply(1:2, function(i) {
+  # apply the following function to each of reports[[1]] and reports[[2]]
+  lapply(reports[[i]][[1]], function(x) {
+    # function splits strings and converts them to numeric values  
+    as.numeric(strsplit(x, split = "")[[1]])
+  })
+})

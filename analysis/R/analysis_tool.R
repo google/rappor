@@ -16,6 +16,7 @@
 
 library(optparse)
 
+setwd("~/git/google_dev_rappor/analysis/R/")
 rappor_root = '../../'  # TODO: Fix this
 
 source(file.path(rappor_root, "analysis/R/analysis_lib.R"))

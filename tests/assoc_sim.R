@@ -64,6 +64,8 @@ SimulateReports <- function(N, candidates, params, mapfile, reportsfile) {
       samples[[i]] <- candidates[[i]][samples[[i]]]
     } else {
       # Pad candidates with sample strings
+      # If only 2 candidates, new set of candidates becomes:
+      # candidate1, candidate2, str3, str4, ...
       len <- length(candidates)
       candidates[[i]][(len + 1):max(samples[[i]])] <- apply(
         as.matrix((len + 1):max(samples[[i]])),
@@ -80,9 +82,9 @@ SimulateReports <- function(N, candidates, params, mapfile, reportsfile) {
   # Create and write map into mapfile_1.csv and mapfile_2.csv
   map <- lapply(1:2, function(i) CreateMap(candidates[[i]], params))
   write.table(map[[1]]$map_pos, file = paste(mapfile, "_1.csv", sep = ""),
-              sep = ",", col.names = FALSE, na = "")
+              sep = ",", col.names = FALSE, na = "", quote = FALSE)
   write.table(map[[2]]$map_pos, file = paste(mapfile, "_2.csv", sep = ""),
-              sep = ",", col.names = FALSE, na = "")
+              sep = ",", col.names = FALSE, na = "", quote = FALSE)
   
   # Write reports into reportsfile.csv
   # Format:
@@ -126,4 +128,4 @@ if (is.null(opt$num))         {opt$num = 1e05}
 
 candidates <- GetCandidatesFromFile(opt$candidates)
 params <- ReadParameterFile(paste(opt$params, ".csv", sep = ""))
-# SimulateReports(opt$num, candidates, params, opt$map, opt$reports)
+SimulateReports(opt$num, candidates, params, opt$map, opt$reports)
