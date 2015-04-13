@@ -173,14 +173,19 @@ class DistHandler(object):
     print 'JSON'
     print request.json.keys()
 
-    params = """
-a,b
-1,2
-"""
-    app_req = request.json
+    app_req = {}
+    # first col of 'counts' matrix 
+    app_req['num_reports'] = request.json['num_reports']
+    # other columns
+    app_req['sums'] = request.json['sums']
+
+    # TODO: conver these
+    app_req['params'] = request.json['params']
 
     filename = request.json['candidates_file']
 
+    # TODO: Add map cache here.  We may need to sync the file down for the R
+    # process.
     if filename.endswith('.csv'):
       # This is a CSV file that can be passed directly to the R process.
       # It is immutable, so we can just pass the full path.
@@ -192,9 +197,7 @@ a,b
     app_req['candidates_path'] = candidates_path
     logging.info('Candidates path: %s', candidates_path)
 
-    resp = self.wrapper(
-        app_req,
-        in_files={'params.csv': params})
+    resp = self.wrapper(app_req)
 
     # read CSV, convert to JSON
 
