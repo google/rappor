@@ -100,12 +100,6 @@ curl-vm() {
   curl-dist $VM_HOST_PORT
 }
 
-csv-to-json() {
-  . google.sh  # define vars
-
-  ./csv_to_json.py $PHISH
-}
-
 readonly HEALTH_URL=http://localhost:8500/_ah/health
 readonly SLEEP_URL=http://localhost:8500/sleep
 
