@@ -10,6 +10,7 @@ import sys
 
 def main(argv):
   dist = argv[1]
+  map_file = argv[2]
   with open('_tmp/regtest/demo-%s/case_params.json' % dist) as p:
     with open('_tmp/regtest/demo-%s/case_counts.json' % dist) as c:
       params = json.load(p)
@@ -21,7 +22,7 @@ def main(argv):
 
   post_body = {}
   # Relative path, taken relative to --state-dir
-  post_body['candidates_file'] = '%s_map.csv' % dist
+  post_body['candidates_file'] = map_file
   post_body['params'] = params
   post_body.update(counts)
   json.dump(post_body, sys.stdout, indent=2)
