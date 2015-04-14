@@ -151,6 +151,18 @@ class ErrorHandler(object):
     return web.JsonResponse(resp)
 
 
+def MakeLegacyParams(params):
+  # TODO: input validation
+  return {
+      'k': params['numBits'],
+      'h': params['numHashes'],
+      'm': params['numCohorts'],
+      'f': params['probPrr'],
+      'p': params['probIrr0'],
+      'q': params['probIrr1'],
+  }
+
+
 class DistHandler(object):
   """Distribution of single variable."""
 
@@ -180,7 +192,7 @@ class DistHandler(object):
     app_req['sums'] = request.json['sums']
 
     # TODO: conver these
-    app_req['params'] = request.json['params']
+    app_req['params'] = MakeLegacyParams(request.json['params'])
 
     filename = request.json['candidates_file']
 

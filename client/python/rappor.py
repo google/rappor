@@ -54,15 +54,15 @@ class Params(object):
   def to_json(self):
     """Convert this instance to JSON.
 
-    TODO: The names should be compatible with apps/api.
+    The names are be compatible with the apps/api server.
     """
     return json.dumps({
-        'k': self.num_bloombits,
-        'h': self.num_hashes,
-        'm': self.num_cohorts,
-        'p': self.prob_p,
-        'q': self.prob_q,
-        'f': self.prob_f,
+        'numBits': self.num_bloombits,
+        'numHashes': self.num_hashes,
+        'numCohorts': self.num_cohorts,
+        'probPrr': self.prob_f,
+        'probIrr0': self.prob_p,
+        'probIrr1': self.prob_q,
     })
 
   # NOTE:

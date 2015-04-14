@@ -3,6 +3,8 @@
 csv_to_json.py
 
 Convert old CSV format to new JSON format.
+
+See also testdata.py.
 """
 
 import csv

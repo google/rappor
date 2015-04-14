@@ -1,7 +1,5 @@
 #!/usr/bin/python
-"""
-testdata.py - Simple Script to create a test POST.
-"""
+"""testdata.py - Create a POST body from regtest.sh data."""
 
 import json
 import os
@@ -15,10 +13,6 @@ def main(argv):
     with open('_tmp/regtest/demo-%s/case_counts.json' % dist) as c:
       params = json.load(p)
       counts = json.load(c)
-
-  # TODO:
-  # - Add candidates.
-  # - Should it be JSON or a file?
 
   post_body = {}
   # Relative path, taken relative to --state-dir
