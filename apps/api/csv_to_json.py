@@ -42,12 +42,36 @@ def main(argv):
   sums = []
 
   # TODO: Add dimensions somewhere?  I guess that is implied by the params.
+
+  # Counts CSV is (m rows) * (k+1 cols).  First column is for the total.
+
+  num_rows = 0
+  num_cols = 0
+
   with open(counts_csv) as f:
     c = csv.reader(f)
     for row in c:
       num_reports.append(int(row[0]))
       # Row-wise sum
       sums.append([int(cell) for cell in row[1:]])
+      num_rows += 1
+
+      if num_cols == 0:
+        num_cols = len(row)
+      else:
+        if len(row) != num_cols:
+          raise RuntimeError('Expected %d rows, got %d' % (num_cols, len(row)))
+
+  params = CHROME2
+
+  if num_cols != params['numBits'] + 1:
+    raise RuntimeError(
+        'Got %d cols, but k+1 = %d' % (num_cols, params['numBits'] + 1))
+
+  # Sanity check
+  if num_rows != params['numCohorts']:
+    raise RuntimeError(
+        'Got %d rows, but m = %d' % (num_rows, params['numCohorts']))
 
   post_body = {}
   # Relative path, taken relative to --state-dir
@@ -55,7 +79,7 @@ def main(argv):
   # TODO: map is the HASHED candidates.
   post_body['candidates_file'] = map_file
 
-  post_body['params'] = CHROME2
+  post_body['params'] = params
 
   post_body['num_reports'] = num_reports
   post_body['sums'] = sums
