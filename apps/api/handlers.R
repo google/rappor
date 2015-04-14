@@ -49,11 +49,11 @@ MakeCounts <- function(params, num_reports, sums) {
   #
   # dim will check the dimensions.  We make our to provide good error messages.
 
-  dim(sums) <- c(params$m, params$k)
-
   # 'sums' is in row major order, representing a matrix of m rows * k columns.
   # We ultimately want a data frame of k columns to maintain compatibility.
   # R is weird so you have to make a k * m matrix and then transpose it.
+  # can't do this:
+  #dim(sums) <- c(params$m, params$k)
 
   dim(sums) <- c(params$k, params$m)
   sums = t(sums)
