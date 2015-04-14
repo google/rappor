@@ -1,11 +1,11 @@
 # Copyright 2014 Google Inc. All rights reserved.
-# 
+#
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
-# 
+#
 #     http://www.apache.org/licenses/LICENSE-2.0
-# 
+#
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -45,7 +45,7 @@ SamplePopulations <- function(N, num_variables = 1, params,
   num_strings <- variable_opts$num_strings
 
   if (variable_opts$deterministic) {
-    # If a deterministic distribution is desired, evenly distribute
+    # If a deterministic assignment is desired, evenly distribute
     #     strings across all cohorts.
 
     reps <- ceiling(N / num_strings)
@@ -57,22 +57,22 @@ SamplePopulations <- function(N, num_variables = 1, params,
                       function(i) rep(1:m, ceiling(N / m))[1:N])
   } else {
     # Otherwise, draw from a Poisson random variable
-    variables <- lapply(1:num_variables, function(i) rpois(N, 1))
+    variables <- lapply(1:num_variables, function(i) rpois(N, 1) + 1)
+    
+    # Randomly assign cohorts in each dimension
+    cohorts <- lapply(1:num_variables,
+                      function(i) sample(1:params$m, N, replace = TRUE))
+    
     if (!variable_opts$independent) {
-      # If user wants dependent RVs, take the cumulative sum of 3 independent
-      #     random variables.
-      variables <- as.list(data.frame(t(apply(do.call("rbind",
-                                                      variables),
-                                              2, cumsum))))
-      # Use the same cohort assignment in all 3 dimensions so the
-      #     correlations are preserved
-      cohort <- sample(1:params$m, N, replace = TRUE)
-      cohorts <- lapply(1:num_variables,
-                        function(i) cohort)
-    } else {
-      # Randomly assign cohorts in each dimension
-      cohorts <- lapply(1:num_variables,
-                        function(i) sample(1:params$m, N, replace = TRUE))
+      # If user wants dependent RVs, subsequent variables are closely correlated
+      # with the first variable in the foll. manner:
+      #   variable_i ~ variable_1 + (i-1) Bernoulli(0.5)
+
+      bernoulli_corr <- function(x) {
+        variables[[1]] + (x - 1) * sample(c(0, 1), N, replace = TRUE)}
+      
+      variables[2:num_variables] <- lapply(2:num_variables, 
+                                           function(x) bernoulli_corr(x))
     }
   }
   list(variables = variables, cohorts = cohorts)
@@ -123,7 +123,7 @@ TestComputeDistributionEM <- function() {
   #          a string from the known map.
   #     Test 4: Test that the variance from EM algorithm is 1/N when there
   #          is no noise in the system.
-  #     Test 5: CHeck that the right answer is still obtained when f = 0.2./
+  #     Test 5: Check that the right answer is still obtained when f = 0.2.
 
   num_variables <- 3
   N <- 100
@@ -151,7 +151,7 @@ TestComputeDistributionEM <- function() {
                                 ignore_other = TRUE,
                                 params, marginals = NULL,
                                 estimate_var = FALSE)
-  checkEqualsNumeric(dist$fit[1], 0.5)
+  checkEqualsNumeric(dist$fit["1"], 0.5)
 
   # Test 3: Check that the "other" category is correctly computed
   # Build a modified map with no column 2 (i.e. we only know that string
@@ -199,7 +199,45 @@ TestComputeDistributionEM <- function() {
                                 params, marginals = NULL,
                                 estimate_var = FALSE)
 
-  checkTrue(abs(dist$fit[1, 1] - 0.5) < 0.15)
+  checkTrue(abs(dist$fit["1", "1"] - 0.5) < 0.15)
+  checkTrue(abs(dist$fit["2", "2"] - 0.5) < 0.15)
+
+  # Test 6: Check the computed joint distribution with randomized
+  # correlated inputs from the Poisson distribution
+  # Expect to have correlation between strings n and n + 1
+  N <- 1000
+  params <- list(k = 16, h = 2, m = 4, p = 0.1, q = 0.9, f = 0.1)
+  variable_opts <- list(deterministic = FALSE, independent = FALSE)
+  sim <- Simulate(N, num_variables = 2, params, variable_opts)
+  dist <- ComputeDistributionEM(sim$reports, sim$cohorts,
+                                sim$maps, ignore_other = TRUE,
+                                params, marginals = NULL,
+                                estimate_var = FALSE)
+
+  print_dist <- TRUE  # to print joint distribution, set to TRUE
+
+  if (print_dist) {
+    # dist$fit[dist$fit<1e-4] <- 0
+    # Sort by row names and column names to visually see correlation
+    print(dist$fit[sort(rownames(dist$fit)), sort(colnames(dist$fit))])
+  }
+  
+  # Check for correlations (constants chosen heuristically to get good
+  # test confidence with small # of samples)
+  # Should have mass roughly 1/2e and 1/2e each
+  checkTrue(abs(dist$fit["1", "1"] - dist$fit["1", "2"]) < 0.05)
+  checkTrue(abs(dist$fit["2", "2"] - dist$fit["2", "3"]) < 0.05)
+  
+  # Should have mass roughly 1/4e and 1/4e each
+  checkTrue(abs(dist$fit["3", "3"] - dist$fit["3", "4"]) < 0.03)
+
+  # Check for lack of probability mass
+  checkTrue(dist$fit["1", "3"] < 0.01)
+  checkTrue(dist$fit["1", "4"] < 0.01)
+  checkTrue(dist$fit["2", "1"] < 0.01)
+  checkTrue(dist$fit["2", "4"] < 0.01)
+  checkTrue(dist$fit["3", "1"] < 0.01)
+  checkTrue(dist$fit["3", "2"] < 0.01)
 
 }
 
