@@ -11,21 +11,23 @@ import csv
 import sys
 import json
 
+# https://chromium.googlesource.com/chromium/src/+/master/tools/metrics/rappor/rappor.xml
+
 # Chrome params from 2014
 CHROME1 = {
     'numBits': 128,
     'numHashes': 2,
-    'numCohorts': 512,
-    'probPrr': 0.50,  # f
-    'probIrr0': 0.25,  # p
-    'probIrr1': 0.75,  # q
+    'numCohorts': 128,
+    'probPrr': 0.50,  # f, fake-prob
+    'probIrr0': 0.25,  # p, zero-coin-prob
+    'probIrr1': 0.75,  # q, one-coin-prob
 }
 
 # Chrome params from early 2015 -- changed to 8 bit reports.
 CHROME2 = {
     'numBits': 8,
     'numHashes': 2,
-    'numCohorts': 512,
+    'numCohorts': 128,
     'probPrr': 0.50,  # f
     'probIrr0': 0.25,  # p
     'probIrr1': 0.75,  # q
