@@ -74,7 +74,7 @@ readonly EXP_POST=$RAPPOR_SRC/_tmp/exp_post.json
 make-exp-post-body() {
   pushd $RAPPOR_SRC
   local dist=${1:-exp}
-  apps/api/testdata.py $dist exp_map.csv | tee $EXP_POST
+  apps/api/make_dist_post.py $dist exp_map.csv | tee $EXP_POST
   # TODO: This should be replaced with gsutil
   cp --verbose _tmp/regtest/demo-${dist}/case_map.csv ~/rappor-api/state/exp_map.csv
   popd

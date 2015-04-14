@@ -56,6 +56,10 @@ MakeCounts <- function(params, num_reports, sums) {
   # can't do this:
   #dim(sums) <- c(params$m, params$k)
 
+  print('OLD DIM')
+  print(class(sums))
+  print(dim(sums))
+
   dim(sums) <- c(params$k, params$m)
   sums = t(sums)
 
