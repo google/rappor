@@ -37,14 +37,17 @@ def main(argv):
   map_file = argv[2]
 
   post_body = {}
-  counts = []
+
+  num_reports = []
+  sums = []
 
   # TODO: Add dimensions somewhere?  I guess that is implied by the params.
-
   with open(counts_csv) as f:
     c = csv.reader(f)
     for row in c:
-      counts.append(row)
+      num_reports.append(int(row[0]))
+      # Row-wise sum
+      sums.append([int(cell) for cell in row[1:]])
 
   post_body = {}
   # Relative path, taken relative to --state-dir
@@ -54,7 +57,9 @@ def main(argv):
 
   post_body['params'] = CHROME2
 
-  post_body['counts'] = counts
+  post_body['num_reports'] = num_reports
+  post_body['sums'] = sums
+
   json.dump(post_body, sys.stdout, indent=2)
 
 
