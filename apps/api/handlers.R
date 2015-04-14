@@ -97,7 +97,9 @@ DistHandler <- function(state, request) {
       rappor <- AnalyzeRAPPOR(params, counts, map,
                               "FDR", 0.05, 1,
                               date="01/01/01", date_num="100001"))
-  Log('AnalyzeRAPPOR took %f seconds', t)
+  # t is a proc.time object, which on Unix has 5 fields.  For now just use
+  # 'elapsed'.
+  Log('AnalyzeRAPPOR took %.3f seconds', t[['elapsed']])
   str(rappor)
 
   list(strings=rappor$strings, proportion=rappor$proportion)
