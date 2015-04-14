@@ -64,7 +64,7 @@ def main(argv):
         if len(row) != num_cols:
           raise RuntimeError('Expected %d rows, got %d' % (num_cols, len(row)))
 
-  params = CHROME2
+  params = CHROME1
 
   if num_cols != params['numBits'] + 1:
     raise RuntimeError(
