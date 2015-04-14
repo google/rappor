@@ -23,33 +23,56 @@ source("../analysis/R/read_input.R")
 source("../analysis/R/association.R")
 
 # This function caches the .csv as an .rda for faster loading.  NOTE: It
-# assumes the map csv file is immutable.
+# assumes the map csv file is immutable. This isn't true if you
+# re-run assoc_sim.R. Adjust immutable_flag as required.
 # Modified from analysis/R/read_input.R to load 2 or more map files
 # into the environment
-LoadMapFiles <- function(map_file, map_file2, params = NULL, quote = "") {
-  # Reads the map file and creates an R binary .rda.
-  # If .rda file already exists, just loads that file.
-  
-  rda_file1 <- sub(".csv", "", map_file, fixed = TRUE)
-  rda_file2 <- sub(".csv", ".rda", map_file2, fixed = TRUE)
-  rda_file <- paste(rda_file1, rda_file2, sep = "_")
-  
-  # file.info() is not implemented yet by the gfile package. One must delete
-  # the .rda file manually when the .csv file is updated.
-  # csv_updated <- file.info(map_file)$mtime > file.info(rda_file)$mtime
-  
-  if (!file.exists(rda_file)) {
+LoadMapFiles <- function(map_file, map_file2, params = NULL, 
+                         immutable_flag = FALSE, quote = "") {
+  if (immutable_flag == FALSE) {
+    # Read map files without caching them
     cat("Parsing", map_file, "and", map_file2, "...\n")
     map1 <- ReadMapFile(map_file, params = params, quote = quote)
     map2 <- ReadMapFile(map_file2, params = params, quote = quote)
+    # For some reason, association.R requires an rmap component
+    # that for all practical purposes is identical to map
+    map1$rmap <- map1$map
+    map2$rmap <- map2$map
     map <- list()
     map[[1]] <- map1
     map[[2]] <- map2
-    save(map, file = file.path(tempdir(), basename(rda_file)))
-    file.copy(file.path(tempdir(), basename(rda_file)), rda_file,
-              overwrite = TRUE)
+    # Load maps to env when not storing it in .rda file
+    e <- globalenv()
+    e$map <- map
+  } else {
+    # Reads the map file and creates an R binary .rda.
+    # If .rda file already exists, just loads that file.
+    
+    rda_file1 <- sub(".csv", "", map_file, fixed = TRUE)
+    rda_file2 <- sub(".csv", ".rda", map_file2, fixed = TRUE)
+    rda_file <- paste(rda_file1, rda_file2, sep = "_")
+    
+    # file.info() is not implemented yet by the gfile package. One must delete
+    # the .rda file manually when the .csv file is updated.
+    # csv_updated <- file.info(map_file)$mtime > file.info(rda_file)$mtime
+    
+    if (!file.exists(rda_file)) {
+      cat("Parsing", map_file, "and", map_file2, "...\n")
+      map1 <- ReadMapFile(map_file, params = params, quote = quote)
+      map2 <- ReadMapFile(map_file2, params = params, quote = quote)
+      # For some reason, association.R requires an rmap component
+      # that for all practical purposes is identical to map
+      map1$rmap <- map1$map
+      map2$rmap <- map2$map
+      map <- list()
+      map[[1]] <- map1
+      map[[2]] <- map2
+      save(map, file = file.path(tempdir(), basename(rda_file)))
+      file.copy(file.path(tempdir(), basename(rda_file)), rda_file,
+                overwrite = TRUE)
+    }
+    load(rda_file, .GlobalEnv)
   }
-  load(rda_file, .GlobalEnv)
 }
 
 # Command line arguments
@@ -75,7 +98,8 @@ if (is.null(opt$params))  {opt$params = "params.csv"}
 if (is.null(opt$reports)) {opt$reports = "reports.csv"}
 
 params <- ReadParameterFile(opt$params)
-LoadMapFiles(opt$map1, opt$map2)
+LoadMapFiles(opt$map1, opt$map2, params = params,
+             immutable_flag = FALSE)
 reportsObj <- read.csv(opt$reports, colClasses = c("integer",
                                                    "character",
                                                    "integer",
@@ -83,8 +107,8 @@ reportsObj <- read.csv(opt$reports, colClasses = c("integer",
                        header = FALSE)
 # Parsing reportsObj
 cohorts <- list()
-cohorts[[1]] <- as.list(reportsObj[1])
-cohorts[[2]] <- as.list(reportsObj[3])
+cohorts[[1]] <- as.list(reportsObj[1])[[1]]
+cohorts[[2]] <- as.list(reportsObj[3])[[1]]
 reports <- list()
 reports[[1]] <- as.list(reportsObj[2])
 reports[[2]] <- as.list(reportsObj[4])
@@ -97,3 +121,9 @@ reports <- lapply(1:2, function(i) {
     as.numeric(strsplit(x, split = "")[[1]])
   })
 })
+
+joint_dist <- ComputeDistributionEM(reports, cohorts, map, 
+                                    ignore_other = TRUE,
+                                    params, marginals = NULL,
+                                    estimate_var = FALSE)
+print(joint_dist$fit)
