@@ -85,7 +85,13 @@ def main(argv):
 
   post_body['num_reports'] = num_reports
 
-  post_body['sums'] = sums
+  # Test for 1D vector
+  # TODO: Decide on format
+  sum_vector = []
+  for row in sums:
+    sum_vector.extend(row)
+
+  post_body['sums'] = sum_vector
 
   json.dump(post_body, sys.stdout, indent=2)
 
