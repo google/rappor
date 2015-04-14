@@ -54,7 +54,7 @@ Log <- function(fmt, ...) {
 #
 # Args:
 #   handlers: list of name -> handler
-pgi.loop <- function(handlers) {
+HandleRequests <- function(handlers) {
   Log("Hello from pgi.R (PGI 2 mode)")
 
   # Each applet is started in its own directory, and we use the standard name
@@ -73,7 +73,7 @@ pgi.loop <- function(handlers) {
     Log('Got request line')
 
     # This gives a vector
-    t = system.time( req.vec <- fromJSON(req.line) )
+    t <- system.time( req.vec <- fromJSON(req.line) )
     Log('fromJSON took %f seconds, %d chars', t[['elapsed']], nchar(req.line))
 
     # Turn it into a list, so we can access fields with $
@@ -82,7 +82,7 @@ pgi.loop <- function(handlers) {
     # on startup
     command <- pgi.request$command
     if (!is.null(command) && command == 'init') {
-      pgi.response = list(result='ok')
+      pgi.response <- list(result='ok')
       .write.response(pgi.response, resp.fifo)
       next()
     }
@@ -121,13 +121,14 @@ pgi.loop <- function(handlers) {
     result <- tryCatch(.invoke.handler(request.handler, app.request),
                        error = function(e) e)
     if (inherits(result, 'error')) {
-      msg = sprintf('ERROR invoking handler for route %s', route.name)
+      fmt <- 'ERROR invoking handler for route %s.  (See server --log-dir)'
+      msg <- sprintf(fmt, route.name)
       Log(msg)
       str(result)
-      pgi.response = .make.dev.error(msg, error = result)
+      pgi.response <- .make.dev.error(msg, error = result)
       # traceback() doesn't work here, because we caught the error :(
     } else {
-      pgi.response = result
+      pgi.response <- result
     }
 
     Log("Writing JSON response")

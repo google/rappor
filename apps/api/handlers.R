@@ -107,5 +107,5 @@ handlers <- list(
     )
 
 if (!interactive()) {  # allow source('handlers.R')
-  pgi.loop(handlers)
+  HandleRequests(handlers)
 }
