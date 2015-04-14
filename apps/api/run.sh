@@ -44,13 +44,13 @@ setup() {
 
 readonly RAPPOR_SRC=$(cd $PWD/../.. && pwd)
 
-# Run the server in batch mode
+# Run the server in batch mode.  Log to stdout.
 get() {
-  rappor-api --test-get "$@"
+  rappor-api --log-dir='' --test-get "$@"
 }
 
 post() {
-  rappor-api --test-post "$@"
+  rappor-api --log-dir='' --test-post "$@"
 }
 
 health() {

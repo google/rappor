@@ -43,11 +43,12 @@ ErrorHandler <- function(state, request) {
   oops  # undefined
 }
 
-# Convert request input to a matrix.
+# Convert request input to a matrix.  (TODO: counts is a data frame?)
 MakeCounts <- function(params, num_reports, sums) {
   # convert 1D array to m * k matrix.
   #
-  # dim will check the dimensions.  We make our to provide good error messages.
+  # dim will check the dimensions.  TODO: check ourselves to provide better
+  # error messages.
 
   # 'sums' is in row major order, representing a matrix of m rows * k columns.
   # We ultimately want a data frame of k columns to maintain compatibility.
