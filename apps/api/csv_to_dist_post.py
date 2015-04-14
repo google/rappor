@@ -84,6 +84,7 @@ def main(argv):
   post_body['params'] = params
 
   post_body['num_reports'] = num_reports
+
   post_body['sums'] = sums
 
   json.dump(post_body, sys.stdout, indent=2)
