@@ -26,18 +26,18 @@ Log <- function(fmt, ...) {
 }
 
 .make.dev.error <- function(message, error = NULL) {
-  list(dev_error=list(message=message, error = error))
+  list(dev_error = list(message = message, error = error))
 }
 
 .write.response <- function(response, f) {
-  t = system.time( j <- toJSON(response) )
+  t <- system.time( j <- toJSON(response) )
   Log('toJSON took %f seconds, got %d chars', t[['elapsed']], nchar(j))
 
   # Must be on a single line!
   # We could also make it length-prefixed, but that introduces unicode issues.
   # This is safe because JSON should not contain actual newlines.  They should
   # all be \ escaped.
-  clean = gsub('\n', '', j)
+  clean <- gsub('\n', '', j)
 
   writeLines(con = f, clean)
 }
@@ -77,7 +77,7 @@ HandleRequests <- function(handlers) {
     Log('fromJSON took %f seconds, %d chars', t[['elapsed']], nchar(req.line))
 
     # Turn it into a list, so we can access fields with $
-    pgi.request = as.list(req.vec)
+    pgi.request <- as.list(req.vec)
 
     # on startup
     command <- pgi.request$command
