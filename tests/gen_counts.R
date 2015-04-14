@@ -16,6 +16,8 @@
 
 source('analysis/R/read_input.R')
 
+library(zipfR)
+
 RandomPartition <- function(total, weights) {
   # Outputs a random partition according to a specified distribution
   # Args:
@@ -134,7 +136,7 @@ main <- function(argv) {
 
   num_unique_values <- length(true_map$strs)
 
-  # These are the three distributions in gen_sim_input.py
+  # These are the four distributions in gen_sim_input.py
   if (dist == 'exp') {
     # NOTE: gen_sim_input.py hard-codes lambda = N/5 for 'exp'
     weights <- dexp(1:num_unique_values, rate = 5 / num_unique_values)
@@ -146,7 +148,14 @@ main <- function(argv) {
   } else if (dist == 'unif') {
     # e.g. for N = 4, weights are [0.25, 0.25, 0.25, 0.25]
     weights <- dunif(1:num_unique_values, max = num_unique_values)
-  } else {
+  } else if (dist == 'zipf1') {
+    # Since the distrubition defined over a finite set, we allow the parameter
+    # of the Zipf distribution to be 1.
+    weights <- sapply(1:num_unique_values, function(x) 1/x)
+  } else if (dist == 'zipf1.5') {
+    weights <- sapply(1:num_unique_values, function(x) 1/x^1.5)
+  }  
+  else {
     stop(sprintf("Invalid distribution '%s'", dist))
   }
   print("weights")

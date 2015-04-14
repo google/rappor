@@ -68,18 +68,34 @@ class RandExp(object):
 
   def __init__(self, num_unique_values, dist_param):
     self.num_unique_values = num_unique_values
-    self.lambda_ = dist_param or float(num_unique_values) / 5
-    # 1 - e^-lambda
-    self.one_minus_exp_lambda = 1 - math.exp(-self.lambda_)
+    self.lambd = dist_param or 1
 
   def __call__(self):
-    rand_in_cf = random.random()
-    # Val sampled from exp distr in [0,1] is CDF^{-1}(unif in [0,1))
-    rand_sample_in_01 = (
-        -math.log(1 - rand_in_cf * self.one_minus_exp_lambda) / self.lambda_)
-    # Scale up to num_unique_values and floor to integer
-    rand_val = int((rand_sample_in_01 * self.num_unique_values) + 1)
-    return rand_val
+    while True:
+      r = random.expovariate(self.lambd)
+      value = int(round(r))
+      # Rejection sampling to drop outputs outside [1, num_unique_values]
+      if 1 <= value <= self.num_unique_values:
+        break
+
+    return value  # true client value
+
+class RandZipf(object):
+  """Returns a value drawn from a Zipf distribution."""
+
+  def __init__(self, num_unique_values, dist_param):
+    self.num_unique_values = num_unique_values
+    self.alpha = dist_param or 1
+
+  def __call__(self):
+    while True:
+      r = random.paretovariate(self.alpha)  # Zipf is a discrete Pareto
+      value = int(round(r))
+      # Rejection sampling to drop outputs outside [1, num_unique_values]
+      if 1 <= value <= self.num_unique_values:
+        break
+
+    return value  # true client value
 
 
 def CreateOptionsParser():
@@ -91,7 +107,7 @@ def CreateOptionsParser():
       help='Instead of a CSV file, output a text file with a value on each '
            'line, and this number of lines.')
 
-  choices = ['exp', 'gauss', 'unif']
+  choices = ['exp', 'gauss', 'unif', 'zipf1', 'zipf1.5']
   p.add_option(
       '-d', type='choice', dest='dist', default='exp', choices=choices,
       help='Distribution to draw values from (%s)' % '|'.join(choices))
@@ -110,7 +126,7 @@ def CreateOptionsParser():
   p.add_option(
       '-p', type='float', metavar='FLOAT', dest='dist_param', default=None,
       help='Parameter to distribution.  Ignored for uniform; Std-dev '
-           'for Gaussian; Lambda for Exponential.')
+           'for Gaussian; Lambda for Exponential; Alpha for Zipf.')
 
   return p
 
@@ -122,7 +138,7 @@ def main(argv):
     raise RuntimeError('-u should be at least 2.')
 
   if opts.num_clients < 10:
-    raise RuntimeError("RAPPOR won't work with less than 10 clients")
+    raise RuntimeError("RAPPOR won't work with fewer than 10 clients")
 
   random.seed()
 
@@ -135,6 +151,10 @@ def main(argv):
     rand_sample = RandGauss(opts.num_unique_values, opts.dist_param)
   elif opts.dist == 'exp':
     rand_sample = RandExp(opts.num_unique_values, opts.dist_param)
+  elif opts.dist == 'zipf1':
+    rand_sample = RandZipf(opts.num_unique_values, 1.0)
+  elif opts.dist == 'zipf1.5':
+    rand_sample = RandZipf(opts.num_unique_values, 1.5)
   else:
     raise AssertionError(opts.dist)
 
