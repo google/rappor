@@ -34,10 +34,22 @@ LoadMapFiles <- function(map_file, map_file2, params = NULL,
     cat("Parsing", map_file, "and", map_file2, "...\n")
     map1 <- ReadMapFile(map_file, params = params, quote = quote)
     map2 <- ReadMapFile(map_file2, params = params, quote = quote)
-    # For some reason, association.R requires an rmap component
-    # that for all practical purposes is identical to map
+    # association.R requires an rmap component that combines all
+    # cohort maps
+    # map$map should be split by cohorts
     map1$rmap <- map1$map
     map2$rmap <- map2$map
+    split_map <- function(i, map_struct) {
+      numbits <- params$k
+      indices <- which(as.matrix(
+          map_struct[((i - 1) * numbits + 1):(i * numbits),]) == TRUE,
+          arr.ind = TRUE)
+      sparseMatrix(indices[, "row"], indices[, "col"],
+                   dims = c(numbits, max(indices[, "col"])))
+    }
+    # Apply the split_map function #cohorts (params$m) times
+    map1$map <- lapply(1:params$m, function(i) split_map(i, map1$rmap))
+    map2$map <- lapply(1:params$m, function(i) split_map(i, map2$rmap))
     map <- list()
     map[[1]] <- map1
     map[[2]] <- map2
@@ -60,10 +72,22 @@ LoadMapFiles <- function(map_file, map_file2, params = NULL,
       cat("Parsing", map_file, "and", map_file2, "...\n")
       map1 <- ReadMapFile(map_file, params = params, quote = quote)
       map2 <- ReadMapFile(map_file2, params = params, quote = quote)
-      # For some reason, association.R requires an rmap component
-      # that for all practical purposes is identical to map
+      # association.R requires an rmap component that combines all
+      # cohort maps
+      # map$map should be split by cohorts
       map1$rmap <- map1$map
       map2$rmap <- map2$map
+      split_map <- function(i, map_struct) {
+        numbits <- params$k
+        indices <- which(as.matrix(
+          map_struct[((i - 1) * numbits + 1):(i * numbits),]) == TRUE,
+          arr.ind = TRUE)
+        sparseMatrix(indices[, "row"], indices[, "col"],
+                     dims = c(numbits, max(indices[, "col"])))
+      }
+      # Apply the split_map function #cohorts (params$m) times
+      map1$map <- lapply(1:params$m, function(i) split_map(i, map1$rmap))
+      map2$map <- lapply(1:params$m, function(i) split_map(i, map2$rmap))
       map <- list()
       map[[1]] <- map1
       map[[2]] <- map2
