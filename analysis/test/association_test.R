@@ -14,7 +14,6 @@
 
 # Authors: vpihur@google.com (Vasyl Pihur), fanti@google.com (Giulia Fanti)
 
-setwd("~/git/google_dev_rappor/analysis/test/")
 library(RUnit)
 source("../R/encode.R")
 source("../R/decode.R")

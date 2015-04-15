@@ -15,7 +15,6 @@
 # limitations under the License.
 
 library("getopt")
-setwd("~/git/google_dev_rappor/tests")
 source("../analysis/R/encode.R")
 source("../analysis/R/decode.R")
 source("../analysis/R/simulation.R")
@@ -63,10 +62,6 @@ LoadMapFiles <- function(map_file, map_file2, params = NULL,
     rda_file1 <- sub(".csv", "", map_file, fixed = TRUE)
     rda_file2 <- sub(".csv", ".rda", map_file2, fixed = TRUE)
     rda_file <- paste(rda_file1, rda_file2, sep = "_")
-    
-    # file.info() is not implemented yet by the gfile package. One must delete
-    # the .rda file manually when the .csv file is updated.
-    # csv_updated <- file.info(map_file)$mtime > file.info(rda_file)$mtime
     
     if (!file.exists(rda_file)) {
       cat("Parsing", map_file, "and", map_file2, "...\n")
