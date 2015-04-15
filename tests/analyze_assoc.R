@@ -121,21 +121,23 @@ if (is.null(opt$map2))    {opt$map2 = "map_2.csv"}
 if (is.null(opt$params))  {opt$params = "params.csv"}
 if (is.null(opt$reports)) {opt$reports = "reports.csv"}
 
+ptm <- proc.time()
+
 params <- ReadParameterFile(opt$params)
 LoadMapFiles(opt$map1, opt$map2, params = params,
              immutable_flag = FALSE)
-reportsObj <- read.csv(opt$reports, colClasses = c("integer",
-                                                   "character",
-                                                   "integer",
-                                                   "character"),
+reportsObj <- read.csv(opt$reports, 
+                       colClasses = c("integer", "character", "character"),
                        header = FALSE)
+
 # Parsing reportsObj
+# ComputeDistributionEM allows for different sets of cohorts
+# for each variable. Here, both sets of cohorts are identical
 cohorts <- list()
 cohorts[[1]] <- as.list(reportsObj[1])[[1]]
-cohorts[[2]] <- as.list(reportsObj[3])[[1]]
-reports <- list()
-reports[[1]] <- as.list(reportsObj[2])
-reports[[2]] <- as.list(reportsObj[4])
+cohorts[[2]] <- cohorts[[1]]
+# Parse reports from reportObj cols 2 and 3
+reports <- lapply(1:2, function(x) as.list(reportsObj[x + 1]))
 
 # Split strings into bit arrays (as required by assoc analysis)
 reports <- lapply(1:2, function(i) {
@@ -150,4 +152,7 @@ joint_dist <- ComputeDistributionEM(reports, cohorts, map,
                                     ignore_other = TRUE,
                                     params, marginals = NULL,
                                     estimate_var = FALSE)
+print("JOINT_DIST$FIT")
 print(joint_dist$fit)
+print("PROC.TIME")
+print(proc.time() - ptm)

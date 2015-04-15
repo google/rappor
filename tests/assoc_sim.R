@@ -28,7 +28,6 @@ source("../analysis/R/association.R")
 #         "ssl", "nossl", ...
 # Returns: a list containing strings
 GetCandidatesFromFile <- function(filename) {
-  filename <- paste(filename, ".csv", sep = "")
   contents <- read.csv(filename, header = FALSE)
   # Expect 2 rows of candidates
   if(nrow(contents) != 2) {
@@ -45,14 +44,19 @@ GetCandidatesFromFile <- function(filename) {
 #         params = list with RAPPOR parameters
 #         mapfile = file to write maps into (with .csv suffixes)
 #         reportsfile = file to write reports into (with .csv suffix)
-SimulateReports <- function(N, candidates, params, mapfile, reportsfile) {
-  reportsfile <- paste(reportsfile, ".csv", sep = "")
-  
+#         unif = whether to replace poisson with uniform
+SimulateReports <- function(N, candidates, params, mapfile, reportsfile,
+                            unif) {
   # Compute true distribution
   m <- params$m  
-  # Draw from a Poisson random variable
   samples = list()
-  samples[[1]] <- rpois(N, 1) + rep(1, N)
+  if (unif) {
+    # Draw uniformly from 1 to 10
+    samples[[1]] <- as.integer(runif(N, 1, 10))
+  } else {
+    # Draw from a Poisson random variable
+    samples[[1]] <- rpois(N, 1) + rep(1, N)
+  }
   
   # Pr[var2 = N + 1 | var1 = N] = 0.5
   # Pr[var2 = N     | var1 = N] = 0.5
@@ -76,8 +80,7 @@ SimulateReports <- function(N, candidates, params, mapfile, reportsfile) {
   }
   
   # Randomly assign cohorts in each dimension
-  cohorts <- lapply(1:2,
-                    function(i) sample(1:m, N, replace = TRUE))
+  cohorts <- sample(1:m, N, replace = TRUE)
   
   # Create and write map into mapfile_1.csv and mapfile_2.csv
   map <- lapply(1:2, function(i) CreateMap(candidates[[i]], params))
@@ -88,14 +91,13 @@ SimulateReports <- function(N, candidates, params, mapfile, reportsfile) {
   
   # Write reports into reportsfile.csv
   # Format:
-  #     cohort var1, bloom filter var1, cohort var2, bloom filter var2
+  #     cohort, bloom filter var1, bloom filter var2
   reports <- lapply(1:2, function(i)
-    EncodeAll(samples[[i]], cohorts[[i]], map[[i]]$map, params))
+    EncodeAll(samples[[i]], cohorts, map[[i]]$map, params))
   # Organize cohorts and reports into format
-  write_matrix <- cbind(as.matrix(cohorts[[1]]),
+  write_matrix <- cbind(as.matrix(cohorts),
                         as.matrix(lapply(reports[[1]], 
                             function(x) paste(x, collapse = ""))),
-                        as.matrix(cohorts[[2]]),
                         as.matrix(lapply(reports[[2]],
                             function(x) paste(x, collapse = ""))))
   write.table(write_matrix, file = reportsfile, quote = FALSE,
@@ -109,6 +111,7 @@ spec = matrix(c(
   "reports", "r", 2, "character",
   "map", "m", 2, "character",
   "num", "n", 2, "integer",
+  "unif", "u", 2, "logical",
   "help", "h", 0, "logical"
   ), byrow = TRUE, ncol = 4)
 opt = getopt(spec)
@@ -120,12 +123,18 @@ if (!is.null(opt$help)) {
 }
 
 # Defaults
-if (is.null(opt$candidates))  {opt$candidates = "candidates"}
-if (is.null(opt$params))      {opt$params = "params"}
-if (is.null(opt$reports))     {opt$reports = "reports"}
+if (is.null(opt$candidates))  {opt$candidates = "candidates.csv"}
+if (is.null(opt$params))      {opt$params = "params.csv"}
+if (is.null(opt$reports))     {opt$reports = "reports.csv"}
 if (is.null(opt$map))         {opt$map = "map"}
 if (is.null(opt$num))         {opt$num = 1e05}
+if (is.null(opt$unif))        {opt$unif = FALSE}
+
+ptm <- proc.time()
 
 candidates <- GetCandidatesFromFile(opt$candidates)
-params <- ReadParameterFile(paste(opt$params, ".csv", sep = ""))
-SimulateReports(opt$num, candidates, params, opt$map, opt$reports)
+params <- ReadParameterFile(opt$params)
+SimulateReports(opt$num, candidates, params, opt$map, opt$reports, opt$unif)
+
+print("PROC.TIME")
+print(proc.time() - ptm)
