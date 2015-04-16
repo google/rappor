@@ -14,7 +14,29 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-library("getopt")
+library("optparse")
+
+# First parse args
+options(stringsAsFactors = FALSE)
+if(!interactive()) {
+  option_list <- list(
+    # Flags
+    make_option(c("--candidates", "-c"), default = "candidates.csv",
+                help = "Filename for candidates"),
+    make_option(c("--params", "-p"), default = "params.csv",
+                help = "Filename for parameters"),
+    make_option(c("--reports", "-r"), default = "reports.csv",
+                help = "Filename for reports"),
+    make_option(c("--map", "-m"), default = "map",
+                help = "Filename *prefix* for map(s)"),
+    make_option(c("--num", "-n"), default = 1e05,
+                help = "Number of reports"),
+    make_option(c("--unif", "-u"), default = FALSE,
+                help = "Run simulation with uniform distribution")
+  )
+  opts <- parse_args(OptionParser(option_list = option_list))
+}    
+
 source("../analysis/R/encode.R")
 source("../analysis/R/decode.R")
 source("../analysis/R/simulation.R")
@@ -49,7 +71,8 @@ SimulateReports <- function(N, candidates, params, mapfile, reportsfile,
                             unif) {
   # Compute true distribution
   m <- params$m  
-  samples = list()
+  samples <- list()
+
   if (unif) {
     # Draw uniformly from 1 to 10
     samples[[1]] <- as.integer(runif(N, 1, 10))
@@ -104,37 +127,17 @@ SimulateReports <- function(N, candidates, params, mapfile, reportsfile,
               row.names = FALSE, col.names = FALSE, sep = ",")
 }
 
-# Command line arguments
-spec = matrix(c(
-  "candidates", "c", 2, "character",
-  "params", "p", 2, "character",
-  "reports", "r", 2, "character",
-  "map", "m", 2, "character",
-  "num", "n", 2, "integer",
-  "unif", "u", 2, "logical",
-  "help", "h", 0, "logical"
-  ), byrow = TRUE, ncol = 4)
-opt = getopt(spec)
-
-# Usage
-if (!is.null(opt$help)) {
-  cat(getopt(spec, usage = TRUE))
-  q(status = 1)
+main <- function(opts) {
+  ptm <- proc.time()
+  
+  candidates <- GetCandidatesFromFile(opts$candidates)
+  params <- ReadParameterFile(opts$params)
+  SimulateReports(opts$num, candidates, params, opts$map, opts$reports, opts$unif)
+  
+  print("PROC.TIME")
+  print(proc.time() - ptm)
 }
 
-# Defaults
-if (is.null(opt$candidates))  {opt$candidates = "candidates.csv"}
-if (is.null(opt$params))      {opt$params = "params.csv"}
-if (is.null(opt$reports))     {opt$reports = "reports.csv"}
-if (is.null(opt$map))         {opt$map = "map"}
-if (is.null(opt$num))         {opt$num = 1e05}
-if (is.null(opt$unif))        {opt$unif = FALSE}
-
-ptm <- proc.time()
-
-candidates <- GetCandidatesFromFile(opt$candidates)
-params <- ReadParameterFile(opt$params)
-SimulateReports(opt$num, candidates, params, opt$map, opt$reports, opt$unif)
-
-print("PROC.TIME")
-print(proc.time() - ptm)
+if(!interactive()) {
+  main(opts)
+}

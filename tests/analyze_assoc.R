@@ -14,7 +14,25 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-library("getopt")
+library("optparse")
+
+# First parse args
+options(stringsAsFactors = FALSE)
+if(!interactive()) {
+  option_list <- list(
+    # Flags
+    make_option(c("--map1", "-m1"), default = "map_1.csv",
+                help = "1st map filename"),
+    make_option(c("--map2", "-m2"), default = "map_2.csv",
+                help = "2nd map filename"),
+    make_option(c("--reports", "-r"), default = "reports.csv",
+                help = "Filename for reports"),
+    make_option(c("--params", "-p"), default = "params.csv",
+                help = "Filename for parameters")
+  )
+  opts <- parse_args(OptionParser(option_list = option_list))
+}    
+
 source("../analysis/R/encode.R")
 source("../analysis/R/decode.R")
 source("../analysis/R/simulation.R")
@@ -94,60 +112,44 @@ LoadMapFiles <- function(map_file, map_file2, params = NULL,
   }
 }
 
-# Command line arguments
-spec = matrix(c(
-  "map1", "m1", 2, "character",
-  "map2", "m2", 2, "character",
-  "reports", "r", 2, "character",
-  "params", "p", 2, "character",
-  "help", "h", 0, "logical"
-), byrow = TRUE, ncol = 4)
-opt = getopt(spec)
-
-# Usage
-if (!is.null(opt$help)) {
-  cat(getopt(spec, usage = TRUE))
-  q(status = 1)
+main <- function(opts) {
+  ptm <- proc.time()
+  
+  params <- ReadParameterFile(opts$params)
+  LoadMapFiles(opts$map1, opts$map2, params = params,
+               immutable_flag = FALSE)
+  reportsObj <- read.csv(opts$reports, 
+                         colClasses = c("integer", "character", "character"),
+                         header = FALSE)
+  
+  # Parsing reportsObj
+  # ComputeDistributionEM allows for different sets of cohorts
+  # for each variable. Here, both sets of cohorts are identical
+  cohorts <- list()
+  cohorts[[1]] <- as.list(reportsObj[1])[[1]]
+  cohorts[[2]] <- cohorts[[1]]
+  # Parse reports from reportObj cols 2 and 3
+  reports <- lapply(1:2, function(x) as.list(reportsObj[x + 1]))
+  
+  # Split strings into bit arrays (as required by assoc analysis)
+  reports <- lapply(1:2, function(i) {
+    # apply the following function to each of reports[[1]] and reports[[2]]
+    lapply(reports[[i]][[1]], function(x) {
+      # function splits strings and converts them to numeric values  
+      as.numeric(strsplit(x, split = "")[[1]])
+    })
+  })
+  
+  joint_dist <- ComputeDistributionEM(reports, cohorts, map, 
+                                      ignore_other = TRUE,
+                                      params, marginals = NULL,
+                                      estimate_var = FALSE)
+  print("JOINT_DIST$FIT")
+  print(joint_dist$fit)
+  print("PROC.TIME")
+  print(proc.time() - ptm)
 }
 
-# Defaults
-if (is.null(opt$map1))    {opt$map1 = "map_1.csv"}
-if (is.null(opt$map2))    {opt$map2 = "map_2.csv"}
-if (is.null(opt$params))  {opt$params = "params.csv"}
-if (is.null(opt$reports)) {opt$reports = "reports.csv"}
-
-ptm <- proc.time()
-
-params <- ReadParameterFile(opt$params)
-LoadMapFiles(opt$map1, opt$map2, params = params,
-             immutable_flag = FALSE)
-reportsObj <- read.csv(opt$reports, 
-                       colClasses = c("integer", "character", "character"),
-                       header = FALSE)
-
-# Parsing reportsObj
-# ComputeDistributionEM allows for different sets of cohorts
-# for each variable. Here, both sets of cohorts are identical
-cohorts <- list()
-cohorts[[1]] <- as.list(reportsObj[1])[[1]]
-cohorts[[2]] <- cohorts[[1]]
-# Parse reports from reportObj cols 2 and 3
-reports <- lapply(1:2, function(x) as.list(reportsObj[x + 1]))
-
-# Split strings into bit arrays (as required by assoc analysis)
-reports <- lapply(1:2, function(i) {
-  # apply the following function to each of reports[[1]] and reports[[2]]
-  lapply(reports[[i]][[1]], function(x) {
-    # function splits strings and converts them to numeric values  
-    as.numeric(strsplit(x, split = "")[[1]])
-  })
-})
-
-joint_dist <- ComputeDistributionEM(reports, cohorts, map, 
-                                    ignore_other = TRUE,
-                                    params, marginals = NULL,
-                                    estimate_var = FALSE)
-print("JOINT_DIST$FIT")
-print(joint_dist$fit)
-print("PROC.TIME")
-print(proc.time() - ptm)
+if(!interactive()) {
+  main(opts)
+}
