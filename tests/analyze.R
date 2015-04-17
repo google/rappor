@@ -59,24 +59,33 @@ Log <- function(...) {
   cat('\n')
 }
 
-LoadInputs <- function(prefix_params, prefix_counts, ctx) {
-  # prefix: path prefix, e.g. '_tmp/exp'
-  p <- paste0(prefix_params, '_params.csv')
-  c <- paste0(prefix_counts, '_counts.csv')
-  m <- paste0(prefix_params, '_map.csv')
-  h <- paste0(prefix_counts, '_hist.csv')
+LoadInputs <- function(prefix_case, prefix_instance, ctx) {
+  # prefix_case: path prefix to the test case, e.g. '_tmp/exp'
+  # prefix_instance: path prefix to the test instance, e.g., '_tmp/exp/1'
+  p <- paste0(prefix_case, '_params.csv')
+  m <- paste0(prefix_case, '_map.csv')
+
+  c <- paste0(prefix_instance, '_counts.csv')
+  h <- paste0(prefix_instance, '_hist.csv')
 
   params <- ReadParameterFile(p)
   counts <- ReadCountsFile(c)
   map <- ReadMapFile(m)
 
-  # Calls AnalyzeRAPPOR to run the analysis code
-  rappor <- AnalyzeRAPPOR(params, counts, map$map, "FDR", 0.05,
+  timing <- system.time({
+    # Calls AnalyzeRAPPOR to run the analysis code
+    rappor <- AnalyzeRAPPOR(params, counts, map$map, "FDR", 0.05,
                           date="01/01/01", date_num="100001")
+  })
+  
   if (is.null(rappor)) {
     stop("RAPPOR analysis failed.")
   }
-
+  
+  # The line is searched for, and elapsed time is extracted, by make_summary.py.
+  # Should the formating or wording change, make_summary must be updated too.
+  Log(c("Inference took", timing["elapsed"], "seconds"))
+   
   Log("Analysis Results:")
   str(rappor)
 
@@ -195,8 +204,8 @@ main <- function(parsed) {
   args <- parsed$args
   options <- parsed$options
 
-  input_params_prefix <- args[[1]]
-  input_counts_prefix <- args[[2]]
+  input_case_prefix <- args[[1]]
+  input_instance_prefix <- args[[2]]
   output_dir <- args[[3]]
 
   # increase ggplot font size globally
@@ -207,7 +216,7 @@ main <- function(parsed) {
   # NOTE: It takes more than 2000+ ms to get here, while the analysis only
   # takes 500 ms or so (as measured by system.time).
 
-  LoadInputs(input_params_prefix, input_counts_prefix, ctx)
+  LoadInputs(input_case_prefix, input_instance_prefix, ctx)
   d <- ProcessAll(ctx)
   p <- PlotAll(d$plot_data, options$title)
 
