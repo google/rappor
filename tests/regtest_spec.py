@@ -101,7 +101,6 @@ def main(argv):
 
   for params in DEMO:
     rows.append(params)
-    print >>sys.stderr, params
 
   for row in rows:
     print ' '.join(row)
