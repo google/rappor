@@ -283,7 +283,7 @@ _run-tests() {
   local parallel=$3
   local fast_counts=$4
 
-  rm -r --verbose $REGTEST_DIR
+  rm -r -f --verbose $REGTEST_DIR
   
   mkdir --verbose -p $REGTEST_DIR
 
