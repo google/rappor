@@ -1,64 +1,75 @@
 #!/usr/bin/python
 """Print a test spec on stdout.
 
-Each line has parmaeters for a test case.  The regtest.sh shell script reads
+Each line has parameters for a test case.  The regtest.sh shell script reads
 these lines and runs parallel processes.
 
 We use Python data structures so the test cases are easier to read and edit.
 """
 
+import optparse
 import sys
 
 #
 # TEST CONFIGURATION
 #
 
-# For gen_sim_input.py
-INPUT_PARAMS = {
-    # distribution, num unique values, num clients, values per client
-    'exp1': ('exp', 100, 100000, 7),
-    'gauss1': ('gauss', 100, 100000, 7),
-    'unif1': ('unif', 100, 100000, 7),
+DEMO = (
+    # (case_name distr num_unique_values num_clients values_per_client)
+    # (num_bits num_hashes num_cohorts)
+    # (p q f) (num_additional regexp_to_remove)
+    ('demo1 unif    100 10000 10', '16 2 64', '0.1 0.9 0.2', '10 v[0-9]*9$'),
+    ('demo2 gauss   100 10000 10', '16 2 64', '0.1 0.9 0.2', '10 v[0-9]*9$'),
+    ('demo3 exp     100 10000 10', '16 2 64', '0.1 0.9 0.2', '10 v[0-9]*9$'),
+    ('demo4 zipf1   100 10000 10', '16 2 64', '0.1 0.9 0.2', '10 v[0-9]*9$'),
+    ('demo5 zipf1.5 100 10000 10', '16 2 64', '0.1 0.9 0.2', '10 v[0-9]*9$'),
+)
+
+DISTRIBUTIONS = (
+    'unif',
+    'exp',
+    'gauss',
+    'zipf1',
+    'zipf1.5',
+)
+
+DISTRIBUTION_PARAMS = (
+    # name, num unique values, num clients, values per client
+    ('tiny', 100, 1000, 1),  # test for insufficient data
+    ('small', 100, 1000000, 1),
+    ('medium', 1000, 10000000, 1),
+    ('large', 10000, 100000000, 1),
+)
+
+# 'k, h, m' as in params file.
+BLOOMFILTER_PARAMS = {
+    '8x16': (8, 2, 16),  # 16 cohorts, 8 bits each, 2 bits set in each
+    '8x32': (8, 2, 32),  # 32 cohorts, 8 bits each, 2 bits set in each
+    '8x128': (8, 2, 128),  # 128 cohorts, 8 bits each, 2 bits set in each
+    '128x128': (128, 2, 128),  # 8 cohorts, 128 bits each, 2 bits set in each
 }
 
-# For rappor_sim.py
-# 'k, h, m, p, q, f' as in params file.
-RAPPOR_PARAMS = {
-    # Initial chrome params from 2014.
-    # NOTE: fastrand simulation only supports 64 bits!
-    #'chrome1': (128, 2, 512, 0.25, 0.75, 0.50),
-
-    # Chrome params from early 2015 -- changed to 8 bit reports.
-    'chrome2': (8, 2, 512, 0.25, 0.75, 0.50),
-
-    # Original demo params
-    'demo': (16, 2, 64, 0.5, 0.75, 0.5),
+# 'p, q, f' as in params file.
+PRIVACY_PARAMS = {
+    'eps_1_1': (0.39, 0.61, 0.45),  # eps_1 = 1, eps_inf = 5:
+    'eps_1_5': (0.225, 0.775, 0.0),  # eps_1 = 5, no eps_inf
 }
 
 # For deriving candidates from true inputs.
-MAP_PARAMS = {
-    # 1. Number of extra candidates to add.
-    # 2. Candidate strings to remove from the map.  This FORCES false
-    # negatives, e.g. for common strings, since a string has to be in the map
-    # for RAPPOR to choose it.
-    'demo': (20, []),
-    'remove-top-2': (20, ['v1', 'v2']),
+MAP_REGEX_MISSING = {
+    'sharp': 'NONE',  # Categorical data
+    '10%': 'v[0-9]*9$',  # missing every 10th string
 }
 
-# test case name -> (input params name, RAPPOR params name, map params name)
-TEST_CASES = [
-    # The 3 cases in the demo.sh script
-    ('demo-exp', 'exp1', 'demo', 'demo'),
-    ('demo-gauss', 'gauss1', 'demo', 'demo'),
-    ('demo-unif', 'unif1', 'demo', 'demo'),
-
-    # Using Chrome params with synthetic map
-    ('chrome2-exp', 'exp1', 'chrome2', 'demo'),
-
-    # What happens when the the candidates are missing top values?
-    ('chrome2-badcand', 'exp1', 'chrome2', 'remove-top-2'),
-
-    # TODO: Use chrome params with real map from Alexa 1M ?
+# test configuration ->
+#   (name modifier, Bloom filter, privacy params, fraction of extra,
+#    regex missing)
+TEST_CONFIGS = [
+    ('typical', '128x128', 'eps_1_1', .2, '10%'),
+    ('sharp', '128x128', 'eps_1_1', .0, 'sharp'),  # no extra candidates
+    ('loose', '128x128', 'eps_1_5', .2, '10%'),  # loose privacy
+    ('over_x2', '128x128', 'eps_1_1', 2.0, '10%'),  # overshoot by x2
+    ('over_x10', '128x128', 'eps_1_1', 10.0, '10%'),  # overshoot by x10
 ]
 
 #
@@ -68,25 +79,31 @@ TEST_CASES = [
 
 def main(argv):
   rows = []
-  for test_case, input_name, rappor_name, map_name in TEST_CASES:
-    input_params = INPUT_PARAMS[input_name]
-    rappor_params = RAPPOR_PARAMS[rappor_name]
-    map_params = MAP_PARAMS[map_name]
-    row = tuple([test_case]) + input_params + rappor_params + map_params
-    rows.append(row)
+
+  test_case = []
+  for (distr_params, num_values, num_clients,
+       num_reports_per_client) in DISTRIBUTION_PARAMS:
+    for distribution in DISTRIBUTIONS:
+      for (config_name, bloom_name, privacy_params, fr_extra,
+           regex_missing) in TEST_CONFIGS:
+        test_name = 'r-{}-{}-{}'.format(distribution, distr_params,
+                                        config_name)
+
+        params = (BLOOMFILTER_PARAMS[bloom_name]
+                  + PRIVACY_PARAMS[privacy_params]
+                  + tuple([int(num_values * fr_extra)])
+                  + tuple([MAP_REGEX_MISSING[regex_missing]]))
+
+        test_case = (test_name, distribution, num_values, num_clients,
+                     num_reports_per_client) + params
+        row_str = [str(element) for element in test_case]
+        rows.append(row_str)
+
+  for params in DEMO:
+    rows.append(params)
 
   for row in rows:
-    for cell in row:
-      if isinstance(cell, list):
-        if cell:
-          cell_str = '|'.join(cell)
-        else:
-          cell_str = 'NONE'  # we don't want an empty string
-      else:
-        cell_str = cell
-      print cell_str,  # print it with a space after it
-    print  # new line after row
-
+    print ' '.join(row)
 
 if __name__ == '__main__':
   try:
