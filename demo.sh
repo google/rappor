@@ -52,7 +52,6 @@ build() {
 run() {
   # Run all the test cases that start with "demo".
   ./regtest.sh run-seq '^demo' 1 F
-  mv _tmp/regtest/results.html _tmp/regtest/report.html
 }
 
 # TODO: Port these old bad cases to regtest_spec.py.
