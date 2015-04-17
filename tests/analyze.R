@@ -84,7 +84,7 @@ LoadInputs <- function(prefix_case, prefix_instance, ctx) {
   
   # The line is searched for, and elapsed time is extracted, by make_summary.py.
   # Should the formating or wording change, make_summary must be updated too.
-  Log(c("Inference took", timing["elapsed"], "seconds"))
+  Log("Inference took %.3f seconds", timing[["elapsed"]])
    
   Log("Analysis Results:")
   str(rappor)

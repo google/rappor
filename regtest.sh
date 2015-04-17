@@ -171,10 +171,6 @@ _run-one-instance() {
 
     banner "Using gen_counts.R"
 
-    echo tests/gen_counts.R $distr $num_clients $values_per_client $params_file \
-                       $true_map_file "$instance_dir/case"
-
-
     tests/gen_counts.R $distr $num_clients $values_per_client $params_file \
                        $true_map_file "$instance_dir/case"
   else
@@ -232,11 +228,6 @@ _run-one-instance-logged() {
     || log "Test case $test_case_id (instance $test_case_run) failed"
 }
 
-show-help() {
-  tests/gen_sim_input.py || true
-  tests/rappor_sim.py -h || true
-}
-
 make-summary() {
   local dir=$1
   local filename=${2:-results.html}
@@ -273,8 +264,7 @@ _setup-test-instances() {
   local fast_counts=$2
 
   while read line; do
-    for ((i=1; i<=$instances; i++))
-    do 
+    for i in $(seq 1 $instances); do
       read case_name _ <<< $line  # extract the first token
       echo $case_name $i $fast_counts
     done
@@ -304,8 +294,8 @@ _run-tests() {
     func=_run-one-instance  # output to the console
   else
     func=_run-one-instance-logged
-    processors=$(grep -c ^processor /proc/cpuinfo)
-    if test $processors -gt 1; then  # leave one for the OS
+    processors=$(grep -c ^processor /proc/cpuinfo || echo 4)  # POSIX-specific
+    if test $processors -gt 1; then  # leave one CPU for the OS
       processors=$(expr $processors - 1)
     fi
     log "Running $processors parallel processes"

@@ -134,9 +134,9 @@ ComputePdf <- function(distr, range) {
   } else if (distr == 'zipf1') {
     # Since the distrubition defined over a finite set, we allow the parameter
     # of the Zipf distribution to be 1.
-    pdf <- sapply(1:range, function(x) 1/x)
+    pdf <- sapply(1:range, function(x) 1 / x)
   } else if (distr == 'zipf1.5') {
-    pdf <- sapply(1:range, function(x) 1/x^1.5)
+    pdf <- sapply(1:range, function(x) 1 / x^1.5)
   }  
   else {
     stop(sprintf("Invalid distribution '%s'", distr))

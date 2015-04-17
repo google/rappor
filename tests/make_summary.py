@@ -243,10 +243,10 @@ def FormatCell1(test_case, test_instance, metrics_file, log_file, plot_file,
     if link_to_plots:
       link = '#{}_{}'.format(test_case, test_instance)  # anchor
     else:
-      link = relpath_report + '/' + 'dist.png'
+      link = os.path.join(relpath_report, 'dist.png')
   else:  # no results likely due to an error, puts a link to the log file
     external_file = log_file
-    link = relpath_report + '/' + 'log.txt'
+    link = os.path.join(relpath_report, 'log.txt')
 
   if os.path.isfile(external_file):
     return '<td><a href="{}">{}</a></td>'.format(link, test_case)

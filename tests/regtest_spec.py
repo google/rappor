@@ -36,7 +36,7 @@ DISTRIBUTIONS = (
 DISTRIBUTION_PARAMS = (
     # name, num unique values, num clients, values per client
     ('tiny', 100, 1000, 1),  # test for insufficient data
-    ('small', 100, 100000, 1),
+    ('small', 100, 1000000, 1),
     ('medium', 1000, 10000000, 1),
     ('large', 10000, 100000000, 1),
 )

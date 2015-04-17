@@ -52,11 +52,11 @@ main <- function(argv) {
   
   stopifnot(length(values) == num_clients)
 
-  # Shuffle values randomly (make take a few sec for > 10^8 inputs)
+  # Shuffle values randomly (may take a few sec for > 10^8 inputs)
   values <- sample(values)
 
   # Obtain reports by prefixing values with "v"s. Even slower than shuffling.
-  reports <- paste("v", format(values, trim = TRUE), sep = "")
+  reports <- sprintf("v%d", values)
 
   reports <- cbind(1:num_clients, reports)  # paste together "1 v342"
   reports <- reports[rep(1:nrow(reports), each = reports_per_client), ]
