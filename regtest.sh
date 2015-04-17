@@ -305,7 +305,9 @@ _run-tests() {
   else
     func=_run-one-instance-logged
     processors=$(grep -c ^processor /proc/cpuinfo)
-    processors=$(expr $processors - 1)
+    if test $processors -gt 1; then  # leave one for the OS
+      processors=$(expr $processors - 1)
+    fi
     log "Running $processors parallel processes"
   fi
 
