@@ -196,9 +196,9 @@ _run-one-instance() {
 
     # Output both JSON and CSV counts.  JSON is used for analysis server.
     analysis/tools/sum_bits.py \
-      $case_dir/case_params.csv $case_dir/case_counts.json \
-      < $case_dir/case_out.csv \
-      > $case_dir/case_counts.csv
+      $case_dir/case_params.csv $instance_dir/case_counts.json \
+      < $instance_dir/case_out.csv \
+      > $instance_dir/case_counts.csv
   fi
 
   local out_dir=${instance_dir}_report
