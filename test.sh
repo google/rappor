@@ -111,9 +111,9 @@ r-unit() {
   tests/gen_counts_test.R
 
   # The way we source requires changing dirs.
-  pushd analysis/test
+  pushd analysis/test >/dev/null
   ./run_tests.R
-  popd
+  popd >/dev/null
 }
 
 doc-lint() {
