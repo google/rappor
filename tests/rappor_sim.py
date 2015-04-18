@@ -99,30 +99,11 @@ def CreateOptionsParser():
   return p
 
 
-def print_params(params, csv_out, json_out):
-  """Print Rappor parameters to a text file."""
-  c = csv.writer(csv_out)
-  c.writerow(('k', 'h', 'm', 'p', 'q', 'f'))  # header
-  row = (
-      params.num_bloombits,
-      params.num_hashes,
-      params.num_cohorts,
-      params.prob_p,
-      params.prob_q,
-      params.prob_f)
-
-  c.writerow(row)
-
-  print >>json_out, params.to_json()
-
-
 def make_histogram(csv_in):
   """Make a histogram of the simulated input file."""
   # TODO: It would be better to share parsing with rappor_encode()
   counter = collections.Counter()
-  for i, (_, word) in enumerate(csv_in):
-    if i == 0:
-      continue
+  for (_, word) in csv_in:
     counter[word] += 1
   return dict(counter.most_common())
 
@@ -171,14 +152,6 @@ def main(argv):
 
   outfile = prefix + "_out.csv"
   histfile = prefix + "_hist.csv"
-  true_inputs_file = prefix + "_true_inputs.txt"
-  params_csv = prefix + "_params.csv"
-  params_json = prefix + '_params.json'
-
-  # Print parameters to parameters file -- needed for the R analysis tool.
-  with open(params_csv, 'w') as csv_out:
-    with open(params_json, 'w') as json_out:
-      print_params(params, csv_out, json_out)
 
   with open(opts.infile) as f:
     csv_in = csv.reader(f)
@@ -189,12 +162,6 @@ def main(argv):
     print_histogram(word_hist, f)
 
   all_words = sorted(word_hist)  # unique words
-
-  # Print all true values, one per line.  This file can be further processed to
-  # simulate inaccurate candidate lists.
-  with open(true_inputs_file, 'w') as f:
-    for word in all_words:
-      print >>f, word
 
   rand = random.Random()  # default Mersenne Twister randomness
   #rand = random.SystemRandom()  # cryptographic randomness from OS
@@ -228,9 +195,6 @@ def main(argv):
     start_time = time.time()
 
     for i, (client, true_value) in enumerate(csv_in):
-      if i == 0:
-        continue  # skip header line
-
       if i % 10000 == 0:
         elapsed = time.time() - start_time
         log('Processed %d inputs in %.2f seconds', i, elapsed)

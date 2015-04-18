@@ -50,9 +50,8 @@ build() {
 
 # Main entry point that is documented in README.md.
 run() {
-  # Run all the test cases that start with "demo-", and write to "report.html".
-  # (The original demo.sh used "report.html", so we're not changing the name.)
-  ./regtest.sh run-seq '^demo-' report.html
+  # Run all the test cases that start with "demo".
+  ./regtest.sh run-seq '^demo' 1 F
 }
 
 # TODO: Port these old bad cases to regtest_spec.py.
