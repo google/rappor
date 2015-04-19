@@ -78,13 +78,13 @@ LoadInputs <- function(prefix_case, prefix_instance, ctx) {
                           date="01/01/01", date_num="100001")
   })
   
-  if (is.null(rappor)) {
-    stop("RAPPOR analysis failed.")
-  }
-  
   # The line is searched for, and elapsed time is extracted, by make_summary.py.
   # Should the formating or wording change, make_summary must be updated too.
   Log("Inference took %.3f seconds", timing[["elapsed"]])
+  
+  if (is.null(rappor)) {
+    stop("RAPPOR analysis failed.")
+  }
    
   Log("Analysis Results:")
   str(rappor)
