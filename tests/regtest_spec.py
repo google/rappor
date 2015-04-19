@@ -65,11 +65,11 @@ MAP_REGEX_MISSING = {
 #   (name modifier, Bloom filter, privacy params, fraction of extra,
 #    regex missing)
 TEST_CONFIGS = [
-    ('typical', '128x128', 'eps_1_1', .2, '10%'),
-    ('sharp', '128x128', 'eps_1_1', .0, 'sharp'),  # no extra candidates
-    ('loose', '128x128', 'eps_1_5', .2, '10%'),  # loose privacy
-    ('over_x2', '128x128', 'eps_1_1', 2.0, '10%'),  # overshoot by x2
-    ('over_x10', '128x128', 'eps_1_1', 10.0, '10%'),  # overshoot by x10
+    ('typical', '8x128', 'eps_1_1', .2, '10%'),
+    ('sharp', '8x128', 'eps_1_1', .0, 'sharp'),  # no extra candidates
+    ('loose', '8x128', 'eps_1_5', .2, '10%'),  # loose privacy
+    ('over_x2', '8x128', 'eps_1_1', 2.0, '10%'),  # overshoot by x2
+    ('over_x10', '8x128', 'eps_1_1', 10.0, '10%'),  # overshoot by x10
 ]
 
 #
