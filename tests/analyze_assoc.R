@@ -39,85 +39,40 @@ source("../analysis/R/simulation.R")
 source("../analysis/R/read_input.R")
 source("../analysis/R/association.R")
 
-# This function caches the .csv as an .rda for faster loading.  NOTE: It
-# assumes the map csv file is immutable. This isn't true if you
-# re-run assoc_sim.R. Adjust immutable_flag as required.
-# Modified from analysis/R/read_input.R to load 2 or more map files
-# into the environment
-LoadMapFiles <- function(map_file, map_file2, params = NULL, 
-                         immutable_flag = FALSE, quote = "") {
-  if (immutable_flag == FALSE) {
-    # Read map files without caching them
-    cat("Parsing", map_file, "and", map_file2, "...\n")
-    map1 <- ReadMapFile(map_file, params = params, quote = quote)
-    map2 <- ReadMapFile(map_file2, params = params, quote = quote)
-    # association.R requires an rmap component that combines all
-    # cohort maps
-    # map$map should be split by cohorts
-    map1$rmap <- map1$map
-    map2$rmap <- map2$map
-    split_map <- function(i, map_struct) {
-      numbits <- params$k
-      indices <- which(as.matrix(
-          map_struct[((i - 1) * numbits + 1):(i * numbits),]) == TRUE,
-          arr.ind = TRUE)
-      sparseMatrix(indices[, "row"], indices[, "col"],
-                   dims = c(numbits, max(indices[, "col"])))
-    }
-    # Apply the split_map function #cohorts (params$m) times
-    map1$map <- lapply(1:params$m, function(i) split_map(i, map1$rmap))
-    map2$map <- lapply(1:params$m, function(i) split_map(i, map2$rmap))
-    map <- list()
-    map[[1]] <- map1
-    map[[2]] <- map2
-    # Load maps to env when not storing it in .rda file
-    e <- globalenv()
-    e$map <- map
-  } else {
-    # Reads the map file and creates an R binary .rda.
-    # If .rda file already exists, just loads that file.
-    
-    rda_file1 <- sub(".csv", "", map_file, fixed = TRUE)
-    rda_file2 <- sub(".csv", ".rda", map_file2, fixed = TRUE)
-    rda_file <- paste(rda_file1, rda_file2, sep = "_")
-    
-    if (!file.exists(rda_file)) {
-      cat("Parsing", map_file, "and", map_file2, "...\n")
-      map1 <- ReadMapFile(map_file, params = params, quote = quote)
-      map2 <- ReadMapFile(map_file2, params = params, quote = quote)
-      # association.R requires an rmap component that combines all
-      # cohort maps
-      # map$map should be split by cohorts
-      map1$rmap <- map1$map
-      map2$rmap <- map2$map
-      split_map <- function(i, map_struct) {
-        numbits <- params$k
-        indices <- which(as.matrix(
-          map_struct[((i - 1) * numbits + 1):(i * numbits),]) == TRUE,
-          arr.ind = TRUE)
-        sparseMatrix(indices[, "row"], indices[, "col"],
-                     dims = c(numbits, max(indices[, "col"])))
-      }
-      # Apply the split_map function #cohorts (params$m) times
-      map1$map <- lapply(1:params$m, function(i) split_map(i, map1$rmap))
-      map2$map <- lapply(1:params$m, function(i) split_map(i, map2$rmap))
-      map <- list()
-      map[[1]] <- map1
-      map[[2]] <- map2
-      save(map, file = file.path(tempdir(), basename(rda_file)))
-      file.copy(file.path(tempdir(), basename(rda_file)), rda_file,
-                overwrite = TRUE)
-    }
-    load(rda_file, .GlobalEnv)
+# This function processes the maps loaded using ReadMapFile
+# Association analysis requires a map object with a map
+# field that has the map split into cohorts and an rmap field
+# that has all the cohorts combined
+# Arguments: 
+#       map = map object with cohorts as sparse matrix in
+#             object map$map
+#             This is the expected object from ReadMapFile
+#       params = data field with parameters
+# TODO(pseudorandom): move this functionality to ReadMapFile
+ProcessMap <- function(map, params) {
+  map$rmap <- map$map
+  split_map <- function(i, map_struct) {
+    numbits <- params$k
+    indices <- which(as.matrix(
+      map_struct[((i - 1) * numbits + 1):(i * numbits),]) == TRUE,
+      arr.ind = TRUE)
+    sparseMatrix(indices[, "row"], indices[, "col"],
+                 dims = c(numbits, max(indices[, "col"])))
   }
+  map$map <- lapply(1:params$m, function(i) split_map(i, map$rmap))
+  map
 }
 
 main <- function(opts) {
   ptm <- proc.time()
   
   params <- ReadParameterFile(opts$params)
-  LoadMapFiles(opts$map1, opts$map2, params = params,
-               immutable_flag = FALSE)
+  opts_map <- list()
+  opts_map[[1]] <- opts$map1
+  opts_map[[2]] <- opts$map2
+  map <- lapply(1:2, function(x) 
+                  ProcessMap(ReadMapFile(opts_map[[x]], params = params),
+                             params = params))
   reportsObj <- read.csv(opts$reports, 
                          colClasses = c("integer", "character", "character"),
                          header = FALSE)

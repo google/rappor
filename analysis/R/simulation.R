@@ -89,7 +89,7 @@ EncodeAll <- function(x, cohorts, map, params, num_cores = 1) {
                          prob = c(1 - qstar, qstar))
     noise
   }, mc.cores = num_cores)
-  
+
   reports
 }
 
