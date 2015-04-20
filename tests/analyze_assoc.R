@@ -1,4 +1,4 @@
-#!/usr/bin/Rscript
+#!/usr/bin/env Rscript
 #
 # Copyright 2015 Google Inc. All rights reserved.
 # 
@@ -18,7 +18,7 @@
 # an EM algorithm to estimate joint distribution over two or more variables
 # 
 # Usage:
-#       $ Rscript analyze_assoc.R -map1 map_1.csv -map2 map_2.csv \
+#       $ ./analyze_assoc.R -map1 map_1.csv -map2 map_2.csv \
 #                                 -reports reports.csv \
 # Inputs: map1, map2, reports, params
 #         see how options are parsed below for more information
@@ -32,17 +32,17 @@
 
 library("optparse")
 
-# First parse args
 options(stringsAsFactors = FALSE)
+
 if(!interactive()) {
   option_list <- list(
     # Flags
     make_option(c("--map1", "-m1"), default = "map_1.csv",
-                help = "1st map filename"),
+                help = "Hashed candidates for 1st variable"),
     make_option(c("--map2", "-m2"), default = "map_2.csv",
-                help = "2nd map filename"),
+                help = "Hashed candidates for 2nd variable"),
     make_option(c("--reports", "-r"), default = "reports.csv",
-                help = "Filename for reports"),
+                help = "File with raw reports as <cohort, report1, report2>"),
     make_option(c("--params", "-p"), default = "params.csv",
                 help = "Filename for RAPPOR parameters")
   )
@@ -83,9 +83,7 @@ main <- function(opts) {
   ptm <- proc.time()
   
   params <- ReadParameterFile(opts$params)
-  opts_map <- list()
-  opts_map[[1]] <- opts$map1
-  opts_map[[2]] <- opts$map2
+  opts_map <- list(opts$map1, opts$map2)
   map <- lapply(1:2, function(x) 
                   ProcessMap(ReadMapFile(opts_map[[x]], params = params),
                              params = params))
@@ -98,9 +96,8 @@ main <- function(opts) {
   # Parsing reportsObj
   # ComputeDistributionEM allows for different sets of cohorts
   # for each variable. Here, both sets of cohorts are identical
-  cohorts <- list()
-  cohorts[[1]] <- as.list(reportsObj[1])[[1]]
-  cohorts[[2]] <- cohorts[[1]]
+  co <- as.list(reportsObj[1])[[1]]
+  cohorts <- list(co, co)
   # Parse reports from reportObj cols 2 and 3
   reports <- lapply(1:2, function(x) as.list(reportsObj[x + 1]))
   
@@ -117,6 +114,7 @@ main <- function(opts) {
                                       ignore_other = TRUE,
                                       params, marginals = NULL,
                                       estimate_var = FALSE)
+  # TODO(pseudorandom): Export the results to a file for further analysis
   print("JOINT_DIST$FIT")
   print(joint_dist$fit)
   print("PROC.TIME")

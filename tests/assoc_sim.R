@@ -1,4 +1,4 @@
-#!/usr/bin/Rscript
+#!/usr/bin/env Rscript
 #
 # Copyright 2015 Google Inc. All rights reserved.
 # 
@@ -19,8 +19,8 @@
 # be easily extended to support more.
 # 
 # Usage:
-#       $ Rscript assoc_sim.R -n 1000
-# Inputs: candidates, params, reports, map, num, unif
+#       $ ./assoc_sim.R -n 1000
+# Inputs: uvals, params, reports, map, num, unif
 #         see how options are parsed below for more information
 # Outputs:
 #         reports.csv file containing reports
@@ -32,8 +32,8 @@ options(stringsAsFactors = FALSE)
 
 if(!interactive()) {
   option_list <- list(
-    make_option(c("--candidates", "-c"), default = "candidates.csv",
-                help = "Filename for list of candidates over which
+    make_option(c("--uval", "-v"), default = "uvals.csv",
+                help = "Filename for list of values over which
                 distributions are simulated. The file is a list of
                 comma-separated strings each line of which refers
                 to a new variable."),
@@ -57,76 +57,90 @@ source("../analysis/R/simulation.R")
 source("../analysis/R/read_input.R")
 source("../analysis/R/association.R")
 
-# Read candidates from a csv file
+# Read unique values of reports from a csv file
 # Inputs: filename. The file is expected to contain two rows of strings
 #         (one for each variable):
 #         "google.com", "apple.com", ...
 #         "ssl", "nossl", ...
 # Returns: a list containing strings
-GetCandidatesFromFile <- function(filename) {
+GetUniqueValsFromFile <- function(filename) {
   contents <- read.csv(filename, header = FALSE)
-  # Expect 2 rows of candidates
+  # Expect 2 rows of unique vals
   if(nrow(contents) != 2) {
-    stop(paste("Candidate file", filename, "expected to have
+    stop(paste("Unique vals file", filename, "expected to have
                two rows of strings."))
   }
-  list(var1 = as.vector(t(contents[1,])),
-       var2 = as.vector(t(contents[2,])))
+  # Removes superfluous "" entries if the lists of unique values
+  # differ in length
+  strip_empty <- function(vec) {
+    vec[!vec %in% c("")]
+  }
+  list(var1 = strip_empty(as.vector(t(contents[1,]))),
+       var2 = strip_empty(as.vector(t(contents[2,]))))
 }
 
 # Simulate correlated reports and write into reportsfile
 # Inputs: N = number of reports
-#         candidates = list containing a list of candidate strings
+#         uvals = list containing a list of unique values
 #         params = list with RAPPOR parameters
 #         unif = whether to replace poisson with uniform
 #         mapfile = file to write maps into (with .csv suffixes)
 #         reportsfile = file to write reports into (with .csv suffix)
-SimulateReports <- function(N, candidates, params, unif,
+SimulateReports <- function(N, uvals, params, unif,
                             mapfile, reportsfile) {
   # Compute true distribution
   m <- params$m  
-  samples <- list()
 
   if (unif) {
     # Draw uniformly from 1 to 10
-    samples[[1]] <- as.integer(runif(N, 1, 10))
+    v1_samples <- as.integer(runif(N, 1, 10))
   } else {
     # Draw from a Poisson random variable
-    samples[[1]] <- rpois(N, 1) + rep(1, N)
+    v1_samples <- rpois(N, 1) + rep(1, N)
   }
   
   # Pr[var2 = N + 1 | var1 = N] = 0.5
   # Pr[var2 = N     | var1 = N] = 0.5
-  samples[[2]] <- samples[[1]] + sample(c(0, 1), N, replace = TRUE)
+  v2_samples <- v1_samples + sample(c(0, 1), N, replace = TRUE)
   
-  # Replace sample i with candidate i for each variable
-  for(i in 1:2) {
-    if(max(samples[[i]]) <= length(candidates[[i]])) {
-      samples[[i]] <- candidates[[i]][samples[[i]]]
-    } else {
-      # Pad candidates with sample strings
-      # If only 2 candidates, new set of candidates becomes:
-      # candidate1, candidate2, str3, str4, ...
-      len <- length(candidates)
-      candidates[[i]][(len + 1):max(samples[[i]])] <- apply(
-        as.matrix((len + 1):max(samples[[i]])),
+  tmp_samples <- list(v1_samples, v2_samples)
+  
+  # Function to pad strings to uval_vec if sample_vec has
+  # larger support than the number of strings in uval_vec
+  # For e.g., if samples have support {1, 2, 3, 4, ...} and uvals
+  # only have "value1", "value2", and "value3", samples now
+  # over support {"value1", "value2", "value3", "str4", ...}
+  PadStrings <- function(sample_vec, uval_vec) {
+    if (max(sample_vec) > length(uval_vec)) {
+      # Padding uvals to required length
+      len <- length(uval_vec)
+      max_of_samples <- max(sample_vec)
+      uval_vec[(len + 1):max_of_samples] <- apply(
+        as.matrix((len + 1):max_of_samples),
         1,
         function(i) paste("str", as.character(i), sep = ""))
-      samples[[i]] <- candidates[[i]][samples[[i]]]
     }
+    uval_vec
   }
   
+  # Pad and update uvals
+  uvals <- lapply(1:2, function(i) PadStrings(tmp_samples[[i]],
+                                              uvals[[i]]))
+
+  # Replace integers in tmp_samples with actual sample strings
+  samples <- lapply(1:2, function(i) uvals[[i]][tmp_samples[[i]]])
+
   # Randomly assign cohorts in each dimension
   cohorts <- sample(1:m, N, replace = TRUE)
   
   # Create and write map into mapfile_1.csv and mapfile_2.csv
-  map <- lapply(1:2, function(i) CreateMap(candidates[[i]], params))
+  map <- lapply(1:2, function(i) CreateMap(uvals[[i]], params))
   write.table(map[[1]]$map_pos, file = paste(mapfile, "_1.csv", sep = ""),
               sep = ",", col.names = FALSE, na = "", quote = FALSE)
   write.table(map[[2]]$map_pos, file = paste(mapfile, "_2.csv", sep = ""),
               sep = ",", col.names = FALSE, na = "", quote = FALSE)
   
-  # Write reports into reportsfile.csv
+  # Write reports into a csv file
   # Format:
   #     cohort, bloom filter var1, bloom filter var2
   reports <- lapply(1:2, function(i)
@@ -144,10 +158,10 @@ SimulateReports <- function(N, candidates, params, unif,
 main <- function(opts) {
   ptm <- proc.time()
   
-  candidates <- GetCandidatesFromFile(opts$candidates)
+  uvals <- GetUniqueValsFromFile(opts$uval)
   params <- ReadParameterFile(opts$params)
-  SimulateReports(opts$num, candidates, params,  opts$unif, # inputs
-                  opts$map, opts$reports)                   # outputs
+  SimulateReports(opts$num, uvals, params,  opts$unif, # inputs
+                  opts$map, opts$reports)              # outputs
   
   print("PROC.TIME")
   print(proc.time() - ptm)
