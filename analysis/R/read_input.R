@@ -83,7 +83,7 @@ ReadMapFile <- function(map_file, params = NULL, quote = "") {
                   n, "_", params$h * params$m))
     }
   }
-  row_pos <- unlist(map_pos[, -1])
+  row_pos <- unlist(map_pos[, -1], use.names = FALSE)
   col_pos <- rep(1:nrow(map_pos), times = ncol(map_pos) - 1)
   removed <- which(is.na(row_pos))
   if (length(removed) > 0) {
