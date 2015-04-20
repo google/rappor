@@ -17,10 +17,6 @@
 
 library(glmnet)
 
-# Test.  Change this to use pcls in alternative.R.
-USE_PCLS <- Sys.getenv('USE_PCLS') == '1'
-#USE_PCLS <- TRUE  # force to true
-
 EstimateBloomCounts <- function(params, obs_counts) {
   # Estimates the number of times each bit in each cohort was set in original
   # Bloom filters.
@@ -45,9 +41,13 @@ EstimateBloomCounts <- function(params, obs_counts) {
   p <- params$p
   q <- params$q
   f <- params$f
+  
+  # Transform counts from absolute values to fractional, removing bias due to
+  #      variability of reporting between cohorts.
+  normalized_counts <- obs_counts / obs_counts[,1]
 
   # N = x[1] is the sample size for cohort i.
-  ests <- t(apply(obs_counts, 1, function(x) {
+  ests <- t(apply(normalized_counts, 1, function(x) {
     (x[-1] - (p + .5 * f * q - .5 * f * p) * x[1]) / ((1 - f) * (q - p))
   }))
 
@@ -211,55 +211,41 @@ Decode <- function(counts, map, params, alpha = 0.05,
   f <- params$f
   h <- params$h
   m <- params$m
+  
+  S <- ncol(map)  # total number of candidates
 
   strs <- colnames(map)
-  ests <- EstimateBloomCounts(params, counts)
   N <- sum(counts[, 1])
+    
+  ests <- EstimateBloomCounts(params, counts)
   Y <- as.vector(t(ests))
-
-  if (ncol(map) > (k * m * .8) ||
-      (as.numeric(ncol(map)) * as.numeric(nrow(map))) > 10^6) {
+  
+  support_coefs <- 1:S
+  
+  if (S > k * m * .8) {  # the system is underdermined 
     mod_lasso <- FitLasso(map, Y, ...)
     lasso <- mod_lasso$fit
 
     # Select non-zero coefficients.
-    non_zero <- which(mod_lasso$coefs > 0)
-    if (length(non_zero) == 0) {
-      non_zero <- 1:2
+    support_coefs <- which(mod_lasso$coefs > 0)
+    cat("LASSO selected ", length(support_coefs), " coefficients in support.\n")
+    
+    if (length(support_coefs) == 0) {
+      support_coefs <- 1:2
     }
-
-    # Fit regular linear model to obtain unbiased estimates.
-    X <- as.data.frame(apply(as.matrix(map[, non_zero]), 2, as.numeric))
-
-    if (!USE_PCLS) {
-
-      mod <- CustomLM(X, Y)
-
-      # Return complete vector of coefficients with 0's.
-      coefs <- rep(0, length(mod_lasso$coefs))
-      names(coefs) <- names(mod_lasso$coefs)
-      coefs[non_zero] <- mod$coef
-      coefs[is.na(coefs)] <- 0
-      mod$coefs <- coefs
-
-    } else {
-      print("CALLING newLM")
-
-      constrained_coefs <- newLM(X, Y)
-
-      # new coefs vector with same names and length as lasso coefs
-      coefs <- rep(0, length(mod_lasso$coefs))
-      names(coefs) <- names(mod_lasso$coefs)
-
-      mod = list()
-      coefs[non_zero] <- constrained_coefs
-      mod$coefs <- coefs
-    }
-  } else {
-    print('Decode: CustomLM')
-    mod <- CustomLM(as.data.frame(as.matrix(map)), Y)
-    lasso <- NULL
   }
+  
+  # Convert the matrix from logical to numerical
+  X <- as.data.frame(apply(as.matrix(map[, support_coefs]), 2, as.numeric))
+
+  constrained_coefs <- N * newLM(X, Y)
+
+  # new coefs vector with same names and length as lasso coefs
+  coefs <- rep(0, S)
+  names(coefs) <- strs
+  coefs[support_coefs] <- constrained_coefs
+  
+  mod = list(coefs = coefs, resid = NULL)  # a stub for now
 
   if (correction == "Bonferroni") {
     alpha <- alpha / length(strs)
@@ -276,7 +262,7 @@ Decode <- function(counts, map, params, alpha = 0.05,
 
   # Estimates from the model are per instance so must be multipled by h.
   # Standard errors are also adjusted.
-  fit$Total_Est <- floor(fit$Estimate * m)
+  fit$Total_Est <- floor(fit$Estimate)
   fit$Total_SD <- floor(fit$SD * m)
   fit$Prop <- fit$Total_Est / N
   fit$LPB <- fit$Prop - 1.96 * fit$Total_SD / N
@@ -303,7 +289,7 @@ Decode <- function(counts, map, params, alpha = 0.05,
                        values = c(k, h, m, p, q, f, N, alpha))
 
   list(fit = fit, summary = res_summary, privacy = privacy, params = params,
-       lasso = lasso, ests = ests, counts = counts[, -1], resid = resid)
+       lasso = NULL, ests = ests, counts = counts[, -1], resid = resid)
 }
 
 ComputeCounts <- function(reports, cohorts, params) {

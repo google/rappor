@@ -24,7 +24,13 @@ makep = function(n) {
   rep(1, n) / (n+1)
 }
 
-# diagonal matrix with -1
+# The next two functions create a matrix (Ain) and a vector (bin) encoding
+# linear inequality constraints that a solution vector (x) must satisfy: 
+#                       Ain * x > bin
+
+# Currently represent two sets of constraints on the solution vector: 
+#  - all solution coefficients are nonnegative
+#  - all solution coefficients don't sum up to more than 1
 makeAin = function(n) {
   d = diag(x=1, n, n)
   last = rep(-1, n)
@@ -32,15 +38,7 @@ makeAin = function(n) {
 }
 
 makebin = function(n) {
-  #ratio = 172318 / 128
-  # NOTE: Hard-coded hacks here
-  ratio = 70000 / 64
-  #ratio = 490000 / 64
-
-  print("RATIO")
-  print(ratio)
-
-  c(rep(0, n), -ratio)
+  c(rep(0, n), -1)
 }
 
 makeM = function(X,Y) {
@@ -48,7 +46,12 @@ makeM = function(X,Y) {
   p = makep(n)
   Ain = makeAin(n)
   bin = makebin(n)
-
+  
+  # Encodes the model with the following properties:
+  #   X - the design matrix
+  #   Ain, bin - linear inequality constraints on feasible solution
+  #   p - initial parameter estimates, must be feasible, i.e., satisfy all 
+  #       constraints
   list(X=as.matrix(X),
        p=p,
        off=array(0,0),
@@ -63,12 +66,13 @@ makeM = function(X,Y) {
 
 # CustomLM(X, Y)
 newLM = function(X,Y) {
-  M = makeM(X,Y)
-  coefs = pcls(M)
+  M <- makeM(X,Y)
+  coefs <- pcls(M)
+  names(coefs) <- colnames(X) 
 
   print("SUM(coefs)")
   print(sum(coefs))
 
-  return(coefs)
+  coefs
 }
 
