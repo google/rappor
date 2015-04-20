@@ -14,6 +14,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# Simulates inputs on which association analysis can be run.
+# Currently assoc_sim.R only supports 2 variables but can
+# be easily extended to support more.
+# 
+# Usage:
+#       $ Rscript assoc_sim.R -n 1000
+# Inputs: candidates, params, reports, map, num, unif
+#         see how options are parsed below for more information
+# Outputs:
+#         reports.csv file containing reports
+#         map_{1, 2, ...}.csv file(s) containing maps of variables
+
 library("optparse")
 
 options(stringsAsFactors = FALSE)

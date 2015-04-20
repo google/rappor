@@ -14,6 +14,22 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# Reads map files, report files, and RAPPOR parameters to run 
+# an EM algorithm to estimate joint distribution over two or more variables
+# 
+# Usage:
+#       $ Rscript analyze_assoc.R -map1 map_1.csv -map2 map_2.csv \
+#                                 -reports reports.csv \
+# Inputs: map1, map2, reports, params
+#         see how options are parsed below for more information
+# Outputs:
+#         prints a table with estimated joint probability masses
+#         over candidate strings
+#         Ex. 
+#                 ssl   nossl
+#         intel   0.1   0.3
+#         google  0.5   0.1
+
 library("optparse")
 
 # First parse args
@@ -28,7 +44,7 @@ if(!interactive()) {
     make_option(c("--reports", "-r"), default = "reports.csv",
                 help = "Filename for reports"),
     make_option(c("--params", "-p"), default = "params.csv",
-                help = "Filename for parameters")
+                help = "Filename for RAPPOR parameters")
   )
   opts <- parse_args(OptionParser(option_list = option_list))
 }    
