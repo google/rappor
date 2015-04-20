@@ -82,6 +82,10 @@ RunOne <- function(opts) {
   config <- ReadParameterFile(opts$config)
   counts <- ReadCountsFile(opts$counts)
   counts <- AdjustCounts(counts, config)
+
+  num_reports <- sum(counts[, 1])
+  Log("Number of reports: %d", num_reports)
+
   LoadMapFile(opts$map)
   date <- as.character(Sys.Date())
   date_num <- as.numeric(format(Sys.Date(), "%Y%m%d"))
@@ -89,19 +93,27 @@ RunOne <- function(opts) {
                        map_name = opts$map, config_name = opts$config,
                        date = date, date_num = date_num)
 
-  Log("sum(proportion)")
-  print(sum(res$proportion))
-
-  Log("sum(estimate)")
-  print(sum(res$estimate))
-
-  if (!is.null(res)) {
-    output_filename <- file.path(opts$output_dir,
-                                 paste(GetFN(opts$counts), GetFN(opts$map),
-                                       GetFN(opts$config), sep = "_"))
-
-    write.csv(res, file = paste0(output_filename, ".csv"))
+  if (is.null(res)) {
+    Log("Analysis failed.")
+    quit(status=1)
   }
+
+  name <- paste(GetFN(opts$counts), GetFN(opts$map),
+                GetFN(opts$config), sep = "_")
+  results_filename <- paste0(name, ".csv")
+  results_path <- file.path(opts$output_dir, results_filename)
+
+  # TODO: Write something simpler?
+  write.csv(res, file = results_path)
+
+  metrics <- list(
+      allocated_mass = sum(res$proportion),
+      num_reports = num_reports,
+      num_rappor = length(res)
+      )
+
+  metrics_path <- file.path(opts$output_dir, 'metrics.csv')
+  write.csv(metrics, file = metrics_path, row.names = FALSE)
 }
 
 # Run multiple models.  There is a CSV experiments config file, and we invoke
