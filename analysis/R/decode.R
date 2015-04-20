@@ -119,13 +119,15 @@ PerformInference <- function(X, Y, N, mod, params, alpha, correction) {
   ESS <- resid_var * nrow(X)
 
   betas <- matrix(mod$coefs, ncol = 1)
-  if (!USE_PCLS) {
-    mod_var <- summary(mod$fit)$sigma^2
-    betas_sd <- rep(sqrt(max(resid_var, mod_var) / (m * h)), length(betas))
-  } else {
-    mod_var <- 0
-    betas_sd <- 1
-  }
+
+  # This is what we want
+  # mod_var <- summary(mod$fit)$sigma^2
+  # betas_sd <- rep(sqrt(max(resid_var, mod_var) / (m * h)), length(betas))
+
+  # This is what we have
+  mod_var <- 0
+  betas_sd <- 1
+  
   z_values <- betas / betas_sd
 
   # 1-sided t-test.
@@ -202,9 +204,6 @@ ComputePrivacyGuarantees <- function(params, alpha, N) {
 
 Decode <- function(counts, map, params, alpha = 0.05,
                    correction = c("Bonferroni"), ...) {
-  # In basic RAPPOR, the corrected counts are exactly the estimates of
-  #     true variable counts.
-
   k <- params$k
   p <- params$p
   q <- params$q
@@ -222,7 +221,7 @@ Decode <- function(counts, map, params, alpha = 0.05,
   
   support_coefs <- 1:S
   
-  if (S > k * m * .8) {  # the system is underdermined 
+  if (S > k * m * .8) {  # the system is underdetermined
     mod_lasso <- FitLasso(map, Y, ...)
     lasso <- mod_lasso$fit
 
@@ -231,21 +230,18 @@ Decode <- function(counts, map, params, alpha = 0.05,
     cat("LASSO selected ", length(support_coefs), " coefficients in support.\n")
     
     if (length(support_coefs) == 0) {
-      support_coefs <- 1:2
+      support_coefs <- 1:2  # leave at list two coefficients
     }
   }
   
-  # Convert the matrix from logical to numerical
-  X <- as.data.frame(apply(as.matrix(map[, support_coefs]), 2, as.numeric))
+  constrained_coefs <- N * newLM(map[, support_coefs], Y)
 
-  constrained_coefs <- N * newLM(X, Y)
-
-  # new coefs vector with same names and length as lasso coefs
+  # new coefs vector with same names and length as LASSO coefs
   coefs <- rep(0, S)
   names(coefs) <- strs
   coefs[support_coefs] <- constrained_coefs
   
-  mod = list(coefs = coefs, resid = NULL)  # a stub for now
+  mod <- list(coefs = coefs, resid = NULL)  # a stub for now
 
   if (correction == "Bonferroni") {
     alpha <- alpha / length(strs)
