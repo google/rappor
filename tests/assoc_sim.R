@@ -16,15 +16,17 @@
 
 library("optparse")
 
-# First parse args
 options(stringsAsFactors = FALSE)
+
 if(!interactive()) {
   option_list <- list(
-    # Flags
     make_option(c("--candidates", "-c"), default = "candidates.csv",
-                help = "Filename for candidates"),
+                help = "Filename for list of candidates over which
+                distributions are simulated. The file is a list of
+                comma-separated strings each line of which refers
+                to a new variable."),
     make_option(c("--params", "-p"), default = "params.csv",
-                help = "Filename for parameters"),
+                help = "Filename for RAPPOR parameters"),
     make_option(c("--reports", "-r"), default = "reports.csv",
                 help = "Filename for reports"),
     make_option(c("--map", "-m"), default = "map",
@@ -64,11 +66,11 @@ GetCandidatesFromFile <- function(filename) {
 # Inputs: N = number of reports
 #         candidates = list containing a list of candidate strings
 #         params = list with RAPPOR parameters
+#         unif = whether to replace poisson with uniform
 #         mapfile = file to write maps into (with .csv suffixes)
 #         reportsfile = file to write reports into (with .csv suffix)
-#         unif = whether to replace poisson with uniform
-SimulateReports <- function(N, candidates, params, mapfile, reportsfile,
-                            unif) {
+SimulateReports <- function(N, candidates, params, unif,
+                            mapfile, reportsfile) {
   # Compute true distribution
   m <- params$m  
   samples <- list()
@@ -132,7 +134,8 @@ main <- function(opts) {
   
   candidates <- GetCandidatesFromFile(opts$candidates)
   params <- ReadParameterFile(opts$params)
-  SimulateReports(opts$num, candidates, params, opts$map, opts$reports, opts$unif)
+  SimulateReports(opts$num, candidates, params,  opts$unif, # inputs
+                  opts$map, opts$reports)                   # outputs
   
   print("PROC.TIME")
   print(proc.time() - ptm)

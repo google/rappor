@@ -73,6 +73,8 @@ main <- function(opts) {
   map <- lapply(1:2, function(x) 
                   ProcessMap(ReadMapFile(opts_map[[x]], params = params),
                              params = params))
+  # Reports must be of the format
+  #     cohort no, rappor bitstring 1, rappor bitstring 2
   reportsObj <- read.csv(opts$reports, 
                          colClasses = c("integer", "character", "character"),
                          header = FALSE)
