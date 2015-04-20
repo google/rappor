@@ -98,13 +98,19 @@ RunOne <- function(opts) {
     quit(status=1)
   }
 
-  name <- paste(GetFN(opts$counts), GetFN(opts$map),
-                GetFN(opts$config), sep = "_")
+  #name <- paste(GetFN(opts$counts), GetFN(opts$map),
+  #              GetFN(opts$config), sep = "_")
+  # Just use a fixed name for now.  TODO: make this a flag?
+  name <- 'results'
   results_filename <- paste0(name, ".csv")
   results_path <- file.path(opts$output_dir, results_filename)
 
   # TODO: Write something simpler?
   write.csv(res, file = results_path)
+
+  # TODO: Save binary version too, may load faster wit unique var name?
+  #results_bin_path <- file.path(opts$output_dir, 'results.rda')
+  #save(res, names=c('res'), file = results_bin_path)
 
   metrics <- list(
       allocated_mass = sum(res$proportion),
