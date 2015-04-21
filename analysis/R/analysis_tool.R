@@ -114,7 +114,7 @@ RunOne <- function(opts) {
 
   metrics <- list(
       allocated_mass = sum(res$proportion),
-      num_reports = num_reports,
+      num_reports = num_reports,  # function of the input
       num_rappor = length(res)
       )
 
