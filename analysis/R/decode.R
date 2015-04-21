@@ -1,11 +1,11 @@
 # Copyright 2014 Google Inc. All rights reserved.
-# 
+#
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
-# 
+#
 #     http://www.apache.org/licenses/LICENSE-2.0
-# 
+#
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -35,13 +35,13 @@ EstimateBloomCounts <- function(params, obs_counts) {
   #                each bit was set in each cohort.
   #
   # Output:
-  #    ests: a matrix of size m by x with estimated counts for the number of
-  #          times each bit was set in the true Bloom filter.
+  #    ests: a matrix of size m by x with estimated counts for the probability
+  #          of each bit set in the true Bloom filter.
 
   p <- params$p
   q <- params$q
   f <- params$f
-  
+
   # Transform counts from absolute values to fractional, removing bias due to
   #      variability of reporting between cohorts.
   normalized_counts <- obs_counts / obs_counts[,1]
@@ -55,6 +55,7 @@ EstimateBloomCounts <- function(params, obs_counts) {
   #     account for this possibility, and set the corresponding counts
   #     to 0.
   ests[abs(ests) == Inf] <- 0
+
   ests
 }
 
@@ -76,7 +77,7 @@ FitLasso <- function(X, Y, intercept = TRUE) {
   names(zero_coefs) <- colnames(X)
 
   mod <- try(glmnet(X, Y, standardize = FALSE, intercept = intercept,
-                    pmax = ceiling(length(Y) * .9)),
+                    pmax = ceiling(length(Y))),
              silent = TRUE)
 
   # If fitting fails, return an empty data.frame.
@@ -127,7 +128,7 @@ PerformInference <- function(X, Y, N, mod, params, alpha, correction) {
   # This is what we have
   mod_var <- 0
   betas_sd <- 1
-  
+
   z_values <- betas / betas_sd
 
   # 1-sided t-test.
@@ -210,17 +211,17 @@ Decode <- function(counts, map, params, alpha = 0.05,
   f <- params$f
   h <- params$h
   m <- params$m
-  
+
   S <- ncol(map)  # total number of candidates
 
   strs <- colnames(map)
   N <- sum(counts[, 1])
-    
+
   ests <- EstimateBloomCounts(params, counts)
   Y <- as.vector(t(ests))
-  
+
   support_coefs <- 1:S
-  
+
   if (S > k * m * .8) {  # the system is underdetermined
     mod_lasso <- FitLasso(map, Y, ...)
     lasso <- mod_lasso$fit
@@ -228,19 +229,19 @@ Decode <- function(counts, map, params, alpha = 0.05,
     # Select non-zero coefficients.
     support_coefs <- which(mod_lasso$coefs > 0)
     cat("LASSO selected ", length(support_coefs), " coefficients in support.\n")
-    
+
     if (length(support_coefs) == 0) {
       support_coefs <- 1:2  # leave at list two coefficients
     }
   }
-  
-  constrained_coefs <- N * newLM(map[, support_coefs], Y)
+
+  constrained_coefs <- N * ConstrainedLinModel(map[, support_coefs], Y)
 
   # new coefs vector with same names and length as LASSO coefs
   coefs <- rep(0, S)
   names(coefs) <- strs
   coefs[support_coefs] <- constrained_coefs
-  
+
   mod <- list(coefs = coefs, resid = NULL)  # a stub for now
 
   if (correction == "Bonferroni") {

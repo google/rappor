@@ -1,13 +1,13 @@
 #!/usr/bin/env Rscript
 #
 # Copyright 2014 Google Inc. All rights reserved.
-# 
+#
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
-# 
+#
 #     http://www.apache.org/licenses/LICENSE-2.0
-# 
+#
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -63,15 +63,15 @@ LoadContext <- function(prefix_case) {
   # Creates the context, filling it with privacy parameters
   # Arg:
   #    prefix_case: path prefix to the test case, e.g. '_tmp/exp'
-  
+
   p <- paste0(prefix_case, '_params.csv')
 
   params <- ReadParameterFile(p)
 
   ctx <- new.env()
-  
+
   ctx$params <- params  # so we can write it out later
-  
+
   ctx
 }
 
@@ -84,25 +84,25 @@ RunRappor <- function(prefix_case, prefix_instance, ctx) {
 
   c <- paste0(prefix_instance, '_counts.csv')
   counts <- ReadCountsFile(c)
-  
+
   m <- paste0(prefix_case, '_map.csv')
   map <- ReadMapFile(m)  # Switch to LoadMapFile if want to cache the result
-  
+
 
   timing <- system.time({
     # Calls AnalyzeRAPPOR to run the analysis code
     rappor <- AnalyzeRAPPOR(ctx$params, counts, map$map, "FDR", 0.05,
                           date="01/01/01", date_num="100001")
   })
-  
+
   # The line is searched for, and elapsed time is extracted, by make_summary.py.
   # Should the formating or wording change, make_summary must be updated too.
   Log("Inference took %.3f seconds", timing[["elapsed"]])
-  
+
   if (is.null(rappor)) {
     stop("RAPPOR analysis failed.")
   }
-   
+
   Log("Analysis Results:")
   str(rappor)
 
@@ -111,7 +111,7 @@ RunRappor <- function(prefix_case, prefix_instance, ctx) {
 
 LoadActual <- function(prefix_instance) {
   # Load ground truth into context
-  
+
   h <- paste0(prefix_instance, '_hist.csv')
   read.csv(h)
 }
@@ -119,7 +119,7 @@ LoadActual <- function(prefix_instance) {
 
 CompareRapporVsActual <- function(ctx) {
   # Prepare input data to be plotted
-  
+
   actual <- ctx$actual  # from the ground truth file
   rappor <- ctx$rappor  # from output of AnalyzeRAPPOR
 
@@ -192,7 +192,7 @@ CompareRapporVsActual <- function(ctx) {
 
   Log("Metrics:")
   str(metrics)
-  
+
   # Return plot data and metrics
   list(plot_data = rbind(r, a), metrics = metrics)
 }
@@ -241,7 +241,7 @@ main <- function(parsed) {
   ctx <- LoadContext(input_case_prefix)
   ctx$rappor <- RunRappor(input_case_prefix, input_instance_prefix, ctx)
   ctx$actual <- LoadActual(input_instance_prefix)
-  
+
   d <- CompareRapporVsActual(ctx)
   p <- PlotAll(d$plot_data, options$title)
 

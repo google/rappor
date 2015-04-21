@@ -16,7 +16,7 @@ set -o errexit
 # R_LIBS_USER doesn't seem to work.
 
 install-r-packages() {
-  sudo R -e 'install.packages(c("shiny", "ggplot2", "glmnet", "optparse", "RUnit"), repos="http://cran.rstudio.com/")'
+  sudo R -e 'install.packages(c("shiny", "ggplot2", "glmnet", "optparse", "RUnit", "limSolve"), repos="http://cran.rstudio.com/")'
 }
 
 "$@"
