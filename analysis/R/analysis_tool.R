@@ -113,9 +113,9 @@ RunOne <- function(opts) {
   #save(res, names=c('res'), file = results_bin_path)
 
   metrics <- list(
-      allocated_mass = sum(res$proportion),
       num_reports = num_reports,  # function of the input
-      num_rappor = length(res)
+      num_rappor = nrow(res),
+      allocated_mass = sum(res$proportion)
       )
 
   metrics_path <- file.path(opts$output_dir, 'metrics.csv')
