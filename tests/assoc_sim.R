@@ -134,7 +134,7 @@ SimulateReports <- function(N, uvals, params, unif,
   cohorts <- sample(1:m, N, replace = TRUE)
   
   # Create and write map into mapfile_1.csv and mapfile_2.csv
-  map <- lapply(1:2, function(i) CreateMap(uvals[[i]], params))
+  map <- lapply(uvals, function(u) CreateMap(u, params))
   write.table(map[[1]]$map_pos, file = paste(mapfile, "_1.csv", sep = ""),
               sep = ",", col.names = FALSE, na = "", quote = FALSE)
   write.table(map[[2]]$map_pos, file = paste(mapfile, "_2.csv", sep = ""),

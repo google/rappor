@@ -84,8 +84,8 @@ main <- function(opts) {
   
   params <- ReadParameterFile(opts$params)
   opts_map <- list(opts$map1, opts$map2)
-  map <- lapply(1:2, function(x) 
-                  ProcessMap(ReadMapFile(opts_map[[x]], params = params),
+  map <- lapply(opts_map, function(o)
+                  ProcessMap(ReadMapFile(o, params = params),
                              params = params))
   # Reports must be of the format
   #     cohort no, rappor bitstring 1, rappor bitstring 2
