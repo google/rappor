@@ -62,13 +62,13 @@ RandomPartition <- function(total, weights) {
   return(result)
 }
 
-GenerateCounts <- function(params, true_map, partition) {
+GenerateCounts <- function(params, true_map, partition, reports_per_client) {
   # Fast simulation of the marginal table for RAPPOR reports 
   # Args:
   #   params - parameters of the RAPPOR reporting process 
-  #   total - number of reports
   #   true_map - hashed true inputs
-  #   weights - vector encoding the probability that a ball lands into a bin
+  #   partition - allocation of clients between true values
+  #   reports_per_client - number of reports (IRRs) per client
   if (nrow(true_map$map) != (params$m * params$k)) {
     stop(cat("Map does not match the params file!",
                  "mk =", params$m * params$k,
@@ -85,89 +85,115 @@ GenerateCounts <- function(params, true_map, partition) {
   # Expands to (m x k) x strs matrix, where each element (corresponding to the 
   # bit in the aggregate Bloom filter) is repeated k times. 
   expanded <- apply(cohorts, 2, function(vec) rep(vec, each = params$k))
-  
-  # Computes the number of bits set to one BEFORE privacy-preserving transform.
-  counts_ones <- apply(expanded * true_map$map, 1, sum)
-  
-  # Computes the number of bits set to zero BEFORE privacy-preserving transform.
-  counts_zeros <- rep(apply(cohorts, 1, sum), each = params$k) - counts_ones
-  
-  p <- params$p
-  q <- params$q
-  f <- params$f
 
-  # probability that a true 1 is reported as "1"
-  pstar <- (1 - f / 2) * q + (f / 2) * p
-  # probability that a true 0 is reported as "1"
-  qstar <- (1 - f / 2) * p + (f / 2) * q
+  # For each bit, the number of clients reporting this bit:
+  clients_per_bit <- rep(apply(cohorts, 1, sum), each = params$k)
   
-  reported_ones <- 
-    unlist(lapply(counts_ones, 
-                  function(x) rbinom(n = 1, size = x, prob = pstar))) + 
-    unlist(lapply(counts_zeros, 
-                  function(x) rbinom(n = 1, size = x, prob = qstar)))
+  # Computes the true number of bits set to one BEFORE PRR.
+  true_ones <- apply(expanded * true_map$map, 1, sum)
+    
+  ones_in_prr <- 
+    unlist(lapply(true_ones, 
+                  function(x) rbinom(n = 1, size = x, prob = 1 - params$f / 2))) + 
+    unlist(lapply(clients_per_bit - true_ones,  # clients where the bit is 0 
+                  function(x) rbinom(n = 1, size = x, prob =  params$f / 2)))
   
-  counts <- cbind(apply(cohorts, 1, sum),
-        matrix(reported_ones, nrow = params$m, ncol = params$k, byrow = TRUE))
+  # Number of IRRs where each bit is reported (either as 0 or as 1)
+  reports_per_bit <- clients_per_bit * reports_per_client
+  
+  ones_before_irr <- ones_in_prr * reports_per_client
+  
+  ones_after_irr <- 
+    unlist(lapply(ones_before_irr, 
+                  function(x) rbinom(n = 1, size = x, prob = params$q))) + 
+    unlist(lapply(reports_per_bit - ones_before_irr,  
+                  function(x) rbinom(n = 1, size = x, prob = params$p)))
 
+  counts <- cbind(apply(cohorts, 1, sum) * reports_per_client,
+        matrix(ones_after_irr, nrow = params$m, ncol = params$k, byrow = TRUE))
+
+  if(any(is.na(counts)))
+    stop("Failed to generate bit counts. Likely due to integer overflow.")
+  
   counts
+}
+
+ComputePdf <- function(distr, range) {
+  # Outputs discrete probability density function for a given distribution
+
+  # These are the five distributions in gen_sim_input.py
+  if (distr == 'exp') {
+    pdf <- dexp(1:range, rate = 5 / range)
+  } else if (distr == 'gauss') {
+    half <- range / 2
+    left <- -half + 1
+    pdf <- dnorm(left : half, sd = range / 6)  
+  } else if (distr == 'unif') {
+    # e.g. for N = 4, weights are [0.25, 0.25, 0.25, 0.25]
+    pdf <- dunif(1:range, max = range)
+  } else if (distr == 'zipf1') {
+    # Since the distrubition defined over a finite set, we allow the parameter
+    # of the Zipf distribution to be 1.
+    pdf <- sapply(1:range, function(x) 1 / x)
+  } else if (distr == 'zipf1.5') {
+    pdf <- sapply(1:range, function(x) 1 / x^1.5)
+  }  
+  else {
+    stop(sprintf("Invalid distribution '%s'", distr))
+  }
+
+  pdf <- pdf / sum(pdf)  # normalize
+
+  pdf
 }
 
 # Usage:
 #
-# $ ./gen_counts.R foo_params.csv foo_true_map.csv exp 10000 \
-#                  foo_counts.csv
+# $ ./gen_counts.R exp 10000 1 foo_params.csv foo_true_map.csv foo
 #
-# 4 inputs and 1 output.
+# Inputs:
+#   distribution name
+#   number of clients
+#   reports per client
+#   parameters file
+#   map file
+#   prefix for output files
+# Outputs:
+#   foo_counts.csv 
+#   foo_hist.csv
+# 
+# Warning: the number of reports in any cohort must be less than 
+#          .Machine$integer.max
 
 main <- function(argv) {
-  params_file <- argv[[1]]
-  true_map_file <- argv[[2]]
-  dist <- argv[[3]]
-  num_reports <- as.integer(argv[[4]])
-  out_prefix <- argv[[5]]
+  distr <- argv[[1]]
+  num_clients <- as.integer(argv[[2]])
+  reports_per_client <- as.integer(argv[[3]])
+  params_file <- argv[[4]]
+  true_map_file <- argv[[5]]
+  out_prefix <- argv[[6]]
 
   params <- ReadParameterFile(params_file)
 
   true_map <- ReadMapFile(true_map_file)
-  # print(true_map$strs)
 
   num_unique_values <- length(true_map$strs)
 
-  # These are the three distributions in gen_sim_input.py
-  if (dist == 'exp') {
-    # NOTE: gen_sim_input.py hard-codes lambda = N/5 for 'exp'
-    weights <- dexp(1:num_unique_values, rate = 5 / num_unique_values)
-  } else if (dist == 'gauss') {
-    # NOTE: gen_sim_input.py hard-codes stddev = N/6 for 'exp'
-    half <- num_unique_values / 2
-    left <- -half + 1
-    weights <- dnorm(left : half, sd = num_unique_values / 6)  
-  } else if (dist == 'unif') {
-    # e.g. for N = 4, weights are [0.25, 0.25, 0.25, 0.25]
-    weights <- dunif(1:num_unique_values, max = num_unique_values)
-  } else {
-    stop(sprintf("Invalid distribution '%s'", dist))
-  }
-  print("weights")
-  print(weights)
+  pdf <- ComputePdf(distr, num_unique_values)
 
-  if (length(true_map$strs) != length(weights)) {
-    stop(cat("Dimensions of weights do not match:",
-              "m =", length(true_map$strs), "weights col:", length(weights),
-              sep = " "))
-  }
+  print("Distribution")
+  print(pdf)
 
   # Computes the number of clients reporting each string 
   # according to the pre-specified distribution.
-  partition <- RandomPartition(num_reports, weights)
+  partition <- RandomPartition(num_clients, pdf)
   print('PARTITION')
   print(partition)
 
   # Histogram
   true_hist <- data.frame(string = true_map$strs, count = partition)
 
-  counts <- GenerateCounts(params, true_map, partition)
+  counts <- GenerateCounts(params, true_map, partition, reports_per_client)
 
   # Now create a CSV file
 

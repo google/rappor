@@ -5,22 +5,31 @@
 # Usage:
 #   ./regtest.sh <function name>
 
-# Examples:
-#
-# $ export NUM_PROCS=20  # 12 by default
-# $ ./regtest.sh run-all  # run all reg tests with 20 parallel processes
-#
 # At the end, it will print an HTML summary.
-
-# To run a subset of tests or debug a specific test case, use the 'run-seq'
-# function:
+# 
+# Three main functions are 
+#    run [[<pattern> [<num> [<fast>]] - run tests matching <pattern> in
+#                                       parallel, each <num> times. The fast 
+#                                       mode (T/F) shortcuts generation of 
+#                                       reports.
+#    run-seq [<pattern> [<num> [<fast>]] - ditto, except that tests are run
+#                                       sequentially
+#    run-all [<num>]              - run all tests, in parallel, each <num> times
 #
-# $ ./regtest.sh run-seq demo-exp  # Sequential run, matches 1 case
-# $ ./regtest.sh run-seq demo-     # Sequential run, matches multiple cases
+# Examples:
+# $ ./regtest.sh run-seq unif-small-typical  # Sequential run, matches 1 case
+# $ ./regtest.sh run-seq unif-small- 3 F  # Sequential, each test is run three
+#                                           times, using slow generation
+# $ ./regtest.sh run unif-  # Parallel run, matches multiple cases
+# $ ./regtest.sh run unif- 5 # Parallel run, matches multiple cases, each test 
+#                              is run 5 times
+# $ ./regtest.sh run-all     # Run all tests once
 #
-# The first argument to run-seq is a regex in 'grep -E' format.  (Detail: Don't
+# The <pattern> argument is a regex in 'grep -E' format. (Detail: Don't
 # use $ in the pattern, since it matches the whole spec line and not just the
-# test case name.)
+# test case name.) The number of processors used in a parallel run is one less
+# than the number of CPUs on the machine.
+
 
 # Future speedups:
 # - Reuse the same input -- come up with naming scheme based on params
@@ -39,11 +48,6 @@ readonly REGTEST_DIR=_tmp/regtest
 
 # All the Python tools need this
 export PYTHONPATH=$CLIENT_DIR
-
-readonly NUM_SPEC_COLS=13
-
-# TODO: Get num cpus
-readonly NUM_PROCS=${NUM_PROCS:-12}
 
 print-true-inputs() {
   local num_unique_values=$1
@@ -85,11 +89,10 @@ print-candidates() {
   more-candidates $last_true $num_additional
 }
 
-# Run a single test case, specified by a line of the test spec.
-# This is a helper function for 'run-all'.
-
-_run-one-case() {
-  local test_case_id=$1
+# Generate a single test case, specified by a line of the test spec.
+# This is a helper function for _run_tests().
+_setup-one-case() {
+  local test_case=$1
 
   # input params
   local dist=$2
@@ -102,58 +105,83 @@ _run-one-case() {
   local num_hashes=$7
   local num_cohorts=$8
   local p=$9
-  local q=${10}
-  local f=${11}  # need curly braces to get 10th arg
+  local q=${10}  # need curly braces to get the 10th arg
+  local f=${11}
 
   # map params
   local num_additional=${12}
   local to_remove=${13}
 
-  # NOTE: NUM_SPEC_COLS == 13
+  banner 'Setting up parameters and candidate files for '$test_case
 
-  local case_dir=$REGTEST_DIR/$test_case_id
+  local case_dir=$REGTEST_DIR/$test_case
   mkdir --verbose -p $case_dir
 
-  # Save the "spec" for showing in the summary.
+  # Save the "spec"
   echo "$@" > $case_dir/spec.txt
 
-  local fast_counts=F
-  # local fast_counts=T
+  local params_path=$case_dir/case_params.csv
+
+  echo 'k,h,m,p,q,f' > $params_path
+  echo "$num_bits,$num_hashes,$num_cohorts,$p,$q,$f" >> $params_path
+
+  print-true-inputs $num_unique_values > $case_dir/case_true_inputs.txt
+
+  local true_map_path=$case_dir/case_true_map.csv
+
+  analysis/tools/hash_candidates.py \
+    $params_path \
+    < $case_dir/case_true_inputs.txt \
+    > $true_map_path
+
+  # banner "Constructing candidates"
+
+  print-candidates \
+    $case_dir/case_true_inputs.txt $num_unique_values \
+    $num_additional "$to_remove" \
+    > $case_dir/case_candidates.txt
+
+  # banner "Hashing candidates to get 'map'"
+
+  analysis/tools/hash_candidates.py \
+    $case_dir/case_params.csv \
+    < $case_dir/case_candidates.txt \
+    > $case_dir/case_map.csv
+}
+
+# Run a single test instance, specified by <test_name, instance_num>.
+# This is a helper function for _run_tests().
+_run-one-instance() {
+  local test_case=$1
+  local test_instance=$2
+  local fast_counts=$3
+
+  local case_dir=$REGTEST_DIR/$test_case
+  
+  read -r case_name distr num_unique_values num_clients \
+    values_per_client num_bits num_hashes num_cohorts p q f num_additional \
+    to_remove < $case_dir/spec.txt
+
+  local instance_dir=$REGTEST_DIR/$test_case/$test_instance
+  mkdir --verbose -p $instance_dir
 
   if test $fast_counts = T; then
-    # Print params CSV.  No JSON.
-    local params_path=$case_dir/case_params.csv
-    echo 'k,h,m,p,q,f' > $params_path
-    echo "$num_bits,$num_hashes,$num_cohorts,$p,$q,$f" >> $params_path
-
-    print-true-inputs $num_unique_values > $case_dir/case_true_inputs.txt
-
-    local true_map_path=$case_dir/case_true_map.csv
-    analysis/tools/hash_candidates.py \
-      $params_path \
-      < $case_dir/case_true_inputs.txt \
-      > $true_map_path
-
-    local num_reports=$(expr $num_clients \* $values_per_client)
+    local params_file=$case_dir/case_params.csv
+    local true_map_file=$case_dir/case_true_map.csv
 
     banner "Using gen_counts.R"
-    tests/gen_counts.R $params_path $true_map_path $dist $num_reports \
-                       "$case_dir/case"
-  else
 
+    tests/gen_counts.R $distr $num_clients $values_per_client $params_file \
+                       $true_map_file "$instance_dir/case"
+  else
     banner "Generating input"
 
-    tests/gen_sim_input.py \
-      -d $dist \
-      -c $num_clients \
-      -u $num_unique_values \
-      -v $values_per_client \
-      > $case_dir/case.csv
+    tests/gen_reports.R $distr $num_unique_values $num_clients \
+                        $values_per_client $instance_dir/case.csv
 
     banner "Running RAPPOR client"
 
-    # Writes encoded "out" file, true histogram, true inputs, params CSV and JSON
-    # to $case_dir.
+    # Writes encoded "out" file, true histogram, true inputs to $instance_dir.
     tests/rappor_sim.py \
       --num-bits $num_bits \
       --num-hashes $num_hashes \
@@ -161,54 +189,43 @@ _run-one-case() {
       -p $p \
       -q $q \
       -f $f \
-      -i $case_dir/case.csv \
-      --out-prefix "$case_dir/case"
+      -i $instance_dir/case.csv \
+      --out-prefix "$instance_dir/case"
 
     banner "Summing bits to get 'counts'"
 
     analysis/tools/sum_bits.py \
       $case_dir/case_params.csv \
-      < $case_dir/case_out.csv \
-      > $case_dir/case_counts.csv
+      < $instance_dir/case_out.csv \
+      > $instance_dir/case_counts.csv
   fi
 
-  banner "Constructing candidates"
-
-  # Reuse demo.sh function
-  print-candidates \
-    $case_dir/case_true_inputs.txt $num_unique_values \
-    $num_additional "$to_remove" \
-    > $case_dir/case_candidates.txt
-
-  banner "Hashing candidates to get 'map'"
-
-  analysis/tools/hash_candidates.py \
-    $case_dir/case_params.csv \
-    < $case_dir/case_candidates.txt \
-    > $case_dir/case_map.csv
-
-  local out_dir=$REGTEST_DIR/${test_case_id}_report
+  local out_dir=${instance_dir}_report
   mkdir --verbose -p $out_dir
 
-  # Input prefix, output dir
-  tests/analyze.R -t "Test case: $test_case_id" "$case_dir/case" $out_dir
+  # Currently, the summary file shows and aggregates timing of the inference
+  # engine, which excludes R's loading time and reading of the (possibly 
+  # substantial) map file. Timing below is more inclusive.
+  TIMEFORMAT='Running analyze.R took %R seconds'
+  time {
+    # Input prefix, output dir
+    tests/analyze.R -t "Test case: $test_case (instance $test_instance)" \
+                       "$case_dir/case" "$instance_dir/case" $out_dir
+  }
 }
 
 # Like _run-once-case, but log to a file.
-_run-one-case-logged() {
+_run-one-instance-logged() {
   local test_case_id=$1
+  local test_case_run=$2
 
-  local case_dir=$REGTEST_DIR/$test_case_id
-  mkdir --verbose -p $case_dir
+  local log_dir=$REGTEST_DIR/$test_case_id/${test_case_run}_report
+  mkdir --verbose -p $log_dir
 
-  log "Started '$test_case_id' -- logging to $case_dir/log.txt"
-  _run-one-case "$@" >$case_dir/log.txt 2>&1
-  log "Test case $test_case_id done"
-}
-
-show-help() {
-  tests/gen_sim_input.py || true
-  tests/rappor_sim.py -h || true
+  log "Started '$test_case_id' (instance $test_case_run) -- logging to $log_dir/log.txt"
+  _run-one-instance "$@" >$log_dir/log.txt 2>&1 \
+    && log "Test case $test_case_id (instance $test_case_run) done" \
+    || log "Test case $test_case_id (instance $test_case_run) failed"
 }
 
 make-summary() {
@@ -229,77 +246,106 @@ make-summary() {
   log "URL: file://$PWD/$dir/$filename"
 }
 
-# Helper to parse spec input with xargs
-multi() {
-  xargs -n $NUM_SPEC_COLS --no-run-if-empty --verbose "$@"
-}
-
 test-error() {
   local spec_regex=${1:-}
   log "Some test cases failed"
   if test -n "$spec_regex"; then
     log "(Perhaps none matched pattern '$spec_regex')"
   fi
-  exit 1
+  # don't quit just yet
+  # exit 1 
 }
 
-# Assuming the spec file, write a list of test case names (first column).  This
-# is read by make_summary.py.
-write-test-cases() {
-  cut -d ' ' -f 1 $REGTEST_DIR/spec-list.txt > $REGTEST_DIR/test-cases.txt
+# Assuming the spec file, write a list of test case names (first column) with
+# the instance ids (second column), where instance ids run from 1 to $1.
+# Third column is fast_counts (T/F).
+_setup-test-instances() {
+  local instances=$1
+  local fast_counts=$2
+
+  while read line; do
+    for i in $(seq 1 $instances); do
+      read case_name _ <<< $line  # extract the first token
+      echo $case_name $i $fast_counts
+    done
+  done
 }
 
-# run-all should take regex?
-run-seq() {
+# Args:
+#   regexp: A pattern selecting the subset of tests to run
+#   instances: A number of times each test case is run
+#   parallel: Whether the tests are run in parallel (T/F)
+#   fast_counts: Whether counts are sampled directly (T/F)
+#   
+_run-tests() {
   local spec_regex=$1  # grep -E format on the spec
-  local html_filename=${2:-results.html}  # demo.sh changes it to demo.sh
+  local instances=$2
+  local parallel=$3
+  local fast_counts=$4
 
+  rm -r -f --verbose $REGTEST_DIR
+  
   mkdir --verbose -p $REGTEST_DIR
 
-  local spec_list=$REGTEST_DIR/spec-list.txt
-  tests/regtest_spec.py | grep -E $spec_regex > $spec_list
-
-  write-test-cases
-
-  cat $spec_list \
-    | multi -- $0 _run-one-case || test-error $spec_regex
-
-  log "Done running all test cases"
-
-  make-summary $REGTEST_DIR $html_filename
-}
-
-run-all() {
-  # Limit it to this number of test cases.  By default we run all of them.
-  local max_cases=${1:-1000000}
-  local verbose=${2:-F} 
-
-  mkdir --verbose -p $REGTEST_DIR
-  # Print the spec
-  #
-  # -n3 has to match the number of arguments in the spec.
-
-  #local func=_run-one-case-logged
   local func
-  if test $verbose = T; then
-    func=_run-one-case  # parallel process output mixed on the console
+  local processors=1
+
+  if test $parallel = F; then
+    func=_run-one-instance  # output to the console
   else
-    func=_run-one-case-logged  # one line
+    func=_run-one-instance-logged
+    processors=$(grep -c ^processor /proc/cpuinfo || echo 4)  # POSIX-specific
+    if test $processors -gt 1; then  # leave one CPU for the OS
+      processors=$(expr $processors - 1)
+    fi
+    log "Running $processors parallel processes"
   fi
 
-  log "Using $NUM_PROCS parallel processes"
+  local cases_list=$REGTEST_DIR/test-cases.txt
+  tests/regtest_spec.py | grep -E $spec_regex > $cases_list
 
-  local spec_list=$REGTEST_DIR/spec-list.txt
-  tests/regtest_spec.py > $spec_list
+  # Generate parameters for all test cases.
+  cat $cases_list \
+    | xargs -l -P $processors -- $0 _setup-one-case \
+    || test-error
 
-  write-test-cases
+  log "Done generating parameters for all test cases"
 
-  head -n $max_cases $spec_list \
-    | multi -P $NUM_PROCS -- $0 $func || test-error
+  local instances_list=$REGTEST_DIR/test-instances.txt
+  _setup-test-instances $instances $fast_counts < $cases_list > $instances_list 
 
-  log "Done running all test cases"
+  cat $instances_list \
+    | xargs -l -P $processors -- $0 $func || test-error
+
+  log "Done running all test instances"
 
   make-summary $REGTEST_DIR
+}
+
+# Run tests sequentially
+run-seq() {
+  local spec_regex=${1:-'^r-'}  # grep -E format on the spec
+  local instances=${2:-1}
+  local fast_counts=${3:-T}
+
+  _run-tests $spec_regex $instances F $fast_counts
+}
+
+# Run tests in parallel
+run() {
+  local spec_regex=${1:-'^r-'}  # grep -E format on the spec
+  local instances=${2:-1}
+  local fast_counts=${3:-T}
+  
+  _run-tests $spec_regex $instances T $fast_counts 
+}
+
+# Run tests in parallel
+run-all() {
+  local instances=${1:-1}
+
+  log "Running all tests. Can take a while."
+  _run-tests '^r-' $instances T T
 }
 
 "$@"

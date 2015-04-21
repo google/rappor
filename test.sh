@@ -103,13 +103,17 @@ py-lint() {
 }
 
 r-unit() {
-  # This one wants to be in the root
+  set -o xtrace  # show tests we're running
+
+  # This one needs to be run from the root dir
   tests/analyze_test.R
 
+  tests/gen_counts_test.R
+
   # The way we source requires changing dirs.
-  pushd analysis/test
+  pushd analysis/test >/dev/null
   ./run_tests.R
-  popd
+  popd >/dev/null
 }
 
 doc-lint() {
