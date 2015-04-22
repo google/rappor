@@ -80,7 +80,8 @@ EncodeAll <- function(x, cohorts, map, params, num_cores = 1) {
     stop("Some strings are not in the map: ",
          paste(setdiff(unique(x), colnames(map[[1]]), collapse="_"),"\n"))
   }
-  bfs <- mapply(function(x, y) y[, x], x, map[cohorts], SIMPLIFY = FALSE)
+  bfs <- mapply(function(x, y) y[, x], x, map[cohorts], SIMPLIFY = FALSE,
+                USE.NAMES = FALSE)
   reports <- mclapply(bfs, function(x) {
     noise <- sample(0:1, k, replace = TRUE, prob = c(1 - pstar, pstar))
     ind <- which(x)
