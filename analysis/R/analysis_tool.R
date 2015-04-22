@@ -86,6 +86,9 @@ RunOne <- function(opts) {
   num_reports <- sum(counts[, 1])
   Log("Number of reports: %d", num_reports)
 
+  # Machine-parseable prefix + JSON
+  Log('__INPUT_METRICS__ {"num_reports": %d}', num_reports)
+
   LoadMapFile(opts$map)
   date <- as.character(Sys.Date())
   date_num <- as.numeric(format(Sys.Date(), "%Y%m%d"))
@@ -112,14 +115,11 @@ RunOne <- function(opts) {
   #results_bin_path <- file.path(opts$output_dir, 'results.rda')
   #save(res, names=c('res'), file = results_bin_path)
 
-  metrics <- list(
-      num_reports = num_reports,  # function of the input
-      num_rappor = nrow(res),
-      allocated_mass = sum(res$proportion)
-      )
-
-  metrics_path <- file.path(opts$output_dir, 'metrics.csv')
-  write.csv(metrics, file = metrics_path, row.names = FALSE)
+  # Output metrics as machine-parseable prefix + JSON.
+  num_rappor <- nrow(res)
+  allocated_mass <- sum(res$proportion)
+  Log('__OUTPUT_METRICS__ {"num_rappor": %d, "allocated_mass": %f}',
+      num_rappor, allocated_mass)
 }
 
 # Run multiple models.  There is a CSV experiments config file, and we invoke
