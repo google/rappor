@@ -32,7 +32,7 @@ options(stringsAsFactors = FALSE)
 
 if(!interactive()) {
   option_list <- list(
-    make_option(c("--uval", "-v"), default = "uvals.csv",
+    make_option(c("--uvals", "-v"), default = "uvals.csv",
                 help = "Filename for list of values over which
                 distributions are simulated. The file is a list of
                 comma-separated strings each line of which refers
@@ -118,7 +118,7 @@ SimulateReports <- function(N, uvals, params, unif,
       uval_vec[(len + 1):max_of_samples] <- apply(
         as.matrix((len + 1):max_of_samples),
         1,
-        function(i) paste("str", as.character(i), sep = ""))
+        function(i) sprintf("str%d", i))
     }
     uval_vec
   }
@@ -158,7 +158,7 @@ SimulateReports <- function(N, uvals, params, unif,
 main <- function(opts) {
   ptm <- proc.time()
   
-  uvals <- GetUniqueValsFromFile(opts$uval)
+  uvals <- GetUniqueValsFromFile(opts$uvals)
   params <- ReadParameterFile(opts$params)
   SimulateReports(opts$num, uvals, params,  opts$unif, # inputs
                   opts$map, opts$reports)              # outputs
