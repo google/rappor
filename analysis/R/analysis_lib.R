@@ -56,9 +56,9 @@ AnalyzeRAPPOR <- function(params, counts, map, correction, alpha,
   fit <- Decode(counts, map, params, correction = correction,
                 alpha = alpha, ...)
 
-  if (nrow(fit$fit) > 0) {
-    res <- fit$fit
+  res <- fit$fit
 
+  if (nrow(fit$fit) > 0) {
     res$rank <- 1:nrow(fit$fit)
     res$detected <- fit$summary[2, 2]
     res$sample_size <- fit$summary[3, 2]
@@ -77,9 +77,9 @@ AnalyzeRAPPOR <- function(params, counts, map, correction, alpha,
     res$config <- config_name
     res$date <- date
     res$date_num <- date_num
-  } else {
-    return(NULL)
   }
+  else
+    print("INSUFFICIENT DATA.")
 
   res
 }

@@ -116,7 +116,6 @@ LoadActual <- function(prefix_instance) {
   read.csv(h)
 }
 
-
 CompareRapporVsActual <- function(ctx) {
   # Prepare input data to be plotted
 
@@ -145,7 +144,7 @@ CompareRapporVsActual <- function(ctx) {
 
   r <- data.frame(index = rappor_values,
                   proportion = rappor$proportion,
-                  dist = "rappor")
+                  dist = rep("rappor", length(rappor_values)))
 
   # Extend a and r with the values that they are missing.
   if (length(rappor_only) > 0) {

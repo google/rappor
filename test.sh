@@ -110,6 +110,8 @@ r-unit() {
 
   tests/gen_counts_test.R
 
+  tests/decode_test.R
+
   # The way we source requires changing dirs.
   pushd analysis/test >/dev/null
   ./run_tests.R

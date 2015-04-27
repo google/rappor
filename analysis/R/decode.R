@@ -35,28 +35,49 @@ EstimateBloomCounts <- function(params, obs_counts) {
   #                each bit was set in each cohort.
   #
   # Output:
-  #    ests: a matrix of size m by x with estimated counts for the probability
-  #          of each bit set in the true Bloom filter.
+  #    ests: a matrix of size m by k with estimated counts for the probability
+  #          of each bit set to 1 in the true Bloom filter.
+  #    std: standard deviation of the estimates.
 
   p <- params$p
   q <- params$q
   f <- params$f
+  m <- params$m
+
+  stopifnot(m == nrow(obs_counts), params$k + 1 == ncol(obs_counts))
+
+  p1 <- p + .5 * f * q - .5 * f * p
+  p2 <- (1 - f) * (q - p)
+
+  ests <- apply(obs_counts, 1, function(x) {
+  	N <- x[1]  # sample size for the cohort
+  	v <- x[-1]  # counts for individual bits
+    (v - p1 * N) / p2  # unbiased estimator for individual bits' true counts
+                       # It can be negative or exceed the total.
+  })
+
+  total <- sum(obs_counts[,1])
+
+  variances <- apply(obs_counts, 1, function(x) {
+  	N <- x[1]
+  	v <- x[-1]
+  	t <- total / m  # expectation of the cohort size
+  	p_hats <- v / N  # vector of estimates
+    p_hats <- sapply(p_hats, function(x) min(1, max(0, x)))  # clamp to [0,1]
+  	(p_hats * (1 - p_hats) * N) / p2^2
+  })
 
   # Transform counts from absolute values to fractional, removing bias due to
   #      variability of reporting between cohorts.
-  normalized_counts <- obs_counts / obs_counts[,1]
-
-  # N = x[1] is the sample size for cohort i.
-  ests <- t(apply(normalized_counts, 1, function(x) {
-    (x[-1] - (p + .5 * f * q - .5 * f * p) * x[1]) / ((1 - f) * (q - p))
-  }))
+  ests <- apply(ests, 1, function(x) x / obs_counts[,1])
+  stds <- apply(variances^.5, 1, function(x) x / obs_counts[,1])
 
   # Some estimates may be set to infinity, e.g. if f=1. We want to
   #     account for this possibility, and set the corresponding counts
   #     to 0.
   ests[abs(ests) == Inf] <- 0
 
-  ests
+  list(estimates = ests, stds = stds)
 }
 
 FitLasso <- function(X, Y, intercept = TRUE) {
@@ -91,16 +112,6 @@ FitLasso <- function(X, Y, intercept = TRUE) {
     resid <- Y - predicted[, ncol(predicted)]
     list(fit = mod, coefs = coefs, intercept = intercept, resid = resid)
   }
-}
-
-CustomLM <- function(X, Y) {
-  if (class(X) == "ngCMatrix") {
-    X <- as.data.frame(apply(as.matrix(X), 2, as.numeric))
-  }
-  mod <- lm(Y ~ ., data = X)
-  resid <- Y - predict(mod, X)
-  list(fit = mod, coefs = coef(mod)[-1], intercept = coef(mod)[1],
-       resid = resid)
 }
 
 PerformInference <- function(X, Y, N, mod, params, alpha, correction) {
@@ -212,18 +223,29 @@ Decode <- function(counts, map, params, alpha = 0.05,
   h <- params$h
   m <- params$m
 
+  if(isTRUE(all.equal((1 - f) * (p - q), 0)))  # numerically correct comparison
+    stop("Information is lost. Cannot decode.")
+
   S <- ncol(map)  # total number of candidates
 
   strs <- colnames(map)
   N <- sum(counts[, 1])
 
-  ests <- EstimateBloomCounts(params, counts)
-  Y <- as.vector(t(ests))
+  filter_cohorts <- which(counts[, 1] != 0)  # exclude cohorts with zero reports
+  # stretch cohorts to bits
+  filter_bits <- unlist(lapply(filter_cohorts,
+                               function(x) ((x - 1) * k + 1): (x * k)))
+
+  e <- EstimateBloomCounts(params, counts)  # returns estimates, stds
+
+  e_filtered <- list(estimates = e$estimates[filter_cohorts,],
+                     stds = e$stds[filter_cohorts,])
 
   support_coefs <- 1:S
 
   if (S > k * m * .8) {  # the system is underdetermined
-    mod_lasso <- FitLasso(map, Y, ...)
+    mod_lasso <- FitLasso(map[filter_bits,], as.vector(t(e_filtered$estimates))
+                          ,...)
     lasso <- mod_lasso$fit
 
     # Select non-zero coefficients.
@@ -231,11 +253,12 @@ Decode <- function(counts, map, params, alpha = 0.05,
     cat("LASSO selected ", length(support_coefs), " coefficients in support.\n")
 
     if (length(support_coefs) == 0) {
-      support_coefs <- 1:2  # leave at list two coefficients
+      support_coefs <- 1:2  # leave at least two coefficients
     }
   }
 
-  constrained_coefs <- N * ConstrainedLinModel(map[, support_coefs], Y)
+  constrained_coefs <- N * ConstrainedLinModel(map[filter_bits, support_coefs],
+                                               e_filtered)
 
   # new coefs vector with same names and length as LASSO coefs
   coefs <- rep(0, S)
@@ -248,7 +271,8 @@ Decode <- function(counts, map, params, alpha = 0.05,
     alpha <- alpha / length(strs)
   }
 
-  inf <- PerformInference(map, Y, N, mod, params, alpha, correction)
+  inf <- PerformInference(map, as.vector(t(e$estimates)), N, mod, params, alpha,
+                          correction)
   fit <- inf$fit
   # If this is a basic RAPPOR instance, just use the counts for the estimate
   #     (Check if the map is diagonal to tell if this is basic RAPPOR.)
@@ -286,7 +310,8 @@ Decode <- function(counts, map, params, alpha = 0.05,
                        values = c(k, h, m, p, q, f, N, alpha))
 
   list(fit = fit, summary = res_summary, privacy = privacy, params = params,
-       lasso = NULL, ests = ests, counts = counts[, -1], resid = resid)
+       lasso = NULL, ests = as.vector(t(e$estimates)), counts = counts[, -1],
+       resid = resid)
 }
 
 ComputeCounts <- function(reports, cohorts, params) {

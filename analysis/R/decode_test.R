@@ -216,7 +216,7 @@ TestDecode <- function() {
 
   pdf <- ComputePdf("zipf1.5", values)
   partition1 <- setNames(RandomPartition(10^6, pdf), colnames(map1))
-  RunMultipleTests("Testing Decode (5/5)", TestDecodeHelper, 100,
+  RunMultipleTests("Testing Decode (5/5)", TestDecodeHelper, 1,
                    c(report8x32, noise0), map1, partition1,
                    tolerance_l1 = values * 3,
                    tolerance_linf = 20)
@@ -224,7 +224,7 @@ TestDecode <- function() {
 }
 
 TestAll <- function() {
-#  TestEstimateBloomCounts()
+  TestEstimateBloomCounts()
   TestDecode()
 }
 
