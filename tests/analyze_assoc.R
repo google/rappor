@@ -114,9 +114,26 @@ main <- function(opts) {
                                       ignore_other = TRUE,
                                       params, marginals = NULL,
                                       estimate_var = FALSE)
+  
+  # Hardcoded place to lookup true distribution
+  # TODO(pseudorandom): Make this a flag
+  td <- read.csv(file = "truedist.csv")
+  ed <- joint_dist$fit
+  
+  # L1 distance = 1 - sum(min(td|x, ed|x)) where
+  # td|x / ed|x projects the distribution to the intersection x of the
+  # supports of td and ed
+  rowsi <- intersect(rownames(td), rownames(ed))
+  colsi <- intersect(colnames(td), colnames(ed))
+  print("L1 DISTANCE")
+  print(1 - sum(mapply(min,
+                  unlist(td[rowsi, colsi], use.names = FALSE),
+                  unlist(as.data.frame(ed)[rowsi, colsi], use.names = FALSE)
+                   )))
+  
   # TODO(pseudorandom): Export the results to a file for further analysis
   print("JOINT_DIST$FIT")
-  print(joint_dist$fit)
+  print(signif(ed[order(rowSums(ed)),], 4))
   print("PROC.TIME")
   print(proc.time() - ptm)
 }

@@ -41,12 +41,17 @@ if(!interactive()) {
                 help = "Filename for RAPPOR parameters"),
     make_option(c("--reports", "-r"), default = "reports.csv",
                 help = "Filename for reports"),
+    make_option(c("--true", "-t"), default = "truedist.csv",
+                help = "Filename for the true distribution"),
     make_option(c("--map", "-m"), default = "map",
                 help = "Filename *prefix* for map(s)"),
     make_option(c("--num", "-n"), default = 1e05,
                 help = "Number of reports"),
-    make_option(c("--unif", "-u"), default = FALSE,
-                help = "Run simulation with uniform distribution")
+    make_option(c("--extras", "-e"), default = TRUE,
+                help = "Does 1st map have spurious candidates?"),
+    make_option(c("--distr", "-d"), default = "zipfg",
+                help = "Type of distribution. Choose between 
+                {unif, poisson, poisson2}")
   )
   opts <- parse_args(OptionParser(option_list = option_list))
 }    
@@ -56,6 +61,7 @@ source("../analysis/R/decode.R")
 source("../analysis/R/simulation.R")
 source("../analysis/R/read_input.R")
 source("../analysis/R/association.R")
+source("../tests/gen_counts.R")
 
 # Read unique values of reports from a csv file
 # Inputs: filename. The file is expected to contain two rows of strings
@@ -83,28 +89,66 @@ GetUniqueValsFromFile <- function(filename) {
 # Inputs: N = number of reports
 #         uvals = list containing a list of unique values
 #         params = list with RAPPOR parameters
-#         unif = whether to replace poisson with uniform
+#         distr = the type of distribution to use
+#                 {unif, poisson, poisson2, zipfg}
+#         extras = whether map_1.csv has spurious candidates or not
 #         mapfile = file to write maps into (with .csv suffixes)
 #         reportsfile = file to write reports into (with .csv suffix)
-SimulateReports <- function(N, uvals, params, unif,
+SimulateReports <- function(N, uvals, params, distr, extras, truefile,
                             mapfile, reportsfile) {
   # Compute true distribution
   m <- params$m  
 
-  if (unif) {
+  if (distr == "unif") {
     # Draw uniformly from 1 to 10
     v1_samples <- as.integer(runif(N, 1, 10))
-  } else {
+    
+    # Pr[var2 = N + 1 | var1 = N] = 0.5
+    # Pr[var2 = N     | var1 = N] = 0.5
+    v2_samples <- v1_samples + sample(c(0, 1), N, replace = TRUE)
+
+  } else if(distr == "poisson") {
     # Draw from a Poisson random variable
     v1_samples <- rpois(N, 1) + rep(1, N)
+
+    # Pr[var2 = N + 1 | var1 = N] = 0.5
+    # Pr[var2 = N     | var1 = N] = 0.5
+    v2_samples <- v1_samples + sample(c(0, 1), N, replace = TRUE)
+  } else if (distr == "poisson2") {
+
+    v1_samples <- rpois(N, 1) + rep(1, N)
+    # supp(var2) = {1, 2}
+    # Pr[var2 = 1 | var1 = even] = 0.75
+    # Pr[var2 = 1 | var1 = odd]  = 0.25
+    pr25 <- rbinom(N, 1, 0.25) + 1
+    pr75 <- rbinom(N, 1, 0.75) + 1
+    v2_samples <- rep(1, N)
+    v2_samples[v1_samples %% 2 == 0] <- pr25[v1_samples %% 2 == 0]
+    v2_samples[v1_samples %% 2 == 1] <- pr75[v1_samples %% 2 == 1]
+  } else if (distr == "zipfg") {
+
+    # Zipfian over 25 strings
+    partition <- RandomPartition(N, ComputePdf("zipf1.5", 25))
+    v1_samples <- rep(1:25, partition)  # expand partition
+    # Shuffle values randomly (may take a few sec for > 10^8 inputs)
+    v1_samples <- sample(v1_samples)
+
+    # supp(var2) = {1, 2, 3, 4, 6}
+    # We look at two zipfian distributions over supp(var2)
+    # D1 = zipfian distribution
+    # D2 = zipfian distr over {6, 5, 4, 3, 2, 1}
+    # (i.e., D1 in reverse)
+    # var2 ~ D1 if var1 = even
+    # var2 ~ D2 if var1 = odd
+    d1 <- sample(rep(1:6, RandomPartition(N, ComputePdf("zipf1.5", 6))))
+    d2 <- c(6, 5, 4, 3, 2, 1)[d1]
+    v2_samples <- rep(1, N)
+    v2_samples[v1_samples %% 2 == 0] <- d1[v1_samples %% 2 == 0]
+    v2_samples[v1_samples %% 2 == 1] <- d2[v1_samples %% 2 == 1] 
   }
-  
-  # Pr[var2 = N + 1 | var1 = N] = 0.5
-  # Pr[var2 = N     | var1 = N] = 0.5
-  v2_samples <- v1_samples + sample(c(0, 1), N, replace = TRUE)
-  
+
   tmp_samples <- list(v1_samples, v2_samples)
-  
+
   # Function to pad strings to uval_vec if sample_vec has
   # larger support than the number of strings in uval_vec
   # For e.g., if samples have support {1, 2, 3, 4, ...} and uvals
@@ -122,21 +166,31 @@ SimulateReports <- function(N, uvals, params, unif,
     }
     uval_vec
   }
-  
+
   # Pad and update uvals
   uvals <- lapply(1:2, function(i) PadStrings(tmp_samples[[i]],
                                               uvals[[i]]))
-
   # Replace integers in tmp_samples with actual sample strings
   samples <- lapply(1:2, function(i) uvals[[i]][tmp_samples[[i]]])
 
+  print("TRUE DISTR")
+  td <- table(samples)/sum(table(samples))
+  td <- td[order(rowSums(td), decreasing = TRUE),]
+  print(td)
+  write.table(td, file = truefile, sep = ",", col.names = TRUE,
+              row.names = TRUE, quote = FALSE)
   # Randomly assign cohorts in each dimension
   cohorts <- sample(1:m, N, replace = TRUE)
   
   # Create and write map into mapfile_1.csv and mapfile_2.csv
+  if (extras == TRUE) {
+    # 1000 spurious candidates for mapfile_1.csv
+    len <- length(uvals[[1]]) + 1000
+    uvals[[1]] <- PadStrings(len, uvals[[1]])
+  }
   map <- lapply(uvals, function(u) CreateMap(u, params))
   write.table(map[[1]]$map_pos, file = paste(mapfile, "_1.csv", sep = ""),
-              sep = ",", col.names = FALSE, na = "", quote = FALSE)
+                sep = ",", col.names = FALSE, na = "", quote = FALSE)
   write.table(map[[2]]$map_pos, file = paste(mapfile, "_2.csv", sep = ""),
               sep = ",", col.names = FALSE, na = "", quote = FALSE)
   
@@ -160,8 +214,9 @@ main <- function(opts) {
   
   uvals <- GetUniqueValsFromFile(opts$uvals)
   params <- ReadParameterFile(opts$params)
-  SimulateReports(opts$num, uvals, params,  opts$unif, # inputs
-                  opts$map, opts$reports)              # outputs
+  SimulateReports(opts$num, uvals, params,  opts$distr, # inuts
+                  opts$extras,  opts$true,              # inputs
+                  opts$map, opts$reports)               # outputs
   
   print("PROC.TIME")
   print(proc.time() - ptm)
