@@ -39,6 +39,7 @@ if (!interactive()) {
                 help="Experiment config file"),
     make_option("--map", default="MA", help="Map file"),
     make_option("--counts", default="CO", help="Counts file"),
+    # TODO: Rename this to --params
     make_option("--config", default="", help="Config file"),
     make_option("--output_dir", default="./", help="Output directory"),
 
@@ -79,43 +80,50 @@ AdjustCounts <- function(counts, params) {
 
 RunOne <- function(opts) {
   # Run a single model of all inputs are specified.
-  config <- ReadParameterFile(opts$config)
+  params <- ReadParameterFile(opts$config)
   counts <- ReadCountsFile(opts$counts)
 
   # Count BEFORE adjustment.
   num_reports <- sum(counts[, 1])
   Log("Number of reports: %d", num_reports)
 
-  counts <- AdjustCounts(counts, config)
+  counts <- AdjustCounts(counts, params)
 
   # Machine-parseable prefix + JSON
   Log('__INPUT_METRICS__ {"num_reports": %d}', num_reports)
 
-  LoadMapFile(opts$map)
-  date <- as.character(Sys.Date())
-  date_num <- as.numeric(format(Sys.Date(), "%Y%m%d"))
-  res <- AnalyzeRAPPOR(config, counts, map$map, opts$correction, opts$alpha,
-                       map_name = opts$map, config_name = opts$config,
-                       date = date, date_num = date_num)
+  # NOTE: Restoring the default quote, which for some reason LoadMapFile
+  # overrides.
+  LoadMapFile(opts$map, quote = "\"'")
 
-  if (is.null(res)) {
-    Log("Analysis failed.")
+  val <- ValidateInput(params, counts, map$map)  # NOTE: using global map
+  if (val != "valid") {
+    Log("FATAL: Invalid input: %s", val)
     quit(status=1)
   }
 
-  #name <- paste(GetFN(opts$counts), GetFN(opts$map),
-  #              GetFN(opts$config), sep = "_")
-  # Just use a fixed name for now.  TODO: make this a flag?
-  name <- 'results'
-  results_filename <- paste0(name, ".csv")
-  results_path <- file.path(opts$output_dir, results_filename)
+  #res <- AnalyzeRAPPOR(config, counts, map$map, opts$correction, opts$alpha,
+  #                     map_name = opts$map, config_name = opts$config,
+  #                     date = NA, date_num = NA, output_metrics = FALSE)
 
-  # TODO: Write something simpler?
-  write.csv(res, file = results_path)
+  res <- Decode(counts, map$map, params, correction = opts$correction, alpha =
+                opts$alpha)
 
-  # TODO: Save binary version too, may load faster wit unique var name?
-  #results_bin_path <- file.path(opts$output_dir, 'results.rda')
-  #save(res, names=c('res'), file = results_bin_path)
+  if (nrow(res$fit) == 0) {
+    Log("FATAL: Analysis returned no strings.")
+    quit(status=1)
+  }
+
+  results_path <- file.path(opts$output_dir, 'results.csv')
+  write.csv(res$fit, file = results_path, row.names = FALSE)
+
+  # TODO:
+  # - These are in an 2 column 'parameters' and 'values' format.  Should be
+  # just a plain list?
+  # - Write them to another CSV file
+
+  print(res$summary)
+  print(res$privacy)
 
   # Output metrics as machine-parseable prefix + JSON.
   num_rappor <- nrow(res)
