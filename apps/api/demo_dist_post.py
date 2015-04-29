@@ -7,10 +7,17 @@ import sys
 
 
 def main(argv):
-  dist = argv[1]
+  dist = argv[1]  # NOTE: unused because the demo uses demo1..5 now.
   map_file = argv[2]
-  with open('_tmp/regtest/demo-%s/case_params.json' % dist) as p:
-    with open('_tmp/regtest/demo-%s/case_counts.json' % dist) as c:
+
+  #params_path = '_tmp/regtest/demo-%s/case_params.json' % dist
+  #counts_path = '_tmp/regtest/demo-%s/case_counts.json' % dist
+
+  params_path = '_tmp/regtest/demo1/1/case_params.json'
+  counts_path = '_tmp/regtest/demo1/1/case_counts.json'
+
+  with open(params_path) as p:
+    with open(counts_path) as c:
       params = json.load(p)
       counts = json.load(c)
 

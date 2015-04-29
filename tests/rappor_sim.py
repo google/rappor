@@ -152,6 +152,10 @@ def main(argv):
 
   outfile = prefix + "_out.csv"
   histfile = prefix + "_hist.csv"
+  params_json = prefix + "_params.json"
+
+  with open(params_json, 'w') as f:
+    print >>f, params.to_json()
 
   with open(opts.infile) as f:
     csv_in = csv.reader(f)
