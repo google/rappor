@@ -87,10 +87,10 @@ RunOne <- function(opts) {
   num_reports <- sum(counts[, 1])
   Log("Number of reports: %d", num_reports)
 
-  counts <- AdjustCounts(counts, params)
-
   # Machine-parseable prefix + JSON
   Log('__INPUT_METRICS__ {"num_reports": %d}', num_reports)
+
+  counts <- AdjustCounts(counts, params)
 
   # NOTE: Restoring the default quote, which for some reason LoadMapFile
   # overrides.
@@ -115,15 +115,21 @@ RunOne <- function(opts) {
   }
 
   results_path <- file.path(opts$output_dir, 'results.csv')
-  write.csv(res$fit, file = results_path, row.names = FALSE)
+  # TODO: It would be better not to have fit$fit
+  write.csv(res$fit$fit, file = results_path, row.names = FALSE)
 
   # TODO:
   # - These are in an 2 column 'parameters' and 'values' format.  Should be
   # just a plain list?
   # - Write them to another CSV file
 
+  Log("Fit summary:")
   print(res$summary)
+  cat("\n")
+
+  Log("Privacy summary:")
   print(res$privacy)
+  cat("\n")
 
   # Output metrics as machine-parseable prefix + JSON.
   num_rappor <- nrow(res)
