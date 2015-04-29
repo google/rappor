@@ -17,6 +17,7 @@
 # This is some messy code to test out alternative regression using pcls().
 
 library(limSolve)
+library(Matrix)
 
 # The next two functions create a matrix (G) and a vector (H) encoding
 # linear inequality constraints that a solution vector (x) must satisfy:
@@ -32,10 +33,11 @@ MakeG <- function(n, X) {
 }
 
 MakeH <- function(n, Y, stds) {
+  # set the floor at 0.01 to avoid degenerate cases
   YY <- apply(Y + 3 * stds,  # in each bin don't overshoot by more than 3 stds
               1:2,
               function(x) min(1, max(0.01, x)))  # clamp to [0.01,1]
-              # set the floor at 0.01 to avoid degenerate cases
+
   c(rep(0, n),  # non-negativity condition
     -1,         # coefficients sum up to no more than 1
     -as.vector(t(YY))) # t is important!
@@ -56,8 +58,14 @@ MakeLseiModel <- function(X, Y, stds) {
 #   G[n+m+1,n:(n+m)] <- -0.1
 #  A = cbind2(X, slack)
 
-  list(A = X,
-       B = as.vector(t(Y)),  # transform to vector in the row-first order
+  w <- as.vector(t(1 / stds))
+  w_median <- median(w[!is.infinite(w)])
+  w[w > w_median] <- w_median * 2
+  w <- w / mean(w)
+
+  list(# coerce sparse Boolean matrix X to sparse numeric matrix
+       A = Diagonal(x = w) %*% (X + 0),
+       B = as.vector(t(Y)) * w,  # transform to vector in the row-first order
        G = MakeG(n, X),
        H = MakeH(n, Y, stds),
        type = 2)  # Since there are no equality constraints, lsei defaults to

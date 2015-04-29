@@ -38,6 +38,11 @@ ValidateInput <- function(params, counts, map) {
                  "k =", params$k, "counts cols: ", ncol(counts) - 1,
                  collapse = " ")
   }
+
+  # numerically correct comparison
+  if(isTRUE(all.equal((1 - params$f) * (params$p - params$q), 0)))
+    stop("Information is lost. Cannot decode.")
+
   val
 }
 

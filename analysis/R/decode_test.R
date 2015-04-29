@@ -127,7 +127,7 @@ TestEstimateBloomCounts <- function() {
   colnames(map1) <- sprintf("v%d", 1:values)
 
   pdf <- ComputePdf("zipf1", values)
-  partition1 <- RandomPartition(10^6, pdf)
+  partition1 <- RandomPartition(10^9, pdf)
 
   TestEstimatesAndStds(repetitions = 100, "Testing estimates and stds (3/3)",
                        c(report8x32, noise1), map1, partition1, NULL)
@@ -172,10 +172,10 @@ TestDecode <- function() {
   # Even in the absence of noise, the inferred counts won't necessarily
   # match the ground truth. Must be close enough though.
 
-  RunMultipleTests("Testing Decode (1/5)", TestDecodeHelper, 100,
-                   c(report4x2, noise0), map0, partition0,
-                   tolerance_l1 = 5,
-                   tolerance_linf = 3)
+#  RunMultipleTests("Testing Decode (1/5)", TestDecodeHelper, 100,
+#                   c(report4x2, noise0), map0, partition0,
+#                   tolerance_l1 = 5,
+#                   tolerance_linf = 3)
 
   noise1 <- list(p = .4, q = .6, f = .5)  # substantial noise
   RunMultipleTests("Testing Decode (2/5)", TestDecodeHelper, 100,
@@ -210,14 +210,14 @@ TestDecode <- function() {
 
   report8x32 <- list(k = 8, m = 32, h = 2)  # 32 cohorts, 8 bits each
 
-  map1 <- matrix(rbinom(32 * 8 * values, 1, .25), nrow = 32 * 8, ncol = values)
+  map2 <- matrix(rbinom(32 * 8 * values, 1, .25), nrow = 32 * 8, ncol = values)
 
-  colnames(map1) <- sprintf("v%d", 1:values)
+  colnames(map2) <- sprintf("v%d", 1:values)
 
   pdf <- ComputePdf("zipf1.5", values)
-  partition1 <- setNames(RandomPartition(10^6, pdf), colnames(map1))
+  partition2 <- setNames(RandomPartition(10^6, pdf), colnames(map2))
   RunMultipleTests("Testing Decode (5/5)", TestDecodeHelper, 1,
-                   c(report8x32, noise0), map1, partition1,
+                   c(report8x32, noise0), map2, partition2,
                    tolerance_l1 = values * 3,
                    tolerance_linf = 20)
 
