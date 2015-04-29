@@ -114,9 +114,10 @@ RunOne <- function(opts) {
     quit(status=1)
   }
 
+  fit <- res$fit
+
   results_path <- file.path(opts$output_dir, 'results.csv')
-  # TODO: It would be better not to have fit$fit
-  write.csv(res$fit$fit, file = results_path, row.names = FALSE)
+  write.csv(fit, file = results_path, row.names = FALSE)
 
   # TODO:
   # - These are in an 2 column 'parameters' and 'values' format.  Should be
@@ -132,10 +133,12 @@ RunOne <- function(opts) {
   cat("\n")
 
   # Output metrics as machine-parseable prefix + JSON.
-  num_rappor <- nrow(res)
-  allocated_mass <- sum(res$proportion)
+  num_rappor <- nrow(fit)
+  allocated_mass <- sum(fit$proportion)
   Log('__OUTPUT_METRICS__ {"num_rappor": %d, "allocated_mass": %f}',
       num_rappor, allocated_mass)
+
+  Log('DONE')
 }
 
 # Run multiple models.  There is a CSV experiments config file, and we invoke
