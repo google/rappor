@@ -65,15 +65,17 @@ EstimateBloomCounts <- function(params, obs_counts) {
   variances <- apply(obs_counts, 1, function(x) {
   	N <- x[1]
   	v <- x[-1]
-  	p_hats <-  (v - p01 * N) / (N * p2)  # expectation of a true 1
-    p_hats <- pmax(0, pmin(1, p_hats))  # clamp to [0,1]
+  	p_hats <- (v - p01 * N) / (N * p2)  # expectation of a true 1
+  	p_hats <- pmax(0, pmin(1, p_hats))  # clamp to [0,1]
+    r <- p_hats * p11 + (1 - p_hats) * p01  # expectation of a reported 1
+    N * r * (1 - r) / p2^2  # variance of the binomial
 
     # using the formula for the random sum of random variables:
-    var11 <- p_hats * N * p11 * (1 - p11) + p11^2 * p_hats * (1 - p_hats) * N
-  	var01 <- (1 - p_hats) * N * p01 * (1 - p01) +
-             p01^2 * (1 - p_hats) * p_hats * N
+#    var11 <- p_hats * N * p11 * (1 - p11) + p11^2 * p_hats * (1 - p_hats) * N
+#  	var01 <- (1 - p_hats) * N * p01 * (1 - p01) +
+#             p01^2 * (1 - p_hats) * p_hats * N
 
-  	(var11 + var01) / p2^2
+#  	(var11 + var01) / p2^2
   })
 
   # Transform counts from absolute values to fractional, removing bias due to

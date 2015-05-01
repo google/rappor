@@ -64,6 +64,7 @@ TestEstimatesAndStdsHelper <- function(params, map, partition) {
 
   results$estimates <<- abind(results$estimates, e$estimates, along = 3)
   results$stds <<- abind(results$stds, e$stds, along = 3)
+  results$counts <<- abind(results$counts, counts, along = 3)
 }
 
 TestEstimatesAndStds <- function(repetitions, title,
@@ -72,7 +73,7 @@ TestEstimatesAndStds <- function(repetitions, title,
 
   total <- sum(partition)
 
-  results <<- c(estimates = list(), stds = list())
+  results <<- c(estimates = list(), stds = list(), counts = list())
 
   RunMultipleTests(title, TestEstimatesAndStdsHelper, repetitions,
                    params, map, partition)
@@ -103,7 +104,7 @@ TestEstimateBloomCounts <- function() {
 
   colnames(map0) <- c('v1', 'v2', 'v3')
 
-  partition0 <- c(3, 2, 1) * 1000
+  partition0 <- c(3, 2, 1) * 100
   names(partition0) <- colnames(map0)
 
   true_distr <- matrix(c(1/2, 1/3, 1/6, 1, 1/6, 0, 0, 0), 2, 4, byrow = TRUE)
@@ -166,7 +167,7 @@ TestDecode <- function() {
   colnames(map0) <- c('v1', 'v2', 'v3')
 
   # toy example
-  partition0 <- setNames(c(3, 2, 1) * 10,  colnames(map0))
+  distribution0 <- setNames(c(.5, .3, 1/6),  colnames(map0))
 
   noise0 <- list(p = 0, q = 1, f = 0)  # no noise whatsoever
   # Even in the absence of noise, the inferred counts won't necessarily
