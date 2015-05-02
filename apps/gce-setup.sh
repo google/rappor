@@ -12,17 +12,24 @@ set -o errexit
 # Install R.  We get R 3.0.2 on Trusty.
 native-packages() {
   sudo apt-get update
-  sudo apt-get install r-base
+  # Need build-essential for gcc compilers, invoked while installing R packages.
+  sudo apt-get install build-essential r-base
 }
 
 r-packages() {
   # Install as root so you can write to /usr/local/lib/R.
   sudo R -e \
-    'install.packages(c("shiny", "ggplot2", "glmnet", "optparse"), repos="http://cran.rstudio.com/")'
+    'install.packages(c("ggplot2", "glmnet", "optparse", "RUnit"), repos="http://cran.rstudio.com/")'
+}
+
+# Keep Shiny separate, since it seems to install a lot of dependencies.
+shiny() {
+  sudo R -e \
+    'install.packages(c("shiny"), repos="http://cran.rstudio.com/")'
 }
 
 # After running one of the run_app.sh scripts, see if the app returns a page.
-smoke-test() {
+shiny-smoke-test() {
   curl http://localhost:6789/
 }
 
