@@ -87,9 +87,6 @@ RunOne <- function(opts) {
   num_reports <- sum(counts[, 1])
   Log("Number of reports: %d", num_reports)
 
-  # Machine-parseable prefix + JSON
-  Log('__INPUT_METRICS__ {"num_reports": %d}', num_reports)
-
   counts <- AdjustCounts(counts, params)
 
   # NOTE: Restoring the default quote, which for some reason LoadMapFile
