@@ -19,18 +19,19 @@ source('analysis/R/read_input.R')
 RandomPartition <- function(total, weights) {
   # Outputs a random partition according to a specified distribution
   # Args:
-  #   total - number of balls
-  #   weights - vector encoding the probability that a ball lands into a bin
+  #   total - number of samples
+  #   weights - weights that are proportional to the probability density
+  #              function of the target distribution
   # Returns:
-  #   an integer vector summing up to total
+  #   a histogram sampled according to the pdf
   # Example:
   #   > RandomPartition(100, c(3, 2, 1, 0, 1))
   #   [1] 47 24 15  0 14
   if (any(weights < 0))
-    stop("Weights cannot be negative")
+    stop("Probabilities cannot be negative")
 
   if (sum(weights) == 0)
-    stop("Weights cannot sum up to 0")
+    stop("Probabilities cannot sum up to 0")
 
   bins <- length(weights)
   result <- rep(0, bins)
@@ -58,6 +59,8 @@ RandomPartition <- function(total, weights) {
       total <- total - rnd_draw
       w <- w - weights[i]
   }
+
+  names(result) <- names(weights)
 
   return(result)
 }

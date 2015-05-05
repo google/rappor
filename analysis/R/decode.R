@@ -69,13 +69,6 @@ EstimateBloomCounts <- function(params, obs_counts) {
   	p_hats <- pmax(0, pmin(1, p_hats))  # clamp to [0,1]
     r <- p_hats * p11 + (1 - p_hats) * p01  # expectation of a reported 1
     N * r * (1 - r) / p2^2  # variance of the binomial
-
-    # using the formula for the random sum of random variables:
-#    var11 <- p_hats * N * p11 * (1 - p11) + p11^2 * p_hats * (1 - p_hats) * N
-#  	var01 <- (1 - p_hats) * N * p01 * (1 - p01) +
-#             p01^2 * (1 - p_hats) * p_hats * N
-
-#  	(var11 + var01) / p2^2
   })
 
   # Transform counts from absolute values to fractional, removing bias due to
@@ -108,11 +101,10 @@ FitLasso <- function(X, Y, intercept = TRUE) {
 
   # If fitting fails, return an empty data.frame.
   if (class(mod)[1] == "try-error") {
-    coefs <- rep(0, ncol(X))
-    names(coefs) <- colnames(X)
+    coefs <- setNames(rep(0, ncol(X)), colnames(X))
   } else {
     coefs <- coef(mod)
-    coefs <- coefs[-1, ncol(coefs)]
+    coefs <- coefs[-1, ncol(coefs), drop = FALSE]
   }
   coefs
 }
@@ -135,34 +127,29 @@ PerformInference <- function(X, Y, N, mod, params, alpha, correction) {
 
   betas <- matrix(mod$coefs, ncol = 1)
 
-  # This is what we want
-  # mod_var <- summary(mod$fit)$sigma^2
-  # betas_sd <- rep(sqrt(max(resid_var, mod_var) / (m * h)), length(betas))
-
-  # This is what we have
-  mod_var <- 0
-  betas_sd <- 1
-
-  z_values <- betas / betas_sd
-
-  # 1-sided t-test.
-  p_values <- pnorm(z_values, lower = FALSE)
+#   mod_var <- summary(mod$fit)$sigma^2
+#   betas_sd <- rep(sqrt(max(resid_var, mod_var) / (m * h)), length(betas))
+#
+#   z_values <- betas / betas_sd
+#
+#   # 1-sided t-test.
+#   p_values <- pnorm(z_values, lower = FALSE)
 
   fit <- data.frame(String = colnames(X), Estimate = betas,
-                    SD = betas_sd, z_stat = z_values, pvalue = p_values,
+                    SD = mod$stds, # z_stat = z_values, pvalue = p_values,
                     stringsAsFactors = FALSE)
 
-  if (correction == "FDR") {
-    fit <- fit[order(fit$pvalue, decreasing = FALSE), ]
-    ind <- which(fit$pvalue < (1:nrow(fit)) * alpha / nrow(fit))
-    if (length(ind) > 0) {
-      fit <- fit[1:max(ind), ]
-    } else {
-      fit <- fit[numeric(0), ]
-    }
-  } else {
-    fit <- fit[fit$p < alpha, ]
-  }
+#   if (correction == "FDR") {
+#     fit <- fit[order(fit$pvalue, decreasing = FALSE), ]
+#     ind <- which(fit$pvalue < (1:nrow(fit)) * alpha / nrow(fit))
+#     if (length(ind) > 0) {
+#       fit <- fit[1:max(ind), ]
+#     } else {
+#       fit <- fit[numeric(0), ]
+#     }
+#   } else {
+#     fit <- fit[fit$p < alpha, ]
+#   }
 
   fit <- fit[order(fit$Estimate, decreasing = TRUE), ]
 
@@ -284,10 +271,11 @@ Decode <- function(counts, map, params, alpha = 0.05,
 
   es <- EstimateBloomCounts(params, counts)
 
-  estimates_stds_filtered <- list(estimates = es$estimates[filter_cohorts,],
-                                  stds = es$stds[filter_cohorts,])
+  estimates_stds_filtered <-
+    list(estimates = es$estimates[filter_cohorts, , drop = FALSE],
+         stds = es$stds[filter_cohorts, , drop = FALSE])
 
-  coefs <- vector()
+  coefs_all <- vector()
 
   for(r in 1:5)
   {
@@ -295,21 +283,24 @@ Decode <- function(counts, map, params, alpha = 0.05,
       e <- Resample(estimates_stds_filtered)
     else
       e <- estimates_stds_filtered
-    coefs <- rbind(coefs, FitDistribution(e, map[filter_bits,]))
+
+    coefs_all <- rbind(coefs_all, FitDistribution(e, map[filter_bits,]))
   }
 
-  coefs_ssd <- N * apply(coefs, 2, sd)  # compute sample standard deviations
-  coefs <- N * apply(coefs, 2, median)
+  coefs_ssd <- N * apply(coefs_all, 2, sd)  # compute sample standard deviations
+  coefs_ave <- N * apply(coefs_all, 2, mean)
 
-  coefs[coefs < coefs_ssd] <- 0  # zero out coefficients within ssd from 0
+  # Only select coefficients more than two standard deviations from 0. May
+  # exaggerate empirical SD of the estimates.
+  reported <- which(coefs_ave > 1E-6 + 2 * coefs_ssd)
 
-  mod <- list(coefs = coefs, resid = NULL)  # a stub for now
+  mod <- list(coefs = coefs_ave[reported], stds = coefs_ssd[reported])
 
   if (correction == "Bonferroni") {
     alpha <- alpha / S
   }
 
-  inf <- PerformInference(map[filter_bits,],
+  inf <- PerformInference(map[filter_bits,reported, drop = FALSE],
                           as.vector(t(estimates_stds_filtered$estimates)),
                           N, mod, params, alpha,
                           correction)
@@ -319,12 +310,11 @@ Decode <- function(counts, map, params, alpha = 0.05,
   if (sum(map) == sum(diag(map))) {
     fit$Estimate <- colSums(counts)[-1]
   }
-  resid <- mod$resid / inf$resid_sigma
 
   # Estimates from the model are per instance so must be multipled by h.
   # Standard errors are also adjusted.
   fit$Total_Est <- floor(fit$Estimate)
-  fit$Total_SD <- floor(fit$SD * m)
+  fit$Total_SD <- floor(fit$SD)
   fit$Prop <- fit$Total_Est / N
   fit$LPB <- fit$Prop - 1.96 * fit$Total_SD / N
   fit$UPB <- fit$Prop + 1.96 * fit$Total_SD / N
@@ -351,7 +341,7 @@ Decode <- function(counts, map, params, alpha = 0.05,
 
   list(fit = fit, summary = res_summary, privacy = privacy, params = params,
        lasso = NULL, ests = as.vector(t(estimates_stds_filtered$estimates)),
-       counts = counts[, -1], resid = resid)
+       counts = counts[, -1], resid = NULL)
 }
 
 ComputeCounts <- function(reports, cohorts, params) {
