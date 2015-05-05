@@ -12,10 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# alternative.R
-#
-# This is some messy code to test out alternative regression using pcls().
-
 library(limSolve)
 library(Matrix)
 
@@ -23,9 +19,11 @@ library(Matrix)
 # linear inequality constraints that a solution vector (x) must satisfy:
 #                       G * x >= H
 
-# Currently represent two sets of constraints on the solution vector:
+# Currently represent three sets of constraints on the solution vector:
 #  - all solution coefficients are nonnegative
-#  - all solution coefficients don't sum up to more than 1
+#  - the sum total of all solution coefficients is no more than 1
+#  - in each of the coordinates of the target vector (estimated Bloom filter)
+#    we don't overshoot by more than three standard deviations.
 MakeG <- function(n, X) {
   d <- Diagonal(n)
   last <- rep(-1, n)
@@ -36,7 +34,7 @@ MakeH <- function(n, Y, stds) {
   # set the floor at 0.01 to avoid degenerate cases
   YY <- apply(Y + 3 * stds,  # in each bin don't overshoot by more than 3 stds
               1:2,
-              function(x) min(1, max(0.01, x)))  # clamp to [0.01,1]
+              function(x) min(1, max(0.01, x)))  # clamp the bound to [0.01,1]
 
   c(rep(0, n),  # non-negativity condition
     -1,         # coefficients sum up to no more than 1
@@ -82,4 +80,3 @@ ConstrainedLinModel <- function(X,Y) {
 
   coefs
 }
-

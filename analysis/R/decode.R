@@ -291,7 +291,7 @@ Decode <- function(counts, map, params, alpha = 0.05,
   coefs_ave <- N * apply(coefs_all, 2, mean)
 
   # Only select coefficients more than two standard deviations from 0. May
-  # exaggerate empirical SD of the estimates.
+  # inflate empirical SD of the estimates.
   reported <- which(coefs_ave > 1E-6 + 2 * coefs_ssd)
 
   mod <- list(coefs = coefs_ave[reported], stds = coefs_ssd[reported])
@@ -300,7 +300,7 @@ Decode <- function(counts, map, params, alpha = 0.05,
     alpha <- alpha / S
   }
 
-  inf <- PerformInference(map[filter_bits,reported, drop = FALSE],
+  inf <- PerformInference(map[filter_bits, reported, drop = FALSE],
                           as.vector(t(estimates_stds_filtered$estimates)),
                           N, mod, params, alpha,
                           correction)
