@@ -1,20 +1,36 @@
 #!/bin/bash
 #
-# Setup apps on Ubuntu Trusty on GCE.
+# Setup RAPPOR analysis on Ubuntu Trusty (Google Cloud or otherwise).
+#
+# For the apps/api server, you need 'install-minimal'.  For the regtest, and
+# Shiny apps, we need a few more R packages (ggplot2, data.table, etc.).  They
+# cause versioning problems, so we keep them separate.
 #
 # Usage:
-#   ./gce-setup.sh <function name>
+#   ./setup.sh <function name>
 
 set -o nounset
 set -o pipefail
 set -o errexit
 
-# Install R.  We get R 3.0.2 on Trusty.
 native-packages() {
   sudo apt-get update
-  # Need build-essential for gcc compilers, invoked while installing R packages.
-  # gfortran needed for glmnet.
-  sudo apt-get install build-essential gfortran r-base
+  # - build-essential for gcc compilers, invoked while installing R packages.
+  # - gfortran Fortran compiler needed for glmnet.
+  # - libblas-dev needed for limSolve.
+  #
+  # NOTE: we get R 3.0.2 on Trusty.
+  sudo apt-get install build-essential gfortran libblas-dev r-base
+}
+
+r-packages() {
+  # Install as root so you can write to /usr/local/lib/R.
+  sudo R -e \
+    'install.packages(c("glmnet", "optparse", "RUnit", "limSolve"), repos="http://cran.rstudio.com/")'
+
+  # Leaving out ggplot2 for now.  It has the plyr dependency issue on Trusty.
+  # r-cran-plyr is too old.
+  #'install.packages(c("ggplot2"), repos="http://cran.rstudio.com/")'
 }
 
 # R 3.0.2 on Trusty is out of date with CRAN, so we need this workaround.
@@ -30,21 +46,38 @@ install-old-versions() {
   R CMD INSTALL _tmp/data.table_1.9.2.tar.gz
 }
 
-r-packages() {
-  # Install as root so you can write to /usr/local/lib/R.
-  sudo R -e \
-    'install.packages(c("glmnet", "optparse", "RUnit"), repos="http://cran.rstudio.com/")'
-
-  # Leaving out ggplot2 for now.  It has the plyr dependency issue on Trusty.
-  # r-cran-plyr is too old.
-  #'install.packages(c("ggplot2"), repos="http://cran.rstudio.com/")'
-}
-
 # Keep Shiny separate, since it seems to install a lot of dependencies.
 shiny() {
   sudo R -e \
     'install.packages(c("shiny"), repos="http://cran.rstudio.com/")'
 }
+
+# This can be installed the old version of "reshape2".
+ggplot2() {
+  sudo R -e \
+    'install.packages(c("ggplot2"), repos="http://cran.rstudio.com/")'
+}
+
+#
+# Batch
+#
+
+install-minimal() {
+  native-packages
+  r-packages
+}
+
+# NOTE: hasn't yet been tested on a clean machine.
+install-most() {
+  install-minimal
+  download-old-versions
+  install-old-versions
+  ggplot2
+}
+
+#
+# Shiny Apps / API Server
+#
 
 # After running one of the run_app.sh scripts, see if the app returns a page.
 shiny-smoke-test() {
