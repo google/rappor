@@ -89,7 +89,7 @@ RunOne <- function(opts) {
 
   counts <- AdjustCounts(counts, params)
 
-  # NOTE: Restoring the default quote, which for some reason LoadMapFile
+  # NOTE: We restore the default quote, which for some reason LoadMapFile
   # overrides.
   LoadMapFile(opts$map, quote = "\"'")
 
@@ -98,10 +98,6 @@ RunOne <- function(opts) {
     Log("FATAL: Invalid input: %s", val)
     quit(status=1)
   }
-
-  #res <- AnalyzeRAPPOR(config, counts, map$map, opts$correction, opts$alpha,
-  #                     map_name = opts$map, config_name = opts$config,
-  #                     date = NA, date_num = NA, output_metrics = FALSE)
 
   res <- Decode(counts, map$map, params, correction = opts$correction, alpha =
                 opts$alpha)
@@ -117,9 +113,9 @@ RunOne <- function(opts) {
   write.csv(fit, file = results_path, row.names = FALSE)
 
   # TODO:
-  # - These are in an 2 column 'parameters' and 'values' format.  Should be
-  # just a plain list?
-  # - Write them to another CSV file
+  # - These are in an 2 column 'parameters' and 'values' format.  Should these
+  # just be a plain list?
+  # - Write them to another CSV file or JSON on stdout?
 
   Log("Fit summary:")
   print(res$summary)
