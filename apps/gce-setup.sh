@@ -17,6 +17,19 @@ native-packages() {
   sudo apt-get install build-essential gfortran r-base
 }
 
+# R 3.0.2 on Trusty is out of date with CRAN, so we need this workaround.
+download-old-versions() {
+  mkdir -p _tmp
+  wget --directory _tmp \
+    http://cran.r-project.org/src/contrib/Archive/reshape2/reshape2_1.2.2.tar.gz \
+    http://cran.r-project.org/src/contrib/Archive/data.table/data.table_1.9.2.tar.gz
+}
+
+install-old-versions() {
+  R CMD INSTALL _tmp/reshape2_1.2.2.tar.gz 
+  R CMD INSTALL _tmp/data.table_1.9.2.tar.gz
+}
+
 r-packages() {
   # Install as root so you can write to /usr/local/lib/R.
   sudo R -e \
