@@ -16,13 +16,11 @@
 
 library(optparse)
 
-rappor_root = '../../'  # TODO: Fix this
+source("analysis/R/analysis_lib.R")
+source("analysis/R/read_input.R")
+source("analysis/R/decode.R")
 
-source(file.path(rappor_root, "analysis/R/analysis_lib.R"))
-source(file.path(rappor_root, "analysis/R/read_input.R"))
-source(file.path(rappor_root, "analysis/R/decode.R"))
-
-source(file.path(rappor_root, "analysis/R/alternative.R"))  # newLM
+source("analysis/R/alternative.R")
 
 options(stringsAsFactors = FALSE)
 
