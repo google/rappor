@@ -41,6 +41,17 @@ DISTRIBUTION_PARAMS = (
     ('large', 10000, 100000000, 1),
 )
 
+DISTRIBUTION_PARAMS_ASSOC = (
+    # name, num unique values 1,
+    # num unique values 2, num clients, values per client
+    ('tiny', 100, 2, int(1e03), 1),  # test for insufficient data
+    ('small', 100, 10, int(1e04), 1),
+    ('medium', 1000, 10, int(1e05), 1),
+    ('large', 1000, 10, int(1e06), 1),
+    ('mediumsquared', 1000, 100, int(1e05), 1),
+    ('largesquared', int(1e04), 100, int(1e06), 1),
+)
+
 # 'k, h, m' as in params file.
 BLOOMFILTER_PARAMS = {
     '8x16': (8, 2, 16),  # 16 cohorts, 8 bits each, 2 bits set in each
@@ -101,6 +112,22 @@ def main(argv):
 
   for params in DEMO:
     rows.append(params)
+
+  # Association tests
+  for (distr_params, num_values1, num_values2, num_clients,
+       num_reports_per_client) in DISTRIBUTION_PARAMS_ASSOC:
+    for bloom_params in BLOOMFILTER_PARAMS:
+      for privacy_params in PRIVACY_PARAMS:
+        test_name = 'a-{}-{}-{}'.format(distr_params, bloom_params,
+                                        privacy_params)
+
+        params = (BLOOMFILTER_PARAMS[bloom_name]
+                  + PRIVACY_PARAMS[privacy_params])
+        test_case = (test_name, distr_params, num_values1, num_values2,
+                     num_clients) + params
+        row_str = [str(element) for element in test_case]
+        rows.append(row_str)
+  # End of association tests
 
   for row in rows:
     print ' '.join(row)

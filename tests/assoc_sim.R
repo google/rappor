@@ -32,7 +32,7 @@ options(stringsAsFactors = FALSE)
 
 if(!interactive()) {
   option_list <- list(
-    make_option(c("--uvals", "-v"), default = "uvals.csv",
+    make_option(c("--uvals", "-v"),
                 help = "Filename for list of values over which
                 distributions are simulated. The file is a list of
                 comma-separated strings each line of which refers
@@ -47,6 +47,10 @@ if(!interactive()) {
                 help = "Filename *prefix* for map(s)"),
     make_option(c("--num", "-n"), default = 1e05,
                 help = "Number of reports"),
+    make_option(c("--var1_num", "-z"), default = 25,
+                help = "Number of values for var1"),
+    make_option(c("--var2_num", "-y"), default = 5,
+                help = "Number of values for var2"),
     make_option(c("--extras", "-e"), default = TRUE,
                 help = "Does 1st map have spurious candidates?"),
     make_option(c("--distr", "-d"), default = "zipfg",
@@ -56,12 +60,12 @@ if(!interactive()) {
   opts <- parse_args(OptionParser(option_list = option_list))
 }    
 
-source("../analysis/R/encode.R")
-source("../analysis/R/decode.R")
-source("../analysis/R/simulation.R")
-source("../analysis/R/read_input.R")
-source("../analysis/R/association.R")
-source("../tests/gen_counts.R")
+source("analysis/R/encode.R")
+source("analysis/R/decode.R")
+source("analysis/R/simulation.R")
+source("analysis/R/read_input.R")
+source("analysis/R/association.R")
+source("tests/gen_counts.R")
 
 # Read unique values of reports from a csv file
 # Inputs: filename. The file is expected to contain two rows of strings
@@ -92,9 +96,14 @@ GetUniqueValsFromFile <- function(filename) {
 #         distr = the type of distribution to use
 #                 {unif, poisson, poisson2, zipfg}
 #         extras = whether map_1.csv has spurious candidates or not
+#         truefile = name of the file with true distribution
+#         var1_num = number of var1 candidates
+#         var2_num = number of var2 candidates
+#         *** CURRENTLY ONLY USEFUL IF DISTR = ZIPFG ***
 #         mapfile = file to write maps into (with .csv suffixes)
 #         reportsfile = file to write reports into (with .csv suffix)
 SimulateReports <- function(N, uvals, params, distr, extras, truefile,
+                            var1_num, var2_num,
                             mapfile, reportsfile) {
   # Compute true distribution
   m <- params$m  
@@ -127,21 +136,22 @@ SimulateReports <- function(N, uvals, params, distr, extras, truefile,
     v2_samples[v1_samples %% 2 == 1] <- pr75[v1_samples %% 2 == 1]
   } else if (distr == "zipfg") {
 
-    # Zipfian over 25 strings
-    partition <- RandomPartition(N, ComputePdf("zipf1.5", 25))
-    v1_samples <- rep(1:25, partition)  # expand partition
+    # Zipfian over var1_num strings
+    partition <- RandomPartition(N, ComputePdf("zipf1.5", var1_num))
+    v1_samples <- rep(1:var1_num, partition)  # expand partition
     # Shuffle values randomly (may take a few sec for > 10^8 inputs)
     v1_samples <- sample(v1_samples)
 
-    # supp(var2) = {1, 2, 3, 4, 6}
+    # supp(var2) = {1, 2, 3, ..., var2_num}
     # We look at two zipfian distributions over supp(var2)
     # D1 = zipfian distribution
-    # D2 = zipfian distr over {6, 5, 4, 3, 2, 1}
+    # D2 = zipfian distr over {var2_num, ..., 4, 3, 2, 1}
     # (i.e., D1 in reverse)
     # var2 ~ D1 if var1 = even
     # var2 ~ D2 if var1 = odd
-    d1 <- sample(rep(1:6, RandomPartition(N, ComputePdf("zipf1.5", 6))))
-    d2 <- c(6, 5, 4, 3, 2, 1)[d1]
+    d1 <- sample(rep(1:var2_num, 
+                     RandomPartition(N, ComputePdf("zipf1.5", var2_num))))
+    d2 <- (var2_num:1)[d1]
     v2_samples <- rep(1, N)
     v2_samples[v1_samples %% 2 == 0] <- d1[v1_samples %% 2 == 0]
     v2_samples[v1_samples %% 2 == 1] <- d2[v1_samples %% 2 == 1] 
@@ -212,10 +222,15 @@ SimulateReports <- function(N, uvals, params, distr, extras, truefile,
 main <- function(opts) {
   ptm <- proc.time()
   
-  uvals <- GetUniqueValsFromFile(opts$uvals)
+  if(is.null(opts$uvals)) {
+    uvals = list(var1 = c("str1"), var2 = c("option1"))
+  } else {
+    uvals <- GetUniqueValsFromFile(opts$uvals)
+  }
   params <- ReadParameterFile(opts$params)
   SimulateReports(opts$num, uvals, params,  opts$distr, # inuts
                   opts$extras,  opts$true,              # inputs
+                  opts$var1_num,  opts$var2_num,        # inputs
                   opts$map, opts$reports)               # outputs
   
   print("PROC.TIME")
