@@ -1,28 +1,26 @@
 #!/bin/bash
 #
-# Run end-to-end tests in parallel.
+# Run and end-to-end association test in parallel.
 #
 # Usage:
-#   ./regtest.sh <function name>
+#   ./assoctest.sh <function name>
 
 # At the end, it will print an HTML summary.
 #
 # Three main functions are
-#    run [[<pattern> [<num> [<fast>]] - run tests matching <pattern> in
-#                                       parallel, each <num> times. The fast
-#                                       mode (T/F) shortcuts generation of
-#                                       reports.
-#    run-seq [<pattern> [<num> [<fast>]] - ditto, except that tests are run
-#                                       sequentially
-#    run-all [<num>]              - run all tests, in parallel, each <num> times
+#    run [[<pattern> [<num>]] - run tests matching <pattern> in
+#                               parallel, each <num> times.
+#
+#    ## run-seq currently not supported!
+#    run-seq [<pattern> [<num>]] - ditto, except that tests are run sequentially
+#    ## --
+#
+#    run-all [<num>]             - run all tests, in parallel, each <num> times
 #
 # Examples:
-# $ ./regtest.sh run-seq unif-small-typical  # Sequential run, matches 1 case
-# $ ./regtest.sh run-seq unif-small- 3 F  # Sequential, each test is run three
-#                                           times, using slow generation
-# $ ./regtest.sh run unif-  # Parallel run, matches multiple cases
-# $ ./regtest.sh run unif- 5 # Parallel run, matches multiple cases, each test
-#                              is run 5 times
+# $ ./regtest.sh run-seq tiny-8x16-  # Sequential run, matches 2 cases
+# $ ./regtest.sh run-seq tiny-8x16- 3  # Sequential, each test is run three
+#                                           times
 # $ ./regtest.sh run-all     # Run all tests once
 #
 # The <pattern> argument is a regex in 'grep -E' format. (Detail: Don't
@@ -30,10 +28,6 @@
 # test case name.) The number of processors used in a parallel run is one less
 # than the number of CPUs on the machine.
 
-
-# Future speedups:
-# - Reuse the same input -- come up with naming scheme based on params
-# - Reuse the same maps -- ditto, rappor library can cache it
 
 set -o nounset
 set -o pipefail
@@ -44,58 +38,17 @@ set -o errexit
 readonly THIS_DIR=$(dirname $0)
 readonly REPO_ROOT=$THIS_DIR
 readonly CLIENT_DIR=$REPO_ROOT/client/python
-readonly REGTEST_DIR=_tmp/regtest
 readonly ASSOCTEST_DIR=_tmp/assoctest
 
 # All the Python tools need this
 export PYTHONPATH=$CLIENT_DIR
-
-#print-true-inputs() {
-#  local num_unique_values=$1
-#  seq 1 $num_unique_values | awk '{print "v" $1}'
-#}
-
-# Add some more candidates here.  We hope these are estimated at 0.
-# e.g. if add_start=51, and num_additional is 20, show v51-v70
-#more-candidates() {
-#  local last_true=$1
-#  local num_additional=$2
-#
-#  local begin
-#  local end
-#  begin=$(expr $last_true + 1)
-#  end=$(expr $last_true + $num_additional)
-#
-#  seq $begin $end | awk '{print "v" $1}'
-#}
-
-# Args:
-#   true_inputs: File of true inputs
-#   last_true: last true input, e.g. 50 if we generated "v1" .. "v50".
-#   num_additional: additional candidates to generate (starting at 'last_true')
-#   to_remove: Regex of true values to omit from the candidates list, or the
-#     string 'NONE' if none should be.  (Our values look like 'v1', 'v2', etc. so
-#     there isn't any ambiguity.)
-#print-candidates() {
-#  local true_inputs=$1
-#  local last_true=$2
-#  local num_additional=$3
-#  local to_remove=$4
-#
-#  if test $to_remove = NONE; then
-#    cat $true_inputs  # include all true inputs
-#  else
-#    egrep -v $to_remove $true_inputs  # remove some true inputs
-#  fi
-#  more-candidates $last_true $num_additional
-#}
 
 # Generate a single test case, specified by a line of the test spec.
 # This is a helper function for _run_tests().
 _setup-one-case() {
   local test_case=$1
 
-  # input params
+  # Input parameters
   local dist=$2
   local num_unique_values=$3
   local num_unique_values2=$4
@@ -164,9 +117,6 @@ _run-one-instance() {
       --truefile $instance_dir/truedist.csv \
       --outdir $out_dir \
       --params $case_dir/case_params.csv
-    # Input prefix, output dir
-#    tests/analyze.R -t "Test case: $test_case (instance $test_instance)" \
-#                       "$case_dir/case" "$instance_dir/case" $out_dir
   }
 }
 
@@ -297,8 +247,8 @@ _run-tests() {
 #  local spec_regex=${1:-'^r-'}  # grep -E format on the spec
 #  local instances=${2:-1}
 #  local fast_counts=${3:-T}
-#  
-#  _run-tests $spec_regex $instances T $fast_counts 
+#
+#  _run-tests $spec_regex $instances T $fast_counts
 #}
 
 # Run tests in parallel
@@ -306,6 +256,7 @@ run-all() {
   local instances=${1:-1}
 
   log "Running all tests. Can take a while."
+  # a- for assoc tests
   _run-tests '^a-' $instances T T
 }
 

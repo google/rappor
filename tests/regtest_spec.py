@@ -47,9 +47,9 @@ DISTRIBUTION_PARAMS_ASSOC = (
     ('tiny', 100, 2, int(1e03), 1),  # test for insufficient data
     ('small', 100, 10, int(1e04), 1),
     ('medium', 1000, 10, int(1e05), 1),
-    ('large', 1000, 10, int(1e06), 1),
-    ('mediumsquared', 1000, 100, int(1e05), 1),
-    ('largesquared', int(1e04), 100, int(1e06), 1),
+#    ('large', 1000, 10, int(1e06), 1),
+#    ('mediumsquared', 1000, 100, int(1e05), 1),
+#    ('largesquared', int(1e04), 100, int(1e06), 1),
 )
 
 # 'k, h, m' as in params file.
