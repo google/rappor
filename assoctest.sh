@@ -228,7 +228,6 @@ _run-tests() {
     | xargs -l -P $processors -- $0 $func || test-error
 
   log "Done running all test instances"
-  exit 1
 
   make-summary $ASSOCTEST_DIR
 }

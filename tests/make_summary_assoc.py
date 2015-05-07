@@ -30,16 +30,11 @@ SUMMARY_ROW = """\
   <td></td>
   <td></td>
 
-  <!-- MAP params -->
-  <td></td>
-  <td></td>
-
   <!-- Result metrics -->
   <td></td>
-  <td></td>
+  <td>%(mean_chisqdiff)s</td>
   <td>%(mean_l1d)s</td>
   <td>%(mean_rtime)s</td>
-  <td>%(mean_chisqdiff)s</td>
 </tr>
 </tfoot>
 """
@@ -243,8 +238,8 @@ def FormatSummaryRow(metrics_lists):
 
   summary = {
       'name': 'Means',
-      'mean_l1d': FormatMeanWithSem(means_with_sem['l1d'], percent=True),
-      'mean_chisqdiff': FormatMeanWithSem(means_with_sem['chisqdiff'], percent=True),
+      'mean_l1d': FormatMeanWithSem(means_with_sem['l1d'], percent=False),
+      'mean_chisqdiff': FormatMeanWithSem(means_with_sem['chisqdiff'], percent=False),
       'mean_rtime': FormatMeanWithSem(means_with_sem['rtime']),
   }
   return SUMMARY_ROW % summary
@@ -279,9 +274,9 @@ def main(argv):
   # the test case. These keys reference a list of floats, which can be empty.
   metrics = {
       'l1d': {},  # l1 distance
-      'rtime': {},  # R run time
       'chisqdiff': {}, # abs diff in values for the chisq test between true
                        # distr and estimated distr.
+      'rtime': {},  # R run time
   }
 
   # If there are too many tests, the plots are not included in the results
