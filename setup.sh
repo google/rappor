@@ -26,7 +26,7 @@ native-packages() {
 r-packages() {
   # Install as root so you can write to /usr/local/lib/R.
   sudo R -e \
-    'install.packages(c("glmnet", "optparse", "RUnit", "limSolve"), repos="http://cran.rstudio.com/")'
+    'install.packages(c("glmnet", "optparse", "limSolve", "RUnit", "abind"), repos="http://cran.rstudio.com/")'
 
   # Leaving out ggplot2 for now.  It has the plyr dependency issue on Trusty.
   # r-cran-plyr is too old.
