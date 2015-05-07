@@ -95,8 +95,8 @@ RunOne <- function(opts) {
 
   val <- ValidateInput(params, counts, map$map)  # NOTE: using global map
   if (val != "valid") {
-    Log("FATAL: Invalid input: %s", val)
-    quit(status=1)
+    Log("ERROR: Invalid input: %s", val)
+    quit(status = 1)
   }
 
   res <- Decode(counts, map$map, params, correction = opts$correction, alpha =
@@ -104,7 +104,7 @@ RunOne <- function(opts) {
 
   if (nrow(res$fit) == 0) {
     Log("FATAL: Analysis returned no strings.")
-    quit(status=1)
+    quit(status = 1)
   }
 
   fit <- res$fit
