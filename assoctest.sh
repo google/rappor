@@ -184,23 +184,23 @@ _run-one-instance-logged() {
     || log "Test case $test_case_id (instance $test_case_run) failed"
 }
 
-#make-summary() {
-#  local dir=$1
-#  local filename=${2:-results.html}
-#
-#  tests/make_summary.py $dir > $dir/rows.html
-#
-#  pushd $dir >/dev/null
-#
-#  cat ../../tests/regtest.html \
-#    | sed -e '/TABLE_ROWS/ r rows.html' \
-#    > $filename
-#
-#  popd >/dev/null
-#
-#  log "Wrote $dir/$filename"
-#  log "URL: file://$PWD/$dir/$filename"
-#}
+make-summary() {
+  local dir=$1
+  local filename=${2:-results.html}
+
+  tests/make_summary_assoc.py $dir > $dir/rows.html
+
+  pushd $dir >/dev/null
+
+  cat ../../tests/assoctest.html \
+    | sed -e '/TABLE_ROWS/ r rows.html' \
+    > $filename
+
+  popd >/dev/null
+
+  log "Wrote $dir/$filename"
+  log "URL: file://$PWD/$dir/$filename"
+}
 
 test-error() {
   local spec_regex=${1:-}
