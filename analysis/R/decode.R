@@ -96,7 +96,8 @@ FitLasso <- function(X, Y, intercept = TRUE) {
   #    a vector of size ncol(X) of coefficients.
 
   mod <- try(glmnet(X, Y, standardize = FALSE, intercept = intercept,
-                    pmax = ceiling(length(Y))),
+                    lower.limits = 0,
+                    dfmax = max(500, length(Y) * .8)),
              silent = TRUE)
 
   # If fitting fails, return an empty data.frame.
