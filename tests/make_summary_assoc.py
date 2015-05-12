@@ -282,6 +282,7 @@ def main(argv):
   # If there are too many tests, the plots are not included in the results
   # file. Instead, rows' names are links to the corresponding .png files.
   include_plots = len(test_instances) < 20
+  include_plots = False
 
   for instance in test_instances:
     # A test instance is idenfied by the test name and the test run.

@@ -44,11 +44,12 @@ DISTRIBUTION_PARAMS = (
 DISTRIBUTION_PARAMS_ASSOC = (
     # name, num unique values 1,
     # num unique values 2, num clients, values per client
-    ('tiny', 100, 2, int(1e03), 1),  # test for insufficient data
-    ('small', 100, 10, int(1e04), 1),
+#    ('tiny', 100, 2, int(1e03), 1),  # test for insufficient data
+#    ('small', 100, 10, int(1e04), 1),
     ('medium', 1000, 10, int(1e05), 1),
-#    ('large', 1000, 10, int(1e06), 1),
-#    ('mediumsquared', 1000, 100, int(1e05), 1),
+    ('medium2', 1000, 2, int(1e05), 1),
+#    ('large', 10000, 10, int(1e06), 1),
+#    ('large2', 10000, 2, int(1e06), 1),
 #    ('largesquared', int(1e04), 100, int(1e06), 1),
 )
 
@@ -56,14 +57,17 @@ DISTRIBUTION_PARAMS_ASSOC = (
 BLOOMFILTER_PARAMS = {
     '8x16': (8, 2, 16),  # 16 cohorts, 8 bits each, 2 bits set in each
     '8x32': (8, 2, 32),  # 32 cohorts, 8 bits each, 2 bits set in each
+    '16x32': (16, 2, 32),  # 32 cohorts, 16 bits each, 2 bits set in each
     '8x128': (8, 2, 128),  # 128 cohorts, 8 bits each, 2 bits set in each
-    '128x128': (128, 2, 128),  # 8 cohorts, 128 bits each, 2 bits set in each
+#    '128x128': (128, 2, 128),  # 8 cohorts, 128 bits each, 2 bits set in each
 }
 
 # 'p, q, f' as in params file.
 PRIVACY_PARAMS = {
-    'eps_1_1': (0.39, 0.61, 0.45),  # eps_1 = 1, eps_inf = 5:
-    'eps_1_5': (0.225, 0.775, 0.0),  # eps_1 = 5, no eps_inf
+#    'eps_1_1': (0.39, 0.61, 0.45),  # eps_1 = 1, eps_inf = 5:
+#    'eps_1_5': (0.225, 0.775, 0.0),  # eps_1 = 5, no eps_inf
+    'eps_verysmall': (0.125, 0.875, 0.125),
+    'eps_small': (0.125, 0.875, 0.5),
 }
 
 # For deriving candidates from true inputs.
@@ -92,26 +96,27 @@ def main(argv):
   rows = []
 
   test_case = []
-  for (distr_params, num_values, num_clients,
-       num_reports_per_client) in DISTRIBUTION_PARAMS:
-    for distribution in DISTRIBUTIONS:
-      for (config_name, bloom_name, privacy_params, fr_extra,
-           regex_missing) in TEST_CONFIGS:
-        test_name = 'r-{}-{}-{}'.format(distribution, distr_params,
-                                        config_name)
+  if(False): 
+    for (distr_params, num_values, num_clients,
+         num_reports_per_client) in DISTRIBUTION_PARAMS:
+      for distribution in DISTRIBUTIONS:
+        for (config_name, bloom_name, privacy_params, fr_extra,
+             regex_missing) in TEST_CONFIGS:
+          test_name = 'r-{}-{}-{}'.format(distribution, distr_params,
+                                          config_name)
 
-        params = (BLOOMFILTER_PARAMS[bloom_name]
-                  + PRIVACY_PARAMS[privacy_params]
-                  + tuple([int(num_values * fr_extra)])
-                  + tuple([MAP_REGEX_MISSING[regex_missing]]))
+          params = (BLOOMFILTER_PARAMS[bloom_name]
+                    + PRIVACY_PARAMS[privacy_params]
+                    + tuple([int(num_values * fr_extra)])
+                    + tuple([MAP_REGEX_MISSING[regex_missing]]))
 
-        test_case = (test_name, distribution, num_values, num_clients,
-                     num_reports_per_client) + params
-        row_str = [str(element) for element in test_case]
-        rows.append(row_str)
+          test_case = (test_name, distribution, num_values, num_clients,
+                       num_reports_per_client) + params
+          row_str = [str(element) for element in test_case]
+          rows.append(row_str)
 
-  for params in DEMO:
-    rows.append(params)
+    for params in DEMO:
+      rows.append(params)
 
   # Association tests
   for (distr_params, num_values1, num_values2, num_clients,
@@ -121,7 +126,7 @@ def main(argv):
         test_name = 'a-{}-{}-{}'.format(distr_params, bloom_params,
                                         privacy_params)
 
-        params = (BLOOMFILTER_PARAMS[bloom_name]
+        params = (BLOOMFILTER_PARAMS[bloom_params]
                   + PRIVACY_PARAMS[privacy_params])
         test_case = (test_name, distr_params, num_values1, num_values2,
                      num_clients) + params
