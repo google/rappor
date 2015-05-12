@@ -144,15 +144,15 @@ main <- function(opts) {
   print("PROC.TIME")
   time_taken <- proc.time() - ptm
   print(time_taken)
-  
+
   # Write metrics to metrics.csv
   metrics <- list(td_chisq = td_chisq[1][[1]][[1]],
                   ed_chisq = ed_chisq[1][[1]][[1]],
-                 l1d = l1d, time = time_taken[1])
+                 tv = l1d/2, time = time_taken[2])   # report l1 distance / 2
+                                                     # to be consistent with
+                                                     # histogram analysis
   filename <- file.path(opts$outdir, 'metrics.csv')
   write.csv(metrics, file = filename, row.names = FALSE)
 }
 
 if(!interactive()) {
-  main(opts)
-}
