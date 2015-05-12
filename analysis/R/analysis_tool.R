@@ -16,13 +16,11 @@
 
 library(optparse)
 
-rappor_root = '../../'  # TODO: Fix this
+source("analysis/R/analysis_lib.R")
+source("analysis/R/read_input.R")
+source("analysis/R/decode.R")
 
-source(file.path(rappor_root, "analysis/R/analysis_lib.R"))
-source(file.path(rappor_root, "analysis/R/read_input.R"))
-source(file.path(rappor_root, "analysis/R/decode.R"))
-
-source(file.path(rappor_root, "analysis/R/alternative.R"))  # newLM
+source("analysis/R/alternative.R")
 
 options(stringsAsFactors = FALSE)
 
@@ -39,6 +37,7 @@ if (!interactive()) {
                 help="Experiment config file"),
     make_option("--map", default="MA", help="Map file"),
     make_option("--counts", default="CO", help="Counts file"),
+    # TODO: Rename this to --params
     make_option("--config", default="", help="Config file"),
     make_option("--output_dir", default="./", help="Output directory"),
 
@@ -79,29 +78,58 @@ AdjustCounts <- function(counts, params) {
 
 RunOne <- function(opts) {
   # Run a single model of all inputs are specified.
-  config <- ReadParameterFile(opts$config)
+  params <- ReadParameterFile(opts$config)
   counts <- ReadCountsFile(opts$counts)
-  counts <- AdjustCounts(counts, config)
-  LoadMapFile(opts$map)
-  date <- as.character(Sys.Date())
-  date_num <- as.numeric(format(Sys.Date(), "%Y%m%d"))
-  res <- AnalyzeRAPPOR(config, counts, map$map, opts$correction, opts$alpha,
-                       map_name = opts$map, config_name = opts$config,
-                       date = date, date_num = date_num)
 
-  Log("sum(proportion)")
-  print(sum(res$proportion))
+  # Count BEFORE adjustment.
+  num_reports <- sum(counts[, 1])
+  Log("Number of reports: %d", num_reports)
 
-  Log("sum(estimate)")
-  print(sum(res$estimate))
+  counts <- AdjustCounts(counts, params)
 
-  if (!is.null(res)) {
-    output_filename <- file.path(opts$output_dir,
-                                 paste(GetFN(opts$counts), GetFN(opts$map),
-                                       GetFN(opts$config), sep = "_"))
+  # NOTE: We restore the default quote, which for some reason LoadMapFile
+  # overrides.
+  LoadMapFile(opts$map, quote = "\"'")
 
-    write.csv(res, file = paste0(output_filename, ".csv"))
+  val <- ValidateInput(params, counts, map$map)  # NOTE: using global map
+  if (val != "valid") {
+    Log("ERROR: Invalid input: %s", val)
+    quit(status = 1)
   }
+
+  res <- Decode(counts, map$map, params, correction = opts$correction, alpha =
+                opts$alpha)
+
+  if (nrow(res$fit) == 0) {
+    Log("FATAL: Analysis returned no strings.")
+    quit(status = 1)
+  }
+
+  fit <- res$fit
+
+  results_path <- file.path(opts$output_dir, 'results.csv')
+  write.csv(fit, file = results_path, row.names = FALSE)
+
+  # TODO:
+  # - These are in an 2 column 'parameters' and 'values' format.  Should these
+  # just be a plain list?
+  # - Write them to another CSV file or JSON on stdout?
+
+  Log("Fit summary:")
+  print(res$summary)
+  cat("\n")
+
+  Log("Privacy summary:")
+  print(res$privacy)
+  cat("\n")
+
+  # Output metrics as machine-parseable prefix + JSON.
+  num_rappor <- nrow(fit)
+  allocated_mass <- sum(fit$proportion)
+  Log('__OUTPUT_METRICS__ {"num_rappor": %d, "allocated_mass": %f}',
+      num_rappor, allocated_mass)
+
+  Log('DONE')
 }
 
 # Run multiple models.  There is a CSV experiments config file, and we invoke
