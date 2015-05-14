@@ -84,7 +84,7 @@ AnalyzeRAPPOR <- function(params, counts, map, correction, alpha,
     res$date_num <- date_num
   }
   else
-    print("INSUFFICIENT DATA.")
+    print("INSUFFICIENT DATA FOR MEANINGFUL ANSWER.")
 
   res
 }

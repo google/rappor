@@ -95,9 +95,9 @@ FitLasso <- function(X, Y, intercept = TRUE) {
   # Output:
   #    a vector of size ncol(X) of coefficients.
 
-  mod <- try(glmnet(X, Y, standardize = FALSE, intercept = intercept,
+  mod <- try(cv.glmnet(X, Y, standardize = FALSE, intercept = intercept,
                     lower.limits = 0,
-                    dfmax = max(500, length(Y) * .8)),
+                    pmax = min(500, length(Y) * .8)),
              silent = TRUE)
 
   # If fitting fails, return an empty data.frame.
@@ -105,7 +105,7 @@ FitLasso <- function(X, Y, intercept = TRUE) {
     coefs <- setNames(rep(0, ncol(X)), colnames(X))
   } else {
     coefs <- coef(mod)
-    coefs <- coefs[-1, ncol(coefs), drop = FALSE]
+    coefs <- coefs[-1, ncol(coefs), drop = FALSE]  # coefs[1] is the intercept
   }
   coefs
 }
@@ -230,12 +230,14 @@ FitDistribution <- function(estimates_stds, map) {
     cat("LASSO selected ", length(support_coefs), " coefficients in support.\n")
   }
 
-  constrained_coefs <- ConstrainedLinModel(map[, support_coefs],
-                                           estimates_stds)
-
-  # Set all undefined coefficients to 0.
   coefs <- setNames(rep(0, S), colnames(map))
-  coefs[support_coefs] <- constrained_coefs
+
+  if(length(support_coefs) > 0) {  # LASSO may return an empty list
+    constrained_coefs <- ConstrainedLinModel(map[, support_coefs, drop = FALSE],
+                                             estimates_stds)
+
+    coefs[support_coefs] <- constrained_coefs
+  }
 
   coefs
 }
