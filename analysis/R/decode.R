@@ -95,7 +95,8 @@ FitLasso <- function(X, Y, intercept = TRUE) {
   # Output:
   #    a vector of size ncol(X) of coefficients.
 
-  mod <- try(cv.glmnet(X, Y, standardize = FALSE, intercept = intercept,
+  # TODO(mironov): Test cv.glmnet instead of glmnet
+  mod <- try(glmnet(X, Y, standardize = FALSE, intercept = intercept,
                     lower.limits = 0,
                     pmax = min(500, length(Y) * .8)),
              silent = TRUE)
