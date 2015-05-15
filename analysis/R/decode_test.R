@@ -270,7 +270,7 @@ TestDecode <- function() {
   TestDecodeAveAndStds("Testing Decode (4/5)", TestDecodeHelper, 100,
                    c(report8x32, noise1), map1, distribution1, 10^6,
                    tolerance_l1 = values * 3,
-                   tolerance_linf = 100)
+                    tolerance_linf = 100)
 
   # Testing LASSO: 500 values, 32 cohorts, 8 bits each, 10^6 reports
   values <- 500
@@ -285,9 +285,9 @@ TestDecode <- function() {
   names(distribution2) <- colnames(map2)
 
   TestDecodeAveAndStds("Testing Decode (5/5)", TestDecodeHelper, 1,
-                   c(report8x32, noise0), map2, distribution2, 10^6,
+                   c(report8x32, noise1), map2, distribution2, 10^6,
                    tolerance_l1 = values * 3,
-                   tolerance_linf = 20)
+                   tolerance_linf = 80)
 
 }
 

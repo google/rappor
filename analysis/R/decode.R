@@ -288,7 +288,8 @@ Decode <- function(counts, map, params, alpha = 0.05,
     else
       e <- estimates_stds_filtered
 
-    coefs_all <- rbind(coefs_all, FitDistribution(e, map[filter_bits,]))
+    coefs_all <- rbind(coefs_all,
+                       FitDistribution(e, map[filter_bits, , drop = FALSE]))
   }
 
   coefs_ssd <- N * apply(coefs_all, 2, sd)  # compute sample standard deviations

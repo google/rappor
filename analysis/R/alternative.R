@@ -38,7 +38,8 @@ MakeH <- function(n, Y, stds) {
 
   c(rep(0, n),  # non-negativity condition
     -1,         # coefficients sum up to no more than 1
-    -as.vector(t(YY))) # t is important!
+    -as.vector(t(YY))   # t is important!
+    )
 }
 
 MakeLseiModel <- function(X, Y, stds) {
@@ -58,7 +59,9 @@ MakeLseiModel <- function(X, Y, stds) {
 
   w <- as.vector(t(1 / stds))
   w_median <- median(w[!is.infinite(w)])
-  w[w > w_median] <- w_median * 2
+  if(is.na(w_median))  # all w are infinite
+    w_median <- 1
+  w[w > w_median * 2] <- w_median * 2
   w <- w / mean(w)
 
   list(# coerce sparse Boolean matrix X to sparse numeric matrix
@@ -74,8 +77,6 @@ MakeLseiModel <- function(X, Y, stds) {
 ConstrainedLinModel <- function(X,Y) {
   model <- MakeLseiModel(X, Y$estimates, Y$stds)
   coefs <- do.call(lsei, model)$X
-
-#  coefs <- coefs[1:(dim(X)[2])]  # remove slack variables
   names(coefs) <- colnames(X)
 
   coefs
