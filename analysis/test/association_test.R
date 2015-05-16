@@ -84,8 +84,9 @@ Simulate <- function(N, num_variables, params, variable_opts = NULL,
     truth <- SamplePopulations(N, num_variables, params,
                                variable_opts)
   }
-  #strs <- lapply(truth$variables, function(x) sort(unique(x)))
-  strs <- lapply(truth$variables, function(x) 1:length(unique(x)))
+  strs <- lapply(truth$variables, function(x) sort(seq(max(x))))
+  # strs <- lapply(truth$variables, function(x) sort(unique(x)))
+  # strs <- lapply(truth$variables, function(x) 1:length(unique(x)))
 
   # Construct lists of maps and reports
   if (variable_opts$deterministic) {
@@ -140,9 +141,9 @@ TestComputeDistributionEM <- function() {
                                       ignore_other = TRUE, params,
                                       marginals = NULL,
                                       estimate_var = FALSE)
-  # The recovered distribution should be the delta function.
-  checkEqualsNumeric(joint_dist$fit["1", "1", "1"], 0.5)
-  checkEqualsNumeric(joint_dist$fit["2", "2", "2"], 0.5)
+  # The recovered distribution should be close to the delta function.
+  checkTrue(abs(joint_dist$fit["1", "1", "1"] - 0.5) < 0.01)
+  checkTrue(abs(joint_dist$fit["2", "2", "2"] - 0.5) < 0.01)
 
   # Test 2: Now compute a marginal using EM
   dist <- ComputeDistributionEM(list(sim$reports[[1]]),
@@ -151,7 +152,7 @@ TestComputeDistributionEM <- function() {
                                 ignore_other = TRUE,
                                 params, marginals = NULL,
                                 estimate_var = FALSE)
-  checkEqualsNumeric(dist$fit["1"], 0.5)
+  checkTrue(abs(dist$fit["1"] - 0.5) < 0.01)
 
   # Test 3: Check that the "other" category is correctly computed
   # Build a modified map with no column 2 (i.e. we only know that string
@@ -225,17 +226,17 @@ TestComputeDistributionEM <- function() {
   # Check for correlations (constants chosen heuristically to get good
   # test confidence with small # of samples)
   # Should have mass roughly 1/2e and 1/2e each
-  checkTrue(abs(dist$fit["1", "1"] - dist$fit["1", "2"]) < 0.05)
-  checkTrue(abs(dist$fit["2", "2"] - dist$fit["2", "3"]) < 0.05)
+  checkTrue(abs(dist$fit["1", "1"] - dist$fit["1", "2"]) < 0.1)
+  checkTrue(abs(dist$fit["2", "2"] - dist$fit["2", "3"]) < 0.1)
 
   # Should have mass roughly 1/4e and 1/4e each
-  checkTrue(abs(dist$fit["3", "3"] - dist$fit["3", "4"]) < 0.03)
+  checkTrue(abs(dist$fit["3", "3"] - dist$fit["3", "4"]) < 0.06)
 
   # Check for lack of probability mass
-  checkTrue(dist$fit["1", "3"] < 0.01)
-  checkTrue(dist$fit["1", "4"] < 0.01)
-  checkTrue(dist$fit["2", "1"] < 0.01)
-  checkTrue(dist$fit["2", "4"] < 0.01)
-  checkTrue(dist$fit["3", "1"] < 0.01)
-  checkTrue(dist$fit["3", "2"] < 0.01)
+  checkTrue(dist$fit["1", "3"] < 0.02)
+  checkTrue(dist$fit["1", "4"] < 0.02)
+  checkTrue(dist$fit["2", "1"] < 0.02)
+  checkTrue(dist$fit["2", "4"] < 0.02)
+  checkTrue(dist$fit["3", "1"] < 0.02)
+  checkTrue(dist$fit["3", "2"] < 0.02)
 }
