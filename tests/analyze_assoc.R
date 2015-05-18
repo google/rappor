@@ -71,15 +71,9 @@ source("analysis/R/association.R")
 # TODO(pseudorandom): move this functionality to ReadMapFile
 ProcessMap <- function(map, params) {
   map$rmap <- map$map
-  split_map <- function(i, map_struct) {
-    numbits <- params$k
-    indices <- which(as.matrix(
-      map_struct[((i - 1) * numbits + 1):(i * numbits),]) == TRUE,
-      arr.ind = TRUE)
-    sparseMatrix(indices[, "row"], indices[, "col"],
-                 dims = c(numbits, max(indices[, "col"])))
-  }
-  map$map <- lapply(1:params$m, function(i) split_map(i, map$rmap))
+  map$map <- lapply(1:params$m, function(i)
+                          map$rmap[seq(from = (i - 1) * params$k + 1),
+                                   length.out = params$k),])
   map
 }
 
@@ -156,3 +150,5 @@ main <- function(opts) {
 }
 
 if(!interactive()) {
+  main(opts)
+}
