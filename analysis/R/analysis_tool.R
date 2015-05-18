@@ -135,7 +135,7 @@ RunOne <- function(opts) {
 # Run multiple models.  There is a CSV experiments config file, and we invoke
 # AnalyzeRAPPOR once for each row in it.
 RunMany <- function(opts) {
-  
+
   # If the date is not specified, run yesterday's analyses only.
   if (opts$start_date == "" && opts$end_date == "") {
     start_date <- Sys.Date() - 1

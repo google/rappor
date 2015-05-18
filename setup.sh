@@ -26,36 +26,23 @@ native-packages() {
 r-packages() {
   # Install as root so you can write to /usr/local/lib/R.
   sudo R -e \
-    'install.packages(c("glmnet", "optparse", "RUnit", "limSolve"), repos="http://cran.rstudio.com/")'
-
-  # Leaving out ggplot2 for now.  It has the plyr dependency issue on Trusty.
-  # r-cran-plyr is too old.
-  #'install.packages(c("ggplot2"), repos="http://cran.rstudio.com/")'
+    'install.packages(c("glmnet", "optparse", "limSolve", "RUnit", "abind"), repos="http://cran.rstudio.com/")'
 }
 
 # R 3.0.2 on Trusty is out of date with CRAN, so we need this workaround.
-download-old-versions() {
+install-plyr-with-friends() {
   mkdir -p _tmp
   wget --directory _tmp \
-    http://cran.r-project.org/src/contrib/Archive/reshape2/reshape2_1.2.2.tar.gz \
-    http://cran.r-project.org/src/contrib/Archive/data.table/data.table_1.9.2.tar.gz
-}
-
-install-old-versions() {
-  R CMD INSTALL _tmp/reshape2_1.2.2.tar.gz 
-  R CMD INSTALL _tmp/data.table_1.9.2.tar.gz
+    http://cran.r-project.org/src/contrib/Archive/plyr/plyr_1.8.1.tar.gz
+  sudo R CMD INSTALL _tmp/plyr_1.8.1.tar.gz 
+  sudo R -e \
+    'install.packages(c("reshape2", "ggplot2", "data.table"), repos="http://cran.rstudio.com/")'
 }
 
 # Keep Shiny separate, since it seems to install a lot of dependencies.
 shiny() {
   sudo R -e \
     'install.packages(c("shiny"), repos="http://cran.rstudio.com/")'
-}
-
-# This can be installed the old version of "reshape2".
-ggplot2() {
-  sudo R -e \
-    'install.packages(c("ggplot2"), repos="http://cran.rstudio.com/")'
 }
 
 #
@@ -70,9 +57,7 @@ install-minimal() {
 # NOTE: hasn't yet been tested on a clean machine.
 install-most() {
   install-minimal
-  download-old-versions
-  install-old-versions
-  ggplot2
+  install-plyr-with-friends
 }
 
 #
