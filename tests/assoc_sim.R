@@ -1,13 +1,13 @@
 #!/usr/bin/env Rscript
 #
 # Copyright 2015 Google Inc. All rights reserved.
-# 
+#
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
-# 
+#
 #     http://www.apache.org/licenses/LICENSE-2.0
-# 
+#
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -17,7 +17,7 @@
 # Simulates inputs on which association analysis can be run.
 # Currently assoc_sim.R only supports 2 variables but can
 # be easily extended to support more.
-# 
+#
 # Usage:
 #       $ ./assoc_sim.R -n 1000
 # Inputs: uvals, params, reports, map, num, unif
@@ -54,11 +54,11 @@ if(!interactive()) {
     make_option(c("--extras", "-e"), default = TRUE,
                 help = "Does 1st map have spurious candidates?"),
     make_option(c("--distr", "-d"), default = "zipfg",
-                help = "Type of distribution. Choose between 
+                help = "Type of distribution. Choose between
                 {unif, poisson, poisson2}")
   )
   opts <- parse_args(OptionParser(option_list = option_list))
-}    
+}
 
 source("analysis/R/encode.R")
 source("analysis/R/decode.R")
@@ -106,12 +106,12 @@ SimulateReports <- function(N, uvals, params, distr, extras, truefile,
                             var1_num, var2_num,
                             mapfile, reportsfile) {
   # Compute true distribution
-  m <- params$m  
+  m <- params$m
 
   if (distr == "unif") {
     # Draw uniformly from 1 to 10
     v1_samples <- as.integer(runif(N, 1, 10))
-    
+
     # Pr[var2 = N + 1 | var1 = N] = 0.5
     # Pr[var2 = N     | var1 = N] = 0.5
     v2_samples <- v1_samples + sample(c(0, 1), N, replace = TRUE)
@@ -149,12 +149,12 @@ SimulateReports <- function(N, uvals, params, distr, extras, truefile,
     # (i.e., D1 in reverse)
     # var2 ~ D1 if var1 = even
     # var2 ~ D2 if var1 = odd
-    d1 <- sample(rep(1:var2_num, 
+    d1 <- sample(rep(1:var2_num,
                      RandomPartition(N, ComputePdf("zipf1.5", var2_num))))
     d2 <- (var2_num:1)[d1]
     v2_samples <- rep(1, N)
     v2_samples[v1_samples %% 2 == 0] <- d1[v1_samples %% 2 == 0]
-    v2_samples[v1_samples %% 2 == 1] <- d2[v1_samples %% 2 == 1] 
+    v2_samples[v1_samples %% 2 == 1] <- d2[v1_samples %% 2 == 1]
   }
 
   tmp_samples <- list(v1_samples, v2_samples)
@@ -191,7 +191,7 @@ SimulateReports <- function(N, uvals, params, distr, extras, truefile,
               row.names = TRUE, quote = FALSE)
   # Randomly assign cohorts in each dimension
   cohorts <- sample(1:m, N, replace = TRUE)
-  
+
   # Create and write map into mapfile_1.csv and mapfile_2.csv
   if (extras == TRUE) {
     # 1000 spurious candidates for mapfile_1.csv
@@ -203,7 +203,7 @@ SimulateReports <- function(N, uvals, params, distr, extras, truefile,
                 sep = ",", col.names = FALSE, na = "", quote = FALSE)
   write.table(map[[2]]$map_pos, file = paste(mapfile, "_2.csv", sep = ""),
               sep = ",", col.names = FALSE, na = "", quote = FALSE)
-  
+
   # Write reports into a csv file
   # Format:
   #     cohort, bloom filter var1, bloom filter var2
@@ -211,7 +211,7 @@ SimulateReports <- function(N, uvals, params, distr, extras, truefile,
     EncodeAll(samples[[i]], cohorts, map[[i]]$map, params))
   # Organize cohorts and reports into format
   write_matrix <- cbind(as.matrix(cohorts),
-                        as.matrix(lapply(reports[[1]], 
+                        as.matrix(lapply(reports[[1]],
                             function(x) paste(x, collapse = ""))),
                         as.matrix(lapply(reports[[2]],
                             function(x) paste(x, collapse = ""))))
@@ -221,7 +221,7 @@ SimulateReports <- function(N, uvals, params, distr, extras, truefile,
 
 main <- function(opts) {
   ptm <- proc.time()
-  
+
   if(is.null(opts$uvals)) {
     uvals = list(var1 = c("str1"), var2 = c("option1"))
   } else {
@@ -232,7 +232,7 @@ main <- function(opts) {
                   opts$extras,  opts$true,              # inputs
                   opts$var1_num,  opts$var2_num,        # inputs
                   opts$map, opts$reports)               # outputs
-  
+
   print("PROC.TIME")
   print(proc.time() - ptm)
 }
