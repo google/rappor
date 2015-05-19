@@ -20,7 +20,6 @@ SUMMARY_ROW = """\
   <td></td>
   <td></td>
   <td></td>
-  <td></td>
 
   <!-- RAPPOR params -->
   <td></td>

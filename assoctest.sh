@@ -49,19 +49,17 @@ _setup-one-case() {
   local test_case=$1
 
   # Input parameters
-  local dist=$2
-  local num_unique_values=$3
-  local num_unique_values2=$4
-  local num_clients=$5
-  local values_per_client=$6
+  local num_unique_values=$2
+  local num_unique_values2=$3
+  local num_clients=$4
 
   # RAPPOR params
-  local num_bits=$6
-  local num_hashes=$7
-  local num_cohorts=$8
-  local p=$9
-  local q=${10}  # need curly braces to get the 10th arg
-  local f=${11}
+  local num_bits=$5
+  local num_hashes=$6
+  local num_cohorts=$7
+  local p=$8
+  local q=$9  # need curly braces to get the 10th arg
+  local f=${10}
 
   banner 'Setting up parameters and candidate files for '$test_case
 
@@ -85,7 +83,7 @@ _run-one-instance() {
 
   local case_dir=$ASSOCTEST_DIR/$test_case
 
-  read -r case_name case_descr num_unique_values num_unique_values2 \
+  read -r case_name num_unique_values num_unique_values2 \
     num_clients num_bits num_hashes num_cohorts p q f < $case_dir/spec.txt
 
   local instance_dir=$ASSOCTEST_DIR/$test_case/$test_instance
@@ -99,7 +97,7 @@ _run-one-instance() {
     -t $instance_dir/truedist.csv \
     -m $instance_dir/map \
     -n $num_clients \
-    --var1_num $num_unique_values \
+    --extras $num_unique_values \
     --var2_num $num_unique_values2
 
   local out_dir=${instance_dir}_report

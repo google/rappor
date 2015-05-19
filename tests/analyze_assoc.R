@@ -72,7 +72,7 @@ source("analysis/R/association.R")
 ProcessMap <- function(map, params) {
   map$rmap <- map$map
   map$map <- lapply(1:params$m, function(i)
-                          map$rmap[seq(from = (i - 1) * params$k + 1),
+                          map$rmap[seq(from = ((i - 1) * params$k + 1),
                                    length.out = params$k),])
   map
 }
@@ -110,6 +110,7 @@ main <- function(opts) {
 
   joint_dist <- ComputeDistributionEM(reports, cohorts, map,
                                       ignore_other = TRUE,
+                                      quick = TRUE,
                                       params, marginals = NULL,
                                       estimate_var = FALSE)
 
@@ -142,7 +143,7 @@ main <- function(opts) {
   # Write metrics to metrics.csv
   metrics <- list(td_chisq = td_chisq[1][[1]][[1]],
                   ed_chisq = ed_chisq[1][[1]][[1]],
-                 tv = l1d/2, time = time_taken[2])   # report l1 distance / 2
+                 tv = l1d/2, time = time_taken[1])   # report l1 distance / 2
                                                      # to be consistent with
                                                      # histogram analysis
   filename <- file.path(opts$outdir, 'metrics.csv')

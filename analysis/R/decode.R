@@ -254,7 +254,7 @@ Resample <- function(e) {
   result
 }
 
-Decode <- function(counts, map, params, alpha = 0.05,
+Decode <- function(counts, map, params, quick = FALSE, alpha = 0.05,
                    correction = c("Bonferroni"), ...) {
   k <- params$k
   p <- params$p
@@ -280,26 +280,31 @@ Decode <- function(counts, map, params, alpha = 0.05,
          stds = es$stds[filter_cohorts, , drop = FALSE])
 
   coefs_all <- vector()
-
-  for(r in 1:5)
+  if(quick) {num_reps <- 2} else {num_reps <- 5}
+  for(r in 1:num_reps)
   {
     if(r > 1)
       e <- Resample(estimates_stds_filtered)
     else
       e <- estimates_stds_filtered
-
+    
     coefs_all <- rbind(coefs_all,
-                       FitDistribution(e, map[filter_bits, , drop = FALSE]))
+                       FitDistribution(e, map[filter_bits, , drop = FALSE]))  
   }
-
   coefs_ssd <- N * apply(coefs_all, 2, sd)  # compute sample standard deviations
   coefs_ave <- N * apply(coefs_all, 2, mean)
-
+  
   # Only select coefficients more than two standard deviations from 0. May
   # inflate empirical SD of the estimates.
   reported <- which(coefs_ave > 1E-6 + 2 * coefs_ssd)
-
+  
   mod <- list(coefs = coefs_ave[reported], stds = coefs_ssd[reported])
+
+#   Old code  ... 
+#     coefs_all <- FitDistribution(estimates_stds_filtered,
+#                                         map[filter_bits, , drop = FALSE])
+#     reported <- which(coefs_all > 1E-6)
+#     mod <- list(coefs = coefs_all[reported], stds = rep(0, length(reported)))
 
   if (correction == "Bonferroni") {
     alpha <- alpha / S

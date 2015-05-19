@@ -43,14 +43,14 @@ DISTRIBUTION_PARAMS = (
 
 DISTRIBUTION_PARAMS_ASSOC = {
     # name, num unique values 1,
-    # num unique values 2, num clients, values per client
-    'tiny': (100, 2, int(1e03), 1),   # test for insufficient data
-    'small': (100, 10, int(1e04), 1),
-    'medium': (1000, 10, int(1e05), 1),
-    'medium2': (1000, 2, int(1e05), 1),
-    'large': (10000, 10, int(1e06), 1),
-    'large2': (10000, 2, int(1e06), 1),
-    'largesquared': (int(1e04), 100, int(1e06), 1),
+    # num unique values 2, num clients
+    'tiny': (100, 2, int(1e03)),   # test for insufficient data
+    'small': (100, 10, int(1e04)),
+    'medium': (1000, 10, int(1e05)),
+    'medium2': (1000, 2, int(1e05)),
+    'large': (10000, 10, int(1e06)),
+    'large2': (10000, 2, int(1e06)),
+    'largesquared': (int(1e04), 100, int(1e06)),
 }
 
 # 'k, h, m' as in params file.
@@ -93,9 +93,9 @@ TEST_CONFIGS = [
 # The test config runs a test suite that is the cross product of all the above
 # sets
 ASSOC_TEST_CONFIG = {
-    'distr': ('small', 'medium'),
-    'blooms': ('8x16', '8x32', '16x32'),
-    'privacy': ('eps_verysmall', 'eps_small'),
+    'distr': ('small',),# 'medium'),
+    'blooms': ('8x16',), # '8x32', '16x32'),
+    'privacy': ('eps_verysmall',), # 'eps_small'),
 }
 
 #
@@ -132,6 +132,7 @@ def main(argv):
   for distr in ASSOC_TEST_CONFIG['distr']:
     for blooms in ASSOC_TEST_CONFIG['blooms']:
       for privacy in ASSOC_TEST_CONFIG['privacy']:
+        print distr, blooms, privacy
         test_name = 'a-{}-{}-{}'.format(distr, blooms, privacy)
         params = (BLOOMFILTER_PARAMS[blooms] +
                   PRIVACY_PARAMS[privacy])

@@ -283,7 +283,7 @@ UpdateJointConditional <- function(cond_report_dist, joint_conditional = NULL) {
 
 ComputeDistributionEM <- function(reports, report_cohorts,
                                   maps, ignore_other = FALSE,
-                                  params,
+                                  params, quick = FALSE,
                                   marginals = NULL,
                                   estimate_var = FALSE) {
   # Computes the distribution of num_variables variables, where
@@ -322,7 +322,7 @@ ComputeDistributionEM <- function(reports, report_cohorts,
     variable_counts <- NULL
     if (is.null(marginals)) {
       variable_counts <- ComputeCounts(variable_report, variable_cohort, params)
-      marginal <- Decode(variable_counts, map$rmap, params)$fit
+      marginal <- Decode(variable_counts, map$rmap, params, quick)$fit
       if (nrow(marginal) == 0) {
         return (NULL)
       }

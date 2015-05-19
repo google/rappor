@@ -47,15 +47,15 @@ if(!interactive()) {
                 help = "Filename *prefix* for map(s)"),
     make_option(c("--num", "-n"), default = 1e05,
                 help = "Number of reports"),
-    make_option(c("--var1_num", "-z"), default = 25,
+    make_option(c("--var1_num", "-z"), default = 40,
                 help = "Number of values for var1"),
     make_option(c("--var2_num", "-y"), default = 5,
                 help = "Number of values for var2"),
-    make_option(c("--extras", "-e"), default = TRUE,
-                help = "Does 1st map have spurious candidates?"),
-    make_option(c("--distr", "-d"), default = "zipfg",
+    make_option(c("--extras", "-e"), default = 1000,
+                help = "How many spurious candidates does the 1st map have?"),
+    make_option(c("--distr", "-d"), default = "zipf2",
                 help = "Type of distribution. Choose between
-                {unif, poisson, poisson2}")
+                {unif, poisson, poisson2, zipf2}")
   )
   opts <- parse_args(OptionParser(option_list = option_list))
 }
@@ -99,7 +99,7 @@ GetUniqueValsFromFile <- function(filename) {
 #         truefile = name of the file with true distribution
 #         var1_num = number of var1 candidates
 #         var2_num = number of var2 candidates
-#         *** CURRENTLY ONLY USEFUL IF DISTR = ZIPFG ***
+#         *** FOR ASSOCTEST TEST SUITE, USE ONLY ZIPF2 ***
 #         mapfile = file to write maps into (with .csv suffixes)
 #         reportsfile = file to write reports into (with .csv suffix)
 SimulateReports <- function(N, uvals, params, distr, extras, truefile,
@@ -134,7 +134,7 @@ SimulateReports <- function(N, uvals, params, distr, extras, truefile,
     v2_samples <- rep(1, N)
     v2_samples[v1_samples %% 2 == 0] <- pr25[v1_samples %% 2 == 0]
     v2_samples[v1_samples %% 2 == 1] <- pr75[v1_samples %% 2 == 1]
-  } else if (distr == "zipfg") {
+  } else if (distr == "zipf2") {
 
     # Zipfian over var1_num strings
     partition <- RandomPartition(N, ComputePdf("zipf1.5", var1_num))
@@ -193,9 +193,9 @@ SimulateReports <- function(N, uvals, params, distr, extras, truefile,
   cohorts <- sample(1:m, N, replace = TRUE)
 
   # Create and write map into mapfile_1.csv and mapfile_2.csv
-  if (extras == TRUE) {
-    # 1000 spurious candidates for mapfile_1.csv
-    len <- length(uvals[[1]]) + 1000
+  if (extras > 0) {
+    # spurious candidates for mapfile_1.csv
+    len <- length(uvals[[1]]) + as.numeric(extras)
     uvals[[1]] <- PadStrings(len, uvals[[1]])
   }
   map <- lapply(uvals, function(u) CreateMap(u, params))
