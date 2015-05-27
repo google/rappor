@@ -54,22 +54,23 @@ EstimateBloomCounts <- function(params, obs_counts) {
   p2 <- p11 - p01  # == (1 - f) * (q - p)
 
   ests <- apply(obs_counts, 1, function(x) {
-  	N <- x[1]  # sample size for the cohort
-  	v <- x[-1]  # counts for individual bits
-    (v - p01 * N) / p2  # unbiased estimator for individual bits' true counts
-                        # It can be negative or exceed the total.
-  })
+      N <- x[1]  # sample size for the cohort
+      v <- x[-1]  # counts for individual bits
+      (v - p01 * N) / p2  # unbiased estimator for individual bits'
+                          # true counts. It can be negative or
+                          # exceed the total.
+    })
 
   total <- sum(obs_counts[,1])
 
   variances <- apply(obs_counts, 1, function(x) {
-  	N <- x[1]
-  	v <- x[-1]
-  	p_hats <- (v - p01 * N) / (N * p2)  # expectation of a true 1
-  	p_hats <- pmax(0, pmin(1, p_hats))  # clamp to [0,1]
-    r <- p_hats * p11 + (1 - p_hats) * p01  # expectation of a reported 1
-    N * r * (1 - r) / p2^2  # variance of the binomial
-  })
+      N <- x[1]
+      v <- x[-1]
+      p_hats <- (v - p01 * N) / (N * p2)  # expectation of a true 1
+      p_hats <- pmax(0, pmin(1, p_hats))  # clamp to [0,1]
+      r <- p_hats * p11 + (1 - p_hats) * p01  # expectation of a reported 1
+      N * r * (1 - r) / p2^2  # variance of the binomial
+     })
 
   # Transform counts from absolute values to fractional, removing bias due to
   #      variability of reporting between cohorts.
@@ -97,7 +98,10 @@ FitLasso <- function(X, Y, intercept = TRUE) {
 
   # TODO(mironov): Test cv.glmnet instead of glmnet
   mod <- try(glmnet(X, Y, standardize = FALSE, intercept = intercept,
-                    lower.limits = 0,
+                    lower.limits = 0,  # outputs are non-negative
+                    # Cap the number of non-zero coefficients to 500 or
+                    # 80% of the length of Y, whichever is less. The 500 cap
+                    # is for performance reasons, 80% is to avoid overfitting.
                     pmax = min(500, length(Y) * .8)),
              silent = TRUE)
 
@@ -206,7 +210,7 @@ ComputePrivacyGuarantees <- function(params, alpha, N) {
   privacy
 }
 
-FitDistribution <- function(estimates_stds, map) {
+FitDistribution <- function(estimates_stds, map, quiet = FALSE) {
   # Find a distribution over rows of map that approximates estimates_stds best
   #
   # Input:
@@ -228,7 +232,9 @@ FitDistribution <- function(estimates_stds, map) {
 
     # Select non-zero coefficients.
     support_coefs <- which(lasso > 0)
-    cat("LASSO selected ", length(support_coefs), " coefficients in support.\n")
+
+    if(!quiet)
+      cat("LASSO selected ", length(support_coefs), " non-zero coefficients.\n")
   }
 
   coefs <- setNames(rep(0, S), colnames(map))
@@ -244,18 +250,18 @@ FitDistribution <- function(estimates_stds, map) {
 }
 
 Resample <- function(e) {
-  result <- e
-
-  result$estimates <- matrix(mapply(function(x, y) x + rnorm(1, 0, y),
+  # Simulate resampling of the Bloom filter estimates by adding Gaussian noise
+  # with estimated standard deviation.
+  estimates <- matrix(mapply(function(x, y) x + rnorm(1, 0, y),
                              e$estimates, e$stds),
                              nrow = nrow(e$estimates), ncol = ncol(e$estimates))
-  result$stds <- e$stds * 2^.5
+  stds <- e$stds * 2^.5
 
-  result
+  list(estimates = estimates, stds = stds)
 }
 
 Decode <- function(counts, map, params, alpha = 0.05,
-                   correction = c("Bonferroni"), ...) {
+                   correction = c("Bonferroni"), quiet = FALSE, ...) {
   k <- params$k
   p <- params$p
   q <- params$q
@@ -281,15 +287,17 @@ Decode <- function(counts, map, params, alpha = 0.05,
 
   coefs_all <- vector()
 
-  for(r in 1:5)
-  {
+  # Run the fitting procedure several times (5 seems to be sufficient and not
+  # too many) to estimate standard deviation of the output.
+  for(r in 1:5) {
     if(r > 1)
       e <- Resample(estimates_stds_filtered)
     else
       e <- estimates_stds_filtered
 
     coefs_all <- rbind(coefs_all,
-                       FitDistribution(e, map[filter_bits, , drop = FALSE]))
+                       FitDistribution(e, map[filter_bits, , drop = FALSE],
+                                       quiet))
   }
 
   coefs_ssd <- N * apply(coefs_all, 2, sd)  # compute sample standard deviations

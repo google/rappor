@@ -322,7 +322,7 @@ ComputeDistributionEM <- function(reports, report_cohorts,
     variable_counts <- NULL
     if (is.null(marginals)) {
       variable_counts <- ComputeCounts(variable_report, variable_cohort, params)
-      marginal <- Decode(variable_counts, map$rmap, params)$fit
+      marginal <- Decode(variable_counts, map$rmap, params, quiet = TRUE)$fit
       if (nrow(marginal) == 0) {
         return (NULL)
       }

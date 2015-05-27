@@ -240,8 +240,6 @@ make-summary() {
     | sed -e '/TABLE_ROWS/ r rows.html' \
     > $filename
 
-  rm rows.html
-
   popd >/dev/null
 
   log "Wrote $dir/$filename"
