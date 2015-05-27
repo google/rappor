@@ -232,7 +232,7 @@ make-summary() {
   local dir=$1
   local filename=${2:-results.html}
 
-  tests/make_summary.py $dir > $dir/rows.html
+  tests/make_summary.py $dir $dir/rows.html
 
   pushd $dir >/dev/null
 

@@ -1,11 +1,11 @@
 # Copyright 2014 Google Inc. All rights reserved.
-# 
+#
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
-# 
+#
 #     http://www.apache.org/licenses/LICENSE-2.0
-# 
+#
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -38,6 +38,11 @@ ValidateInput <- function(params, counts, map) {
                  "k =", params$k, "counts cols: ", ncol(counts) - 1,
                  collapse = " ")
   }
+
+  # numerically correct comparison
+  if(isTRUE(all.equal((1 - params$f) * (params$p - params$q), 0)))
+    stop("Information is lost. Cannot decode.")
+
   val
 }
 
@@ -56,9 +61,9 @@ AnalyzeRAPPOR <- function(params, counts, map, correction, alpha,
   fit <- Decode(counts, map, params, correction = correction,
                 alpha = alpha, ...)
 
-  if (nrow(fit$fit) > 0) {
-    res <- fit$fit
+  res <- fit$fit
 
+  if (nrow(fit$fit) > 0) {
     res$rank <- 1:nrow(fit$fit)
     res$detected <- fit$summary[2, 2]
     res$sample_size <- fit$summary[3, 2]
@@ -77,9 +82,9 @@ AnalyzeRAPPOR <- function(params, counts, map, correction, alpha,
     res$config <- config_name
     res$date <- date
     res$date_num <- date_num
-  } else {
-    return(NULL)
   }
+  else
+    print("INSUFFICIENT DATA FOR MEANINGFUL ANSWER.")
 
   res
 }
