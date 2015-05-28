@@ -144,7 +144,7 @@ _setup-one-case() {
   # banner "Hashing candidates to get 'map'"
 
   analysis/tools/hash_candidates.py \
-    $case_dir/case_params.csv \
+    $params_path \
     < $case_dir/case_candidates.txt \
     > $case_dir/case_map.csv
 }
@@ -271,38 +271,51 @@ _setup-test-instances() {
   done
 }
 
+# Print the default number of parallel processes, which is max(#CPUs - 1, 1)
+default-processes() {
+  processors=$(grep -c ^processor /proc/cpuinfo || echo 4)  # Linux-specific
+  if test $processors -gt 1; then  # leave one CPU for the OS
+    processors=$(expr $processors - 1)
+  fi
+  echo $processors
+}
+
 # Args:
-#   regexp: A pattern selecting the subset of tests to run
+#   spec_gen: A program to execute to generate the spec.
+#   spec_regex: A pattern selecting the subset of tests to run
 #   instances: A number of times each test case is run
-#   parallel: Whether the tests are run in parallel (T/F)
+#   parallel: Whether the tests are run in parallel (T/F).  Sequential
+#     runs log to the console; parallel runs log to files.
 #   fast_counts: Whether counts are sampled directly (T/F)
-#   
+
 _run-tests() {
-  local spec_regex=$1  # grep -E format on the spec
-  local instances=$2
-  local parallel=$3
-  local fast_counts=$4
+  local spec_gen=$1
+  local spec_regex="$2"  # grep -E format on the spec, can be empty
+  local instances=$3
+  local parallel=$4
+  local fast_counts=$5
 
   rm -r -f --verbose $REGTEST_DIR
   
   mkdir --verbose -p $REGTEST_DIR
 
   local func
-  local processors=1
+  local processors
 
   if test $parallel = F; then
     func=_run-one-instance  # output to the console
+    processors=1
   else
     func=_run-one-instance-logged
-    processors=$(grep -c ^processor /proc/cpuinfo || echo 4)  # POSIX-specific
-    if test $processors -gt 1; then  # leave one CPU for the OS
-      processors=$(expr $processors - 1)
-    fi
+    # Let the user override with MAX_PROC, in case they don't have enough
+    # memory.
+    processors=${MAX_PROC:-$(default-processes)}
     log "Running $processors parallel processes"
   fi
 
   local cases_list=$REGTEST_DIR/test-cases.txt
-  tests/regtest_spec.py | grep -E $spec_regex > $cases_list
+  # Need -- for regexes that start with -
+  $spec_gen | grep -E -- "$spec_regex" > $cases_list
 
   # Generate parameters for all test cases.
   cat $cases_list \
@@ -322,13 +335,16 @@ _run-tests() {
   make-summary $REGTEST_DIR
 }
 
-# Run tests sequentially
+# used for most tests
+readonly REGTEST_SPEC=tests/regtest_spec.py
+
+# Run tests sequentially.  NOTE: called by demo.sh.
 run-seq() {
   local spec_regex=${1:-'^r-'}  # grep -E format on the spec
   local instances=${2:-1}
   local fast_counts=${3:-T}
 
-  _run-tests $spec_regex $instances F $fast_counts
+  time _run-tests $REGTEST_SPEC $spec_regex $instances F $fast_counts
 }
 
 # Run tests in parallel
@@ -337,15 +353,22 @@ run() {
   local instances=${2:-1}
   local fast_counts=${3:-T}
   
-  _run-tests $spec_regex $instances T $fast_counts 
+  time _run-tests $REGTEST_SPEC $spec_regex $instances T $fast_counts 
 }
 
-# Run tests in parallel
+# Run tests in parallel (7+ minutes on 8 cores)
 run-all() {
   local instances=${1:-1}
 
   log "Running all tests. Can take a while."
-  _run-tests '^r-' $instances T T
+  time _run-tests $REGTEST_SPEC '^r-' $instances T T
+}
+
+run-user() {
+  local spec_regex=${1:-}
+  local instances=${2:-1}
+  local parallel=T  # too much memory
+  time _run-tests tests/user_spec.py "$spec_regex" $instances $parallel T
 }
 
 "$@"
