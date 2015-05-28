@@ -1,11 +1,11 @@
 # Copyright 2014 Google Inc. All rights reserved.
-# 
+#
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
-# 
+#
 #     http://www.apache.org/licenses/LICENSE-2.0
-# 
+#
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -322,7 +322,7 @@ ComputeDistributionEM <- function(reports, report_cohorts,
     variable_counts <- NULL
     if (is.null(marginals)) {
       variable_counts <- ComputeCounts(variable_report, variable_cohort, params)
-      marginal <- Decode(variable_counts, map$rmap, params)$fit
+      marginal <- Decode(variable_counts, map$rmap, params, quiet = TRUE)$fit
       if (nrow(marginal) == 0) {
         return (NULL)
       }
@@ -347,7 +347,7 @@ ComputeDistributionEM <- function(reports, report_cohorts,
     cond_report_dist <- lapply(seq(length(variable_report)), function(i) {
       idx <- variable_cohort[i]
       rep <- GetCondProb(variable_report[[i]],
-                         candidate_strings = as.numeric(rownames(marginal)),
+                         candidate_strings = rownames(marginal),
                          params = params,
                          map$map[[idx]],
                          prob_other[[idx]])

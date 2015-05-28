@@ -1,11 +1,11 @@
 # Copyright 2014 Google Inc. All rights reserved.
-# 
+#
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
-# 
+#
 #     http://www.apache.org/licenses/LICENSE-2.0
-# 
+#
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -17,9 +17,7 @@
 
 library(glmnet)
 
-# Test.  Change this to use pcls in alternative.R.
-USE_PCLS <- Sys.getenv('USE_PCLS') == '1'
-#USE_PCLS <- TRUE  # force to true
+source('analysis/R/alternative.R')
 
 EstimateBloomCounts <- function(params, obs_counts) {
   # Estimates the number of times each bit in each cohort was set in original
@@ -39,23 +37,52 @@ EstimateBloomCounts <- function(params, obs_counts) {
   #                each bit was set in each cohort.
   #
   # Output:
-  #    ests: a matrix of size m by x with estimated counts for the number of
-  #          times each bit was set in the true Bloom filter.
+  #    ests: a matrix of size m by k with estimated counts for the probability
+  #          of each bit set to 1 in the true Bloom filter.
+  #    std: standard deviation of the estimates.
 
   p <- params$p
   q <- params$q
   f <- params$f
+  m <- params$m
 
-  # N = x[1] is the sample size for cohort i.
-  ests <- t(apply(obs_counts, 1, function(x) {
-    (x[-1] - (p + .5 * f * q - .5 * f * p) * x[1]) / ((1 - f) * (q - p))
-  }))
+  stopifnot(m == nrow(obs_counts), params$k + 1 == ncol(obs_counts))
+
+  p11 <- q * (1 - f/2) + p * f / 2  # probability of a true 1 reported as 1
+  p01 <- p * (1 - f/2) + q * f / 2  # probability of a true 0 reported as 1
+
+  p2 <- p11 - p01  # == (1 - f) * (q - p)
+
+  ests <- apply(obs_counts, 1, function(x) {
+      N <- x[1]  # sample size for the cohort
+      v <- x[-1]  # counts for individual bits
+      (v - p01 * N) / p2  # unbiased estimator for individual bits'
+                          # true counts. It can be negative or
+                          # exceed the total.
+    })
+
+  total <- sum(obs_counts[,1])
+
+  variances <- apply(obs_counts, 1, function(x) {
+      N <- x[1]
+      v <- x[-1]
+      p_hats <- (v - p01 * N) / (N * p2)  # expectation of a true 1
+      p_hats <- pmax(0, pmin(1, p_hats))  # clamp to [0,1]
+      r <- p_hats * p11 + (1 - p_hats) * p01  # expectation of a reported 1
+      N * r * (1 - r) / p2^2  # variance of the binomial
+     })
+
+  # Transform counts from absolute values to fractional, removing bias due to
+  #      variability of reporting between cohorts.
+  ests <- apply(ests, 1, function(x) x / obs_counts[,1])
+  stds <- apply(variances^.5, 1, function(x) x / obs_counts[,1])
 
   # Some estimates may be set to infinity, e.g. if f=1. We want to
   #     account for this possibility, and set the corresponding counts
   #     to 0.
   ests[abs(ests) == Inf] <- 0
-  ests
+
+  list(estimates = ests, stds = stds)
 }
 
 FitLasso <- function(X, Y, intercept = TRUE) {
@@ -67,39 +94,25 @@ FitLasso <- function(X, Y, intercept = TRUE) {
   #    intercept: whether to fit with intercept or not.
   #
   # Output:
-  #    lasso: a cross-validated Lasso object.
-  #    coefs: a vector of size ncol(X) of coefficients.
-  #    intercept: estimate of the intercept.
-  #    resid: residuals estimates.
+  #    a vector of size ncol(X) of coefficients.
 
-  zero_coefs <- rep(0, ncol(X))
-  names(zero_coefs) <- colnames(X)
-
+  # TODO(mironov): Test cv.glmnet instead of glmnet
   mod <- try(glmnet(X, Y, standardize = FALSE, intercept = intercept,
-                    pmax = ceiling(length(Y) * .9)),
+                    lower.limits = 0,  # outputs are non-negative
+                    # Cap the number of non-zero coefficients to 500 or
+                    # 80% of the length of Y, whichever is less. The 500 cap
+                    # is for performance reasons, 80% is to avoid overfitting.
+                    pmax = min(500, length(Y) * .8)),
              silent = TRUE)
 
   # If fitting fails, return an empty data.frame.
   if (class(mod)[1] == "try-error") {
-    return(list(fit = NULL, coefs = zero_coefs, intercept = 0, resid = NULL))
+    coefs <- setNames(rep(0, ncol(X)), colnames(X))
   } else {
     coefs <- coef(mod)
-    intercept <- coefs[1, ncol(coefs)]
-    coefs <- coefs[-1, ncol(coefs)]
-    predicted <- predict(mod, X, type = "response")
-    resid <- Y - predicted[, ncol(predicted)]
-    list(fit = mod, coefs = coefs, intercept = intercept, resid = resid)
+    coefs <- coefs[-1, ncol(coefs), drop = FALSE]  # coefs[1] is the intercept
   }
-}
-
-CustomLM <- function(X, Y) {
-  if (class(X) == "ngCMatrix") {
-    X <- as.data.frame(apply(as.matrix(X), 2, as.numeric))
-  }
-  mod <- lm(Y ~ ., data = X)
-  resid <- Y - predict(mod, X)
-  list(fit = mod, coefs = coef(mod)[-1], intercept = coef(mod)[1],
-       resid = resid)
+  coefs
 }
 
 PerformInference <- function(X, Y, N, mod, params, alpha, correction) {
@@ -119,33 +132,30 @@ PerformInference <- function(X, Y, N, mod, params, alpha, correction) {
   ESS <- resid_var * nrow(X)
 
   betas <- matrix(mod$coefs, ncol = 1)
-  if (!USE_PCLS) {
-    mod_var <- summary(mod$fit)$sigma^2
-    betas_sd <- rep(sqrt(max(resid_var, mod_var) / (m * h)), length(betas))
-  } else {
-    mod_var <- 0
-    betas_sd <- 1
-  }
-  z_values <- betas / betas_sd
 
-  # 1-sided t-test.
-  p_values <- pnorm(z_values, lower = FALSE)
+#   mod_var <- summary(mod$fit)$sigma^2
+#   betas_sd <- rep(sqrt(max(resid_var, mod_var) / (m * h)), length(betas))
+#
+#   z_values <- betas / betas_sd
+#
+#   # 1-sided t-test.
+#   p_values <- pnorm(z_values, lower = FALSE)
 
   fit <- data.frame(String = colnames(X), Estimate = betas,
-                    SD = betas_sd, z_stat = z_values, pvalue = p_values,
+                    SD = mod$stds, # z_stat = z_values, pvalue = p_values,
                     stringsAsFactors = FALSE)
 
-  if (correction == "FDR") {
-    fit <- fit[order(fit$pvalue, decreasing = FALSE), ]
-    ind <- which(fit$pvalue < (1:nrow(fit)) * alpha / nrow(fit))
-    if (length(ind) > 0) {
-      fit <- fit[1:max(ind), ]
-    } else {
-      fit <- fit[numeric(0), ]
-    }
-  } else {
-    fit <- fit[fit$p < alpha, ]
-  }
+#   if (correction == "FDR") {
+#     fit <- fit[order(fit$pvalue, decreasing = FALSE), ]
+#     ind <- which(fit$pvalue < (1:nrow(fit)) * alpha / nrow(fit))
+#     if (length(ind) > 0) {
+#       fit <- fit[1:max(ind), ]
+#     } else {
+#       fit <- fit[numeric(0), ]
+#     }
+#   } else {
+#     fit <- fit[fit$p < alpha, ]
+#   }
 
   fit <- fit[order(fit$Estimate, decreasing = TRUE), ]
 
@@ -200,11 +210,58 @@ ComputePrivacyGuarantees <- function(params, alpha, N) {
   privacy
 }
 
-Decode <- function(counts, map, params, alpha = 0.05,
-                   correction = c("Bonferroni"), ...) {
-  # In basic RAPPOR, the corrected counts are exactly the estimates of
-  #     true variable counts.
+FitDistribution <- function(estimates_stds, map, quiet = FALSE) {
+  # Find a distribution over rows of map that approximates estimates_stds best
+  #
+  # Input:
+  #   estimates_stds: a list of two m x k matrices, one for estimates, another
+  #                   for standard errors
+  #   map           : an (m * k) x S boolean matrix
+  #
+  # Output:
+  #   a float vector of length S, so that a distribution over map's rows sampled
+  #   according to this vector approximates estimates
 
+  S <- ncol(map)  # total number of candidates
+
+  support_coefs <- 1:S
+
+  if (S > length(estimates_stds$estimates) * .8) {
+    # the system is close to being underdetermined
+    lasso <- FitLasso(map, as.vector(t(estimates_stds$estimates)))
+
+    # Select non-zero coefficients.
+    support_coefs <- which(lasso > 0)
+
+    if(!quiet)
+      cat("LASSO selected ", length(support_coefs), " non-zero coefficients.\n")
+  }
+
+  coefs <- setNames(rep(0, S), colnames(map))
+
+  if(length(support_coefs) > 0) {  # LASSO may return an empty list
+    constrained_coefs <- ConstrainedLinModel(map[, support_coefs, drop = FALSE],
+                                             estimates_stds)
+
+    coefs[support_coefs] <- constrained_coefs
+  }
+
+  coefs
+}
+
+Resample <- function(e) {
+  # Simulate resampling of the Bloom filter estimates by adding Gaussian noise
+  # with estimated standard deviation.
+  estimates <- matrix(mapply(function(x, y) x + rnorm(1, 0, y),
+                             e$estimates, e$stds),
+                             nrow = nrow(e$estimates), ncol = ncol(e$estimates))
+  stds <- e$stds * 2^.5
+
+  list(estimates = estimates, stds = stds)
+}
+
+Decode <- function(counts, map, params, alpha = 0.05,
+                   correction = c("Bonferroni"), quiet = FALSE, ...) {
   k <- params$k
   p <- params$p
   q <- params$q
@@ -212,72 +269,65 @@ Decode <- function(counts, map, params, alpha = 0.05,
   h <- params$h
   m <- params$m
 
-  strs <- colnames(map)
-  ests <- EstimateBloomCounts(params, counts)
+  S <- ncol(map)  # total number of candidates
+
   N <- sum(counts[, 1])
-  Y <- as.vector(t(ests))
 
-  if (ncol(map) > (k * m * .8) ||
-      (as.numeric(ncol(map)) * as.numeric(nrow(map))) > 10^6) {
-    mod_lasso <- FitLasso(map, Y, ...)
-    lasso <- mod_lasso$fit
+  filter_cohorts <- which(counts[, 1] != 0)  # exclude cohorts with zero reports
 
-    # Select non-zero coefficients.
-    non_zero <- which(mod_lasso$coefs > 0)
-    if (length(non_zero) == 0) {
-      non_zero <- 1:2
-    }
+  # stretch cohorts to bits
+  filter_bits <- as.vector(
+    t(matrix(1:nrow(map), nrow = m, byrow = TRUE)[filter_cohorts,]))
 
-    # Fit regular linear model to obtain unbiased estimates.
-    X <- as.data.frame(apply(as.matrix(map[, non_zero]), 2, as.numeric))
+  es <- EstimateBloomCounts(params, counts)
 
-    if (!USE_PCLS) {
+  estimates_stds_filtered <-
+    list(estimates = es$estimates[filter_cohorts, , drop = FALSE],
+         stds = es$stds[filter_cohorts, , drop = FALSE])
 
-      mod <- CustomLM(X, Y)
+  coefs_all <- vector()
 
-      # Return complete vector of coefficients with 0's.
-      coefs <- rep(0, length(mod_lasso$coefs))
-      names(coefs) <- names(mod_lasso$coefs)
-      coefs[non_zero] <- mod$coef
-      coefs[is.na(coefs)] <- 0
-      mod$coefs <- coefs
+  # Run the fitting procedure several times (5 seems to be sufficient and not
+  # too many) to estimate standard deviation of the output.
+  for(r in 1:5) {
+    if(r > 1)
+      e <- Resample(estimates_stds_filtered)
+    else
+      e <- estimates_stds_filtered
 
-    } else {
-      print("CALLING newLM")
-
-      constrained_coefs <- newLM(X, Y)
-
-      # new coefs vector with same names and length as lasso coefs
-      coefs <- rep(0, length(mod_lasso$coefs))
-      names(coefs) <- names(mod_lasso$coefs)
-
-      mod = list()
-      coefs[non_zero] <- constrained_coefs
-      mod$coefs <- coefs
-    }
-  } else {
-    print('Decode: CustomLM')
-    mod <- CustomLM(as.data.frame(as.matrix(map)), Y)
-    lasso <- NULL
+    coefs_all <- rbind(coefs_all,
+                       FitDistribution(e, map[filter_bits, , drop = FALSE],
+                                       quiet))
   }
+
+  coefs_ssd <- N * apply(coefs_all, 2, sd)  # compute sample standard deviations
+  coefs_ave <- N * apply(coefs_all, 2, mean)
+
+  # Only select coefficients more than two standard deviations from 0. May
+  # inflate empirical SD of the estimates.
+  reported <- which(coefs_ave > 1E-6 + 2 * coefs_ssd)
+
+  mod <- list(coefs = coefs_ave[reported], stds = coefs_ssd[reported])
 
   if (correction == "Bonferroni") {
-    alpha <- alpha / length(strs)
+    alpha <- alpha / S
   }
 
-  inf <- PerformInference(map, Y, N, mod, params, alpha, correction)
+  inf <- PerformInference(map[filter_bits, reported, drop = FALSE],
+                          as.vector(t(estimates_stds_filtered$estimates)),
+                          N, mod, params, alpha,
+                          correction)
   fit <- inf$fit
   # If this is a basic RAPPOR instance, just use the counts for the estimate
   #     (Check if the map is diagonal to tell if this is basic RAPPOR.)
   if (sum(map) == sum(diag(map))) {
     fit$Estimate <- colSums(counts)[-1]
   }
-  resid <- mod$resid / inf$resid_sigma
 
   # Estimates from the model are per instance so must be multipled by h.
   # Standard errors are also adjusted.
-  fit$Total_Est <- floor(fit$Estimate * m)
-  fit$Total_SD <- floor(fit$SD * m)
+  fit$Total_Est <- floor(fit$Estimate)
+  fit$Total_SD <- floor(fit$SD)
   fit$Prop <- fit$Total_Est / N
   fit$LPB <- fit$Prop - 1.96 * fit$Total_SD / N
   fit$UPB <- fit$Prop + 1.96 * fit$Total_SD / N
@@ -292,7 +342,7 @@ Decode <- function(counts, map, params, alpha = 0.05,
         "Sample size (N)", "Discovered Prop (out of N)",
         "Explained Variance", "Missing Variance", "Noise Variance",
         "Theoretical Noise Std. Dev.")
-  values <- c(length(strs), nrow(fit), N, round(sum(fit[, 2]) / N, 3),
+  values <- c(S, nrow(fit), N, round(sum(fit[, 2]) / N, 3),
               round(inf$SS, 3),
               round(inf$resid_sigma, 3))
   res_summary <- data.frame(parameters = parameters, values = values)
@@ -303,7 +353,8 @@ Decode <- function(counts, map, params, alpha = 0.05,
                        values = c(k, h, m, p, q, f, N, alpha))
 
   list(fit = fit, summary = res_summary, privacy = privacy, params = params,
-       lasso = lasso, ests = ests, counts = counts[, -1], resid = resid)
+       lasso = NULL, ests = as.vector(t(estimates_stds_filtered$estimates)),
+       counts = counts[, -1], resid = NULL)
 }
 
 ComputeCounts <- function(reports, cohorts, params) {

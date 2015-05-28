@@ -1,11 +1,11 @@
 # Copyright 2014 Google Inc. All rights reserved.
-# 
+#
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
-# 
+#
 #     http://www.apache.org/licenses/LICENSE-2.0
-# 
+#
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -101,11 +101,10 @@ ReadMapFile <- function(map_file, params = NULL, quote = "") {
   list(map = map, strs = strs, map_pos = map_pos)
 }
 
-# This function caches the .csv as an .rda for faster loading.  NOTE: It
-# assumes the map csv file is immutable.
 LoadMapFile <- function(map_file, params = NULL, quote = "") {
-  # Reads the map file and creates an R binary .rda.
-  # If .rda file already exists, just loads that file.
+  # Reads the map file and creates an R binary .rda. If the .rda file already
+  # exists, just loads that file. NOTE: It assumes the map file is
+  # immutable.
 
   rda_file <- sub(".csv", ".rda", map_file, fixed = TRUE)
 
@@ -116,9 +115,11 @@ LoadMapFile <- function(map_file, params = NULL, quote = "") {
   if (!file.exists(rda_file)) {
     cat("Parsing", map_file, "...\n")
     map <- ReadMapFile(map_file, params = params, quote = quote)
+    cat("Saving", map_file, "as an rda file for faster access.\n")
     save(map, file = file.path(tempdir(), basename(rda_file)))
     file.copy(file.path(tempdir(), basename(rda_file)), rda_file,
               overwrite = TRUE)
   }
   load(gfile(rda_file), .GlobalEnv)
+  return(map)
 }

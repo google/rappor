@@ -1,5 +1,5 @@
 #!/usr/bin/python
-"""Given a regtest result tree, prints an HTML summary on stdout.
+"""Given a regtest result tree, prints an HTML summary to a file.
 
 See HTML skeleton in tests/regtest.html.
 """
@@ -160,7 +160,7 @@ def ExtractTime(log_filename):
     with open(log_filename) as log:
       log_str = log.read()
     # Matching a line output by analyze.R.
-    match = re.search(r'Inference took ([0-9.]+) seconds', log_str)
+    match = re.search(r'Running analyze.R took ([0-9.]+) seconds', log_str)
     if match:
       return float(match.group(1))
   return None
@@ -170,56 +170,64 @@ def ParseMetrics(metrics_file, log_file, num_additional):
   """Processes the metrics file.
 
   Args:
-    report_dir: A directory name containing metrics.csv and log.txt.
+    metrics_file: name of the metrics file
+    log_file: name of the log.txt file
     num_additional: A number of bogus candidates added to the candidate list.
 
   Returns a pair:
     - A dictionary of metrics (some can be []).
     - An HTML-formatted portion of the report row.
   """
-  with open(metrics_file) as m:
-    m.readline()
-    metrics_row = m.readline().split(',')
 
-  (num_actual, num_rappor, num_false_pos, num_false_neg, total_variation,
-   allocated_mass) = metrics_row
+  if not os.path.isfile(metrics_file):
+    metrics_row_str = ['', '', '', '', '', '']
+    metrics_row_dict = {}
+  else:
+    with open(metrics_file) as m:
+      m.readline()
+      metrics_row = m.readline().split(',')
 
-  num_actual = int(num_actual)
-  num_rappor = int(num_rappor)
+    (num_actual, num_rappor, num_false_pos, num_false_neg, total_variation,
+        allocated_mass) = metrics_row
 
-  num_false_pos = int(num_false_pos)
-  num_false_neg = int(num_false_neg)
+    num_actual = int(num_actual)
+    num_rappor = int(num_rappor)
 
-  total_variation = float(total_variation)
-  allocated_mass = float(allocated_mass)
+    num_false_pos = int(num_false_pos)
+    num_false_neg = int(num_false_neg)
+
+    total_variation = float(total_variation)
+    allocated_mass = float(allocated_mass)
+
+    # e.g. if there are 20 additional candidates added, and 1 false positive,
+    # the false positive rate is 5%.
+    fp_rate = float(num_false_pos) / num_additional if num_additional else 0
+    # e.g. if there are 100 strings in the true input, and 80 strings
+    # detected by RAPPOR, then we have 20 false negatives, and a false
+    # negative rate of 20%.
+    fn_rate = float(num_false_neg) / num_actual
+
+    metrics_row_str = [
+        str(num_actual),
+        str(num_rappor),
+        '%.1f%% (%d)' % (fp_rate * 100, num_false_pos) if num_additional
+        else '',
+        '%.1f%% (%d)' % (fn_rate * 100, num_false_neg),
+        '%.3f' % total_variation,
+        '%.3f' % allocated_mass,
+    ]
+
+    metrics_row_dict = {
+        'tv': [total_variation],
+        'fpr': [fp_rate] if num_additional else [],
+        'fnr': [fn_rate],
+        'am': [allocated_mass],
+    }
 
   elapsed_time = ExtractTime(log_file)
-
-  # e.g. if there are 20 additional candidates added, and 1 false positive,
-  # the false positive rate is 5%.
-  fp_rate = float(num_false_pos) / num_additional if num_additional else 0
-  # e.g. if there are 100 strings in the true input, and 80 strings
-  # detected by RAPPOR, then we have 20 false negatives, and a false
-  # negative rate of 20%.
-  fn_rate = float(num_false_neg) / num_actual
-
-  metrics_row_str = [
-      str(num_actual),
-      str(num_rappor),
-      '%.1f%% (%d)' % (fp_rate * 100, num_false_pos) if num_additional else '',
-      '%.1f%% (%d)' % (fn_rate * 100, num_false_neg),
-      '%.3f' % total_variation,
-      '%.3f' % allocated_mass,
-      '%.2f' % elapsed_time if elapsed_time is not None else '',
-  ]
-
-  metrics_row_dict = {
-      'tv': [total_variation],
-      'fpr': [fp_rate] if num_additional else [],
-      'fnr': [fn_rate],
-      'am': [allocated_mass],
-      'time': [elapsed_time] if elapsed_time is not None else [],
-  }
+  if elapsed_time is not None:
+    metrics_row_str = metrics_row_str + ['%.2f' % elapsed_time]
+    metrics_row_dict['time'] = [elapsed_time]
 
   # return metrics formatted as HTML table entries
   return (metrics_row_dict,
@@ -292,11 +300,15 @@ def FormatPlots(base_dir, test_instances):
 
 def main(argv):
   base_dir = argv[1]
+  output_file = open(argv[2], 'w')
 
   # This file has the test case names, in the order that they should be
   # displayed.
-  path = os.path.join(base_dir, 'test-instances.txt')
-  with open(path) as f:
+  instances_file = os.path.join(base_dir, 'test-instances.txt')
+  if not os.path.isfile(instances_file):
+    raise RuntimeError('{} is missing'.format(instances_file))
+
+  with open(instances_file) as f:
     test_instances = [line.strip() for line in f]
 
   # Metrics are assembled into a dictionary of dictionaries. The top-level
@@ -313,6 +325,10 @@ def main(argv):
   # If there are too many tests, the plots are not included in the results
   # file. Instead, rows' names are links to the corresponding .png files.
   include_plots = len(test_instances) < 20
+
+  instances_succeeded = 0
+  instances_failed = 0
+  instances_running = 0
 
   for instance in test_instances:
     # A test instance is idenfied by the test name and the test run.
@@ -334,33 +350,48 @@ def main(argv):
     cell1_html = FormatCell1(test_case, test_instance, metrics_file, log_file,
                              plot_file, include_plots)
 
-    if os.path.isfile(metrics_file):
-      # ParseMetrics outputs an HTML table row and also updates lists
-      metrics_dict, metrics_html = ParseMetrics(metrics_file, log_file,
-                                                num_additional)
+    # ParseMetrics outputs an HTML table row and also updates lists
+    metrics_dict, metrics_html = ParseMetrics(metrics_file, log_file,
+                                              num_additional)
 
-      # Update the metrics structure. Initialize dictionaries if necessary.
-      for m in metrics:
+    # Update the metrics structure. Initialize dictionaries if necessary.
+    for m in metrics:
+      if m in metrics_dict:
         if not test_case in metrics[m]:
           metrics[m][test_case] = metrics_dict[m]
         else:
           metrics[m][test_case] += metrics_dict[m]
 
-    print '<tr>{}{}{}</tr>'.format(cell1_html, spec_html, metrics_html)
+    print >>output_file, '<tr>{}{}{}</tr>'.format(cell1_html,
+                                                  spec_html, metrics_html)
 
-  print FormatSummaryRow(metrics)
+    # Update counters
+    if 'tv' in metrics_dict:
+      instances_succeeded += 1
+    else:
+      if 'time' in metrics_dict:
+        instances_failed += 1
+      else:
+        if os.path.isfile(log_file):
+          instances_running += 1
 
-  print '</tbody>'
-  print '</table>'
-  print '<p style="padding-bottom: 3em"></p>'  # vertical space
+  print >>output_file, FormatSummaryRow(metrics)
+
+  print >>output_file, '</tbody>'
+  print >>output_file, '</table>'
+  print >>output_file, '<p style="padding-bottom: 3em"></p>'  # vertical space
 
   # Plot links.
   if include_plots:
-    print FormatPlots(base_dir, test_instances)
+    print >>output_file, FormatPlots(base_dir, test_instances)
   else:
-    print ('<p>Too many tests to include plots. '
-           'Click links within rows for details.</p>')
+    print >>output_file, ('<p>Too many tests to include plots. '
+                          'Click links within rows for details.</p>')
 
+  print ('Instances'
+         ' succeeded: {}  failed: {}  running: {}  total: {}'.
+         format(instances_succeeded, instances_failed, instances_running,
+                len(test_instances)))
 
 if __name__ == '__main__':
   try:
