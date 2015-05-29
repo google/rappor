@@ -107,28 +107,22 @@ RunOne <- function(opts) {
   write.csv(fit, file = results_csv_path, row.names = FALSE)
 
   # Write summary as JSON (scalar values).
-  results_json_path <- file.path(opts$output_dir, 'results.json')
-  res_json <- toJSON(res$summary2)
-  writeLines(res_json, con = results_json_path)
+  metrics_json_path <- file.path(opts$output_dir, 'metrics.json')
+  m <- toJSON(res$metrics)
+  writeLines(m, con = metrics_json_path)
 
   # TODO:
   # - These are in an 2 column 'parameters' and 'values' format.  Should these
   # just be a plain list?
-  # - Write them to another CSV file or JSON on stdout?
-
-  Log("Fit summary:")
-  print(res$summary)
-  cat("\n")
+  # - Should any of these privacy params be in metrics.json?
 
   Log("Privacy summary:")
   print(res$privacy)
   cat("\n")
 
   # Output metrics as machine-parseable prefix + JSON.
-  num_rappor <- nrow(fit)
-  allocated_mass <- sum(fit$proportion)
   Log('__OUTPUT_METRICS__ {"num_rappor": %d, "allocated_mass": %f}',
-      num_rappor, allocated_mass)
+      res$metrics$num_detected, res$metrics$allocated_mass)
 
   Log('DONE')
 }

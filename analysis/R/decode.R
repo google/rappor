@@ -336,7 +336,8 @@ Decode <- function(counts, map, params, alpha = 0.05,
   colnames(fit) <- c("strings", "estimate", "std_dev", "proportion",
                      "lower_bound", "upper_bound")
 
-  detected_prop <- round(sum(fit[, 2]) / N, digits = 3)
+  allocated_mass <- sum(fit$proportion)
+  num_detected <- nrow(fit)
 
   ss <- round(inf$SS, digits = 3)
   explained_var <- ss[[1]]
@@ -351,7 +352,7 @@ Decode <- function(counts, map, params, alpha = 0.05,
         "Sample size (N)", "Discovered Prop (out of N)",
         "Explained Variance", "Missing Variance", "Noise Variance",
         "Theoretical Noise Std. Dev.")
-  values <- c(S, nrow(fit), N, detected_prop,
+  values <- c(S, num_detected, N, allocated_mass,
               explained_var, missing_var, noise_var, noise_std_dev)
 
   res_summary <- data.frame(parameters = parameters, values = values)
@@ -363,14 +364,15 @@ Decode <- function(counts, map, params, alpha = 0.05,
 
   # This is a list of decode stats in a better format than 'summary'.
   # TODO: Delete summary.
-  summary2 <- list(sample_size = N,
-                   detected_prop = detected_prop,
-                   explained_var = explained_var,
-                   missing_var = missing_var)
+  metrics <- list(sample_size = N,
+                  allocated_mass = allocated_mass,
+                  num_detected = num_detected,
+                  explained_var = explained_var,
+                  missing_var = missing_var)
 
   list(fit = fit, summary = res_summary, privacy = privacy, params = params,
        lasso = NULL, ests = as.vector(t(estimates_stds_filtered$estimates)),
-       counts = counts[, -1], resid = NULL, summary2 = summary2)
+       counts = counts[, -1], resid = NULL, metrics = metrics)
 }
 
 ComputeCounts <- function(reports, cohorts, params) {

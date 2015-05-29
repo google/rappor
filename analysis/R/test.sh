@@ -27,7 +27,7 @@ analysis-tool() {
 
   cat _tmp/results.csv 
   echo
-  cat _tmp/results.json
+  cat _tmp/metrics.json
 
   popd
 }

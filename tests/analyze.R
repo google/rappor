@@ -175,6 +175,8 @@ CompareRapporVsActual <- function(ctx) {
   Log("False negatives:")
   str(false_neg)
 
+  # NOTE: We should call Decode() directly, and then num_rappor is
+  # metrics$num_detected, and sum_proportion is metrics$allocated_mass.
   metrics <- list(
       num_actual = nrow(actual),  # data frames
       num_rappor = nrow(rappor),
