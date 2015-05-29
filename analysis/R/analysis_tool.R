@@ -15,6 +15,7 @@
 # days for weekly and 28 days for monthly analyses.
 
 library(optparse)
+library(RJSONIO)
 
 source("analysis/R/analysis_lib.R")
 source("analysis/R/read_input.R")
@@ -101,8 +102,14 @@ RunOne <- function(opts) {
 
   fit <- res$fit
 
-  results_path <- file.path(opts$output_dir, 'results.csv')
-  write.csv(fit, file = results_path, row.names = FALSE)
+  # Write analysis results as CSV.
+  results_csv_path <- file.path(opts$output_dir, 'results.csv')
+  write.csv(fit, file = results_csv_path, row.names = FALSE)
+
+  # Write summary as JSON (scalar values).
+  results_json_path <- file.path(opts$output_dir, 'results.json')
+  res_json <- toJSON(res$summary2)
+  writeLines(res_json, con = results_json_path)
 
   # TODO:
   # - These are in an 2 column 'parameters' and 'values' format.  Should these
