@@ -1,7 +1,7 @@
 #!/usr/bin/python
 """Given a regtest result tree, prints an HTML summary on stdout.
 
-See HTML skeleton in tests/regtest.html.
+See HTML skeleton in tests/assoctest.html.
 """
 
 import os
@@ -18,8 +18,6 @@ SUMMARY_ROW = """\
 
   <!-- input params -->
   <td></td>
-  <td></td>
-  <td></td>
 
   <!-- RAPPOR params -->
   <td></td>
@@ -30,6 +28,8 @@ SUMMARY_ROW = """\
   <td></td>
 
   <!-- Result metrics -->
+  <td></td>
+  <td></td>
   <td></td>
   <td>%(mean_chisqdiff)s</td>
   <td>%(mean_l1d)s</td>
@@ -133,7 +133,7 @@ def ParseSpecFile(spec_filename):
   with open(spec_filename) as s:
     spec_row = s.readline().split()
 
-  spec_in_html = ' '.join('<td>%s</td>' % cell for cell in spec_row[1:])
+  spec_in_html = ' '.join('<td>%s</td>' % cell for cell in spec_row[3:])
 
   return spec_in_html
 
@@ -169,7 +169,7 @@ def ParseMetrics(metrics_file, log_file):
     m.readline()
     metrics_row = m.readline().split(',')
 
-  (td_chisq, ed_chisq, l1d, rtime) = metrics_row
+  (td_chisq, ed_chisq, l1d, rtime, d1, d2) = metrics_row
 
   td_chisq = float(td_chisq)
   ed_chisq = float(ed_chisq)
@@ -180,16 +180,20 @@ def ParseMetrics(metrics_file, log_file):
   elapsed_time = ExtractTime(log_file)
 
   metrics_row_str = [
-      str(td_chisq),
-      str(ed_chisq),
-      str(l1d),
-      str(rtime),
+    '%s' % d1,
+    '%s' % d2,
+    '%.3f' % td_chisq,
+    '%.3f' % ed_chisq,
+    '%.3f' % l1d,
+    str(rtime),
   ]
 
   metrics_row_dict = {
-      'l1d': [l1d],
-      'rtime': [rtime],
-      'chisqdiff': [abs(td_chisq - ed_chisq)],
+    'd1': [d1],
+    'd2': [d2],
+    'l1d': [l1d],
+    'rtime': [rtime],
+    'chisqdiff': [abs(td_chisq - ed_chisq)],
   }
 
   # return metrics formatted as HTML table entries

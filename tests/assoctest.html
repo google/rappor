@@ -25,9 +25,9 @@
   <table cellspacing="0" cellpadding="5">
     <colgroup>
       <col span="1" class="highlight" />
-      <col span="3" />
+      <col span="1" />
       <col span="6" class="highlight" />
-      <col span="4" />
+      <col span="6" />
     </colgroup>
 
     <thead>
@@ -35,23 +35,21 @@
         <td>
           Test Case
         </td>
-        <td colspan=3>
+        <td colspan=1>
           Input Params
         </td>
         <td colspan=6>
           RAPPOR Params
         </td>
-        <td colspan=4>
+        <td colspan=6>
           Result Metrics
         </td>
       </tr>
 
       <tr class="explain">
         <td></td>
-        <td colspan=3>
-          e: number of extras<br/>
-          u2: number of unique vals in var2<br/>
-          n: number of reports/clients <br/>
+        <td colspan=1>
+          n: num reports<br/>
         </td>
         <td colspan=6>
           k: report bits<br/>
@@ -59,9 +57,11 @@
           m: cohorts<br/>
           p, q, f: probabilities<br/>
         </td>
-        <td colspan=7>
-          td_chisq: chisq test on true distr.<br/>
-          ed_chisq: chisq test on est. distr.<br/>
+        <td colspan=6>
+          d1: dimension of var1 solutions. <br />
+          d2: dimension of var2 solutions. <br />
+          td_chisq: chisq test on true distr.<br />
+          ed_chisq: chisq test on est. distr.<br />
           tv: tot. var. distance<br/>
           rtime: R runtime<br/>
         </td>
@@ -70,8 +70,6 @@
       <tr class="subhead">
         <td></td>
 
-        <td>e</td>
-        <td>u2</td>
         <td>n</td>
 
         <td>k</td>
@@ -81,6 +79,8 @@
         <td>q</td>
         <td>f</td>
 
+        <td>d1</td>
+        <td>d2</td>
         <td>td_chisq</td>
         <td>ed_chisq</td>
         <td>tv</td>

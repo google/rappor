@@ -47,17 +47,23 @@ if(!interactive()) {
                 help = "Filename *prefix* for map(s)"),
     make_option(c("--num", "-n"), default = 1e05,
                 help = "Number of reports"),
-    make_option(c("--var1_num", "-z"), default = 40,
+    make_option(c("--var1_num", "-z"), default = 100,
                 help = "Number of values for var1"),
-    make_option(c("--var2_num", "-y"), default = 5,
+    make_option(c("--var2_num", "-y"), default = 20,
                 help = "Number of values for var2"),
-    make_option(c("--extras", "-e"), default = 1000,
+    make_option(c("--extras", "-e"), default = 1e05,
                 help = "How many spurious candidates does the 1st map have?"),
     make_option(c("--distr", "-d"), default = "zipf2",
                 help = "Type of distribution. Choose between
-                {unif, poisson, poisson2, zipf2}")
+                {unif, poisson, poisson2, zipf2}"),
+    make_option(c("--prefix", "-x"), default = "./",
+                help = "Path to prefix all default files")
   )
   opts <- parse_args(OptionParser(option_list = option_list))
+}
+
+apply_prefix <- function(path) {
+  paste(opts$prefix, path, sep = "")
 }
 
 source("analysis/R/encode.R")
@@ -225,13 +231,14 @@ main <- function(opts) {
   if(is.null(opts$uvals)) {
     uvals = list(var1 = c("str1"), var2 = c("option1"))
   } else {
-    uvals <- GetUniqueValsFromFile(opts$uvals)
+    uvals <- GetUniqueValsFromFile(apply_prefix(opts$uvals))
   }
-  params <- ReadParameterFile(opts$params)
-  SimulateReports(opts$num, uvals, params,  opts$distr, # inuts
-                  opts$extras,  opts$true,              # inputs
-                  opts$var1_num,  opts$var2_num,        # inputs
-                  opts$map, opts$reports)               # outputs
+  params <- ReadParameterFile(apply_prefix(opts$params))
+  SimulateReports(opts$num, uvals, params,  opts$distr,   # inuts
+                  opts$extras,  apply_prefix(opts$true),  # inputs
+                  opts$var1_num,  opts$var2_num,          # inputs
+                  apply_prefix(opts$map),
+                  apply_prefix(opts$reports))             # outputs
 
   print("PROC.TIME")
   print(proc.time() - ptm)

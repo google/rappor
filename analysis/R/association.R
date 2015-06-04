@@ -137,6 +137,33 @@ GetJointConditionalProb <- function(cond_x, cond_y) {
   mapply("outer", cond_x, cond_y, SIMPLIFY = FALSE)
 }
 
+UpdatePij2 <- function(pij, reports, cohorts, cand_strs,
+                       params, map) {
+
+  accum <- array(0, dim(pij))
+  # For each report
+  for (i in seq(length(reports[[1]]))) {
+    # For each var
+    for (var in seq(length(reports))) {
+      idx <- cohorts[[var]][i]
+      rep <- GetCondProb(reports[[var]][[i]],
+                         candidate_strings = cand_strs[[var]],
+                         params = params,
+                         map[[var]]$map[[idx]], NULL)
+      if(var == 1) {
+        cond_joint_distr <- rep
+      } else {
+        cond_joint_distr <- outer(cond_joint_distr, rep)
+      }
+    }
+    z <- cond_joint_distr * pij
+    z <- z / sum(z)
+    z[is.nan(z)] <- 0
+    accum <- accum + z
+  }
+  accum / length(reports[[1]])
+}
+
 UpdatePij <- function(pij, cond_prob) {
   # Update the probability matrix based on the EM algorithm.
   #
@@ -152,6 +179,23 @@ UpdatePij <- function(pij, cond_prob) {
     z <- z / sum(z)
     z[is.nan(z)] <- 0
     z })
+  Reduce("+", wcp) / length(wcp)
+}
+
+UpdatePij3 <- function(pij, cond_prob) {
+  wcp <- lapply(cond_prob, function(x) {
+    for (i in seq(length(x))) {
+      if (i == 1) {
+        op <- x[[i]]
+      } else {
+        op <- outer(op, x[[i]])
+      }
+    }
+    z <- op * pij
+    z <- z / sum(z)
+    z[is.nan(z)] <- 0
+    z
+  })
   Reduce("+", wcp) / length(wcp)
 }
 
@@ -186,6 +230,62 @@ ComputeVar <- function(cond_prob, est) {
   list(var_cov = var_cov, sd = sd, inform = inform)
 }
 
+EM2 <- function(reports, cohorts, cand_strs, starting_pij = NULL,
+                params, map,
+                max_iter = 1e03, epsilon = 1e-06) {
+  
+  # State space is the product of lengths.
+  state_space <- sapply(cand_strs, "length")
+  pij <- array()
+  if(is.null(starting_pij)) {
+    pij <- array(1 / prod(state_space), state_space)
+  } else {
+    pij <- starting_pij
+  }
+
+  if (nrow(pij) > 0) {
+    # Run EM
+    for (i in 1:max_iter) {
+      pij_new <- UpdatePij2(pij, reports, cohorts, cand_strs,
+                        params, map)
+      diff <- max(abs(pij_new - pij))
+      pij <- pij_new
+      if (diff < epsilon) {
+        break
+      }
+    }
+  }
+  list(hist = pij)
+}
+
+EM3 <- function(cond_prob, starting_pij = NULL, estimate_var = FALSE,
+                max_iter = 1e03, epsilon = 1e-06, verbose = FALSE) {
+  pij <- list()
+  
+  # Compute dimensions of conditional distributions.
+  state_space <- sapply(cond_prob[[1]], length)
+  if (is.null(starting_pij)) {
+    pij <- array(1 / prod(state_space), state_space)
+  } else {
+    pij <- starting_pij
+  }
+  if (nrow(pij) > 0) {
+    # Run EM
+    for (i in 1:max_iter) {
+      if (i == 1) {
+        ptm_iter <- proc.time()
+      }
+      pij_new <- UpdatePij3(pij, cond_prob)
+      diff <- max(abs(pij_new - pij))
+      pij <- pij_new
+      if (diff < epsilon) {
+        break
+      }
+    }
+  }
+  list(est = pij, hist = pij, sd = 0)
+}
+
 EM <- function(cond_prob, starting_pij = NULL, estimate_var = FALSE,
                max_iter = 1000, epsilon = 10^-6, verbose = FALSE) {
   # Performs estimation.
@@ -213,8 +313,15 @@ EM <- function(cond_prob, starting_pij = NULL, estimate_var = FALSE,
   if (nrow(pij[[1]]) > 0) {
     # Run EM
     for (i in 1:max_iter) {
+      if (i == 1) {
+        ptm_iter <- proc.time()
+      }
       pij[[i + 1]] <- UpdatePij(pij[[i]], cond_prob)
       dif <- max(abs(pij[[i + 1]] - pij[[i]]))
+      if (i == 1) {
+        print("ONE ITERATION")
+        print(proc.time() - ptm_iter)
+      }
       if (dif < epsilon) {
         break
       }
@@ -285,7 +392,8 @@ ComputeDistributionEM <- function(reports, report_cohorts,
                                   maps, ignore_other = FALSE,
                                   params, quick = FALSE,
                                   marginals = NULL,
-                                  estimate_var = FALSE) {
+                                  estimate_var = FALSE,
+                                  new_alg = FALSE) {
   # Computes the distribution of num_variables variables, where
   #     num_variables is chosen by the client, using the EM algorithm.
   #
@@ -312,17 +420,22 @@ ComputeDistributionEM <- function(reports, report_cohorts,
   # Compute the counts for each variable and then do conditionals.
   joint_conditional = NULL
   found_strings <- list()
-
+  cd_for_reports <- list()
+  
   for (j in (1:num_variables)) {
+    ptm <- proc.time()
     variable_report <- reports[[j]]
     variable_cohort <- report_cohorts[[j]]
     map <- maps[[j]]
-
+    
     # Compute the probability of the "other" category
     variable_counts <- NULL
     if (is.null(marginals)) {
+      ptm2 <- proc.time()
       variable_counts <- ComputeCounts(variable_report, variable_cohort, params)
       marginal <- Decode(variable_counts, map$rmap, params, quick)$fit
+      print("TIME IN MARGINALS")
+      print(proc.time() - ptm2)
       if (nrow(marginal) == 0) {
         return (NULL)
       }
@@ -353,17 +466,39 @@ ComputeDistributionEM <- function(reports, report_cohorts,
                          prob_other[[idx]])
       rep
     })
-
-    # Update the joint conditional distribution of all variables
-    joint_conditional <- UpdateJointConditional(cond_report_dist,
+    
+    if(new_alg) {
+      # Report conditional distributions as lists
+      if (j == 1) {
+        # Conditional distribution for reports
+        joint_conditional <- lapply(cond_report_dist, "list")
+      } else {
+        joint_conditional <- mapply(function (x, y) c(x, list(y)),
+                                 joint_conditional, cond_report_dist,
+                                 SIMPLIFY = FALSE)
+      }
+    } else {
+      # Update the joint conditional distribution of all variables
+      joint_conditional <- UpdateJointConditional(cond_report_dist,
                                                 joint_conditional)
+    }
+    print("TIME IN COND_REPORT_DIST")
+    print(proc.time()-ptm)
   }
-
+  
+  ptm <- proc.time()
   # Run expectation maximization to find joint distribution
-  em <- EM(joint_conditional, epsilon = 10 ^ -6, verbose = FALSE,
+  if (new_alg) {
+    funct <- EM3
+  } else {
+    funct <- EM
+  }
+  em <- funct(joint_conditional, epsilon = 10 ^ -5, verbose = FALSE,
            estimate_var = estimate_var)
+  print("TIME IN EM")
+  print(proc.time() - ptm)
   dimnames(em$est) <- found_strings
+  
   # Return results in a usable format
-  list(fit = em$est, sd = em$sd, em = em)
-
+  list(orig = list(fit = em$est, sd = em$sd, em = em))
 }

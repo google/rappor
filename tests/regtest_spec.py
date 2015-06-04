@@ -46,6 +46,8 @@ DISTRIBUTION_PARAMS_ASSOC = {
     # num unique values 2, num clients
     'tiny': (100, 2, int(1e03)),   # test for insufficient data
     'small': (100, 10, int(1e04)),
+    'fizz': (100, 20, int(1e05)),
+    'fizzbool': (100, 2, int(1e05)),
     'medium': (1000, 10, int(1e05)),
     'medium2': (1000, 2, int(1e05)),
     'large': (10000, 10, int(1e06)),
@@ -93,9 +95,9 @@ TEST_CONFIGS = [
 # The test config runs a test suite that is the cross product of all the above
 # sets
 ASSOC_TEST_CONFIG = {
-    'distr': ('small',),# 'medium'),
+    'distr': ('fizz', 'fizzbool'),# 'medium'),
     'blooms': ('8x16',), # '8x32', '16x32'),
-    'privacy': ('eps_verysmall',), # 'eps_small'),
+    'privacy': ('eps_small',), # 'eps_small'),
 }
 
 #

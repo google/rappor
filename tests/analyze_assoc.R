@@ -48,7 +48,9 @@ if(!interactive()) {
     make_option(c("--outdir", "-o"), default = ".",
                 help = "File where the metrics go"),
     make_option(c("--params", "-p"), default = "params.csv",
-                help = "Filename for RAPPOR parameters")
+                help = "Filename for RAPPOR parameters"),
+    make_option(c("--newalg", "-a"), default = FALSE,
+                help = "Flag to run new EM3 algorithm or not")
   )
   opts <- parse_args(OptionParser(option_list = option_list))
 }
@@ -112,28 +114,19 @@ main <- function(opts) {
                                       ignore_other = TRUE,
                                       quick = TRUE,
                                       params, marginals = NULL,
-                                      estimate_var = FALSE)
+                                      estimate_var = FALSE,
+                                      new_alg = opts$newalg)
 
   td <- read.csv(file = opts$truefile)
-  ed <- joint_dist$fit
+  ed <- joint_dist$orig$fit
   print("CHI-SQUARED")
   td_chisq <- chisq.test(td)
   ed_chisq <- chisq.test(ed)
   print(td_chisq)
   print(ed_chisq)
 
-  # L1 distance = 1 - sum(min(td|x, ed|x)) where
-  # td|x / ed|x projects the distribution to the intersection x of the
-  # supports of td and ed
-  rowsi <- intersect(rownames(td), rownames(ed))
-  colsi <- intersect(colnames(td), colnames(ed))
-  print("L1 DISTANCE")
-  l1d <- 1 - sum(mapply(min,
-                  unlist(td[rowsi, colsi], use.names = FALSE),
-                  unlist(as.data.frame(ed)[rowsi, colsi], use.names = FALSE)
-                   ))
-  print(l1d)
-
+  print(l1d(td, ed, "L1 DISTANCE"))
+  
   print("JOINT_DIST$FIT")
   print(signif(ed[order(rowSums(ed)),], 4))
   print("PROC.TIME")
@@ -141,13 +134,27 @@ main <- function(opts) {
   print(time_taken)
 
   # Write metrics to metrics.csv
+  # Report l1 distance / 2 to be consistent with histogram analysis
   metrics <- list(td_chisq = td_chisq[1][[1]][[1]],
                   ed_chisq = ed_chisq[1][[1]][[1]],
-                 tv = l1d/2, time = time_taken[1])   # report l1 distance / 2
-                                                     # to be consistent with
-                                                     # histogram analysis
+                 tv = l1d(td, ed, "L1 DISTANCE")/2,
+                 time = time_taken[1],
+                 dim1 = dim(ed)[[1]],
+                 dim2 = dim(ed)[[2]])               
   filename <- file.path(opts$outdir, 'metrics.csv')
   write.csv(metrics, file = filename, row.names = FALSE)
+}
+
+# L1 distance = 1 - sum(min(df1|x, df2|x)) where
+# df1|x / df2|x projects the distribution to the intersection x of the
+# supports of df1 and df2
+l1d <- function(df1, df2, statement = "L1 DISTANCE") {
+  rowsi <- intersect(rownames(df1), rownames(df2))
+  colsi <- intersect(colnames(df1), colnames(df2))
+  print(statement)
+  1 - sum(mapply(min, 
+                 unlist(as.data.frame(df1)[rowsi, colsi], use.names = FALSE),
+                 unlist(as.data.frame(df2)[rowsi, colsi], use.names = FALSE)))
 }
 
 if(!interactive()) {
