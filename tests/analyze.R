@@ -50,14 +50,9 @@ if (library(Cairo, quietly = TRUE, logical.return = TRUE)) {
 source("analysis/R/analysis_lib.R")
 source("analysis/R/read_input.R")
 source("analysis/R/decode.R")
+source("analysis/R/util.R")
 
 source("analysis/R/alternative.R")  # temporary
-
-Log <- function(...) {
-  cat('analyze.R: ')
-  cat(sprintf(...))
-  cat('\n')
-}
 
 LoadContext <- function(prefix_case) {
   # Creates the context, filling it with privacy parameters
