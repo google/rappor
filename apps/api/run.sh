@@ -44,6 +44,13 @@ setup() {
 
 readonly RAPPOR_SRC=$(cd $PWD/../.. && pwd)
 
+# Run this to serve too
+rappor-api() {
+  # R code needs to be able to find other modules
+  export RAPPOR_SRC
+  ./rappor_api.py "$@"
+}
+
 # Run the server in batch mode.  Log to stdout.
 get() {
   rappor-api --log-dir='' --test-get "$@"
@@ -119,26 +126,17 @@ smoke-test() {
   time seq 3 | xargs -P2 -n1 -I{} --verbose -- curl $HEALTH_URL
 }
 
+serve() {
+  # log to stdout
+  rappor-api --log-dir '' "$@"
+}
+
 #
 # Misc
 #
 
 count() {
   wc -l *.py *.R
-}
-
-#
-# Serve
-#
-
-rappor-api() {
-  # R code needs to be able to find other modules
-  export RAPPOR_SRC
-  ./rappor_api.py "$@"
-}
-
-serve() {
-  rappor-api "$@"
 }
 
 #

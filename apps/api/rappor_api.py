@@ -217,6 +217,7 @@ class DistHandler(object):
 
 
 def InitPool(opts, pool):
+  rappor_src = os.environ['RAPPOR_SRC']  # required
 
   for i in xrange(opts.num_processes):
     logging.info('Starting child %d', i)
@@ -234,9 +235,9 @@ def InitPool(opts, pool):
       filename = None
       f = None
 
-    rappor_src = os.environ['RAPPOR_SRC']  # required
     applet = os.path.join(rappor_src, 'apps/api/handlers.R')
 
+    # NOTE: Can't start in a tmp dir, because of R imports.
     c = child.Child([applet], cwd=tmp_dir, log_fd=f)
     c.Start()
 
