@@ -39,7 +39,7 @@ EstimateBloomCounts <- function(params, obs_counts) {
   # Output:
   #    ests: a matrix of size m by k with estimated counts for the probability
   #          of each bit set to 1 in the true Bloom filter.
-  #    std: standard deviation of the estimates.
+  #    stds: standard deviation of the estimates.
 
   p <- params$p
   q <- params$q
