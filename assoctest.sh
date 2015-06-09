@@ -97,7 +97,7 @@ _run-one-instance() {
     -t $instance_dir/truedist.csv \
     -m $instance_dir/map \
     -n $num_clients \
-    --extras $num_unique_values \
+    --var1_num $num_unique_values \
     --var2_num $num_unique_values2
 
   local out_dir=${instance_dir}_report
@@ -111,6 +111,7 @@ _run-one-instance() {
     tests/analyze_assoc.R \
       --map1 $instance_dir/map_1.csv \
       --map2 $instance_dir/map_2.csv \
+      --map3 $instance_dir/map_3.csv \
       --reports $instance_dir/reports.csv \
       --truefile $instance_dir/truedist.csv \
       --outdir $out_dir \

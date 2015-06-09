@@ -51,6 +51,8 @@ DISTRIBUTION_PARAMS_ASSOC = {
     'fizz-small': (100, 20, int(1e04)),
     'fizz-small-bool': (100, 2, int(1e04)),
     'fizz': (100, 20, int(1e05)),
+    'fizz-large': (100, 50, int(1e05)),
+    'fizz-2large': (100, 50, int(5e05)),
     'fizz-bool': (100, 2, int(1e05)),
     'medium': (1000, 10, int(1e05)),
     'medium2': (1000, 2, int(1e05)),
@@ -74,6 +76,7 @@ PRIVACY_PARAMS = {
     'eps_1_5': (0.225, 0.775, 0.0),  # eps_1 = 5, no eps_inf
     'eps_verysmall': (0.125, 0.875, 0.125),
     'eps_small': (0.125, 0.875, 0.5),
+    'uma_rappor_type': (0.50, 0.75, 0.5),
 }
 
 # For deriving candidates from true inputs.
@@ -99,10 +102,11 @@ TEST_CONFIGS = [
 # The test config runs a test suite that is the cross product of all the above
 # sets
 ASSOC_TEST_CONFIG = {
-    'distr': ('fizz-tiny', 'fizz-tiny-bool',
-              'fizz-small', 'fizz-small-bool',),# 'medium'),
-    'blooms': ('8x16',), # '8x32', '16x32'),
-    'privacy': ('eps_small',), # 'eps_small'),
+    'distr': ('fizz-tiny',
+              'fizz-small',
+              'fizz','fizz-large','fizz-2large'),# 'medium'),
+    'blooms': ('8x32',), # '8x32', '16x32'),
+    'privacy': ('eps_small','uma_rappor_type'), # 'eps_small'),
 }
 
 #

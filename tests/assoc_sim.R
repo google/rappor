@@ -53,7 +53,7 @@ if(!interactive()) {
                 help = "Number of values for var2"),
     make_option(c("--extras", "-e"), default = 1e05,
                 help = "How many spurious candidates does the 1st map have?"),
-    make_option(c("--distr", "-d"), default = "zipf2",
+    make_option(c("--distr", "-d"), default = "zipf3",
                 help = "Type of distribution. Choose between
                 {unif, poisson, poisson2, zipf2}"),
     make_option(c("--prefix", "-x"), default = "./",
@@ -105,7 +105,7 @@ GetUniqueValsFromFile <- function(filename) {
 #         truefile = name of the file with true distribution
 #         var1_num = number of var1 candidates
 #         var2_num = number of var2 candidates
-#         *** FOR ASSOCTEST TEST SUITE, USE ONLY ZIPF2 ***
+#         *** FOR ASSOCTEST TEST SUITE, USE ONLY ZIPF2 / ZIPF3 ***
 #         mapfile = file to write maps into (with .csv suffixes)
 #         reportsfile = file to write reports into (with .csv suffix)
 SimulateReports <- function(N, uvals, params, distr, extras, truefile,
@@ -140,7 +140,7 @@ SimulateReports <- function(N, uvals, params, distr, extras, truefile,
     v2_samples <- rep(1, N)
     v2_samples[v1_samples %% 2 == 0] <- pr25[v1_samples %% 2 == 0]
     v2_samples[v1_samples %% 2 == 1] <- pr75[v1_samples %% 2 == 1]
-  } else if (distr == "zipf2") {
+  } else if (distr == "zipf2" || distr == "zipf3") {
 
     # Zipfian over var1_num strings
     partition <- RandomPartition(N, ComputePdf("zipf1.5", var1_num))
@@ -159,11 +159,18 @@ SimulateReports <- function(N, uvals, params, distr, extras, truefile,
                      RandomPartition(N, ComputePdf("zipf1.5", var2_num))))
     d2 <- (var2_num:1)[d1]
     v2_samples <- rep(1, N)
+    v3_samples <- rep(1, N)
     v2_samples[v1_samples %% 2 == 0] <- d1[v1_samples %% 2 == 0]
     v2_samples[v1_samples %% 2 == 1] <- d2[v1_samples %% 2 == 1]
+    if(distr == "zipf3") {
+      bool1 <- rbinom(N, 1, 0.25) + rep(1, N)
+      bool2 <- rbinom(N, 1, 0.75) + rep(1, N)
+      v3_samples[v1_samples %% 2 == 0] <- bool1[v1_samples %% 2 == 0]
+      v3_samples[v1_samples %% 2 == 1] <- bool2[v1_samples %% 2 == 1]
+    }
   }
 
-  tmp_samples <- list(v1_samples, v2_samples)
+  tmp_samples <- list(v1_samples, v2_samples, v3_samples)
 
   # Function to pad strings to uval_vec if sample_vec has
   # larger support than the number of strings in uval_vec
@@ -186,12 +193,13 @@ SimulateReports <- function(N, uvals, params, distr, extras, truefile,
   # Pad and update uvals
   uvals <- lapply(1:2, function(i) PadStrings(tmp_samples[[i]],
                                               uvals[[i]]))
+  uvals[[3]] <- c("true", "false")
   # Replace integers in tmp_samples with actual sample strings
-  samples <- lapply(1:2, function(i) uvals[[i]][tmp_samples[[i]]])
+  samples <- lapply(1:3, function(i) uvals[[i]][tmp_samples[[i]]])
 
   print("TRUE DISTR")
   td <- table(samples)/sum(table(samples))
-  td <- td[order(rowSums(td), decreasing = TRUE),]
+  td <- td[order(rowSums(td), decreasing = TRUE),,]
   print(td)
   write.table(td, file = truefile, sep = ",", col.names = TRUE,
               row.names = TRUE, quote = FALSE)
@@ -209,17 +217,21 @@ SimulateReports <- function(N, uvals, params, distr, extras, truefile,
                 sep = ",", col.names = FALSE, na = "", quote = FALSE)
   write.table(map[[2]]$map_pos, file = paste(mapfile, "_2.csv", sep = ""),
               sep = ",", col.names = FALSE, na = "", quote = FALSE)
+  write.table(map[[3]]$map_pos, file = paste(mapfile, "_3.csv", sep = ""),
+              sep = ",", col.names = FALSE, na = "", quote = FALSE)
 
   # Write reports into a csv file
   # Format:
   #     cohort, bloom filter var1, bloom filter var2
-  reports <- lapply(1:2, function(i)
+  reports <- lapply(1:3, function(i)
     EncodeAll(samples[[i]], cohorts, map[[i]]$map, params))
   # Organize cohorts and reports into format
   write_matrix <- cbind(as.matrix(cohorts),
                         as.matrix(lapply(reports[[1]],
                             function(x) paste(x, collapse = ""))),
                         as.matrix(lapply(reports[[2]],
+                            function(x) paste(x, collapse = ""))),
+                        as.matrix(lapply(reports[[3]],
                             function(x) paste(x, collapse = ""))))
   write.table(write_matrix, file = reportsfile, quote = FALSE,
               row.names = FALSE, col.names = FALSE, sep = ",")
