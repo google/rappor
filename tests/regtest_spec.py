@@ -102,11 +102,11 @@ TEST_CONFIGS = [
 # The test config runs a test suite that is the cross product of all the above
 # sets
 ASSOC_TEST_CONFIG = {
-    'distr': ('fizz-tiny',
-              'fizz-small',
-              'fizz','fizz-large','fizz-2large'),# 'medium'),
+    'distr': (#'fizz-tiny',
+              #'fizz-small',
+              'fizz',),#'fizz-large','fizz-2large'),# 'medium'),
     'blooms': ('8x32',), # '8x32', '16x32'),
-    'privacy': ('eps_small','uma_rappor_type'), # 'eps_small'),
+    'privacy': ('eps_small',),#'uma_rappor_type'), # 'eps_small'),
 }
 
 #

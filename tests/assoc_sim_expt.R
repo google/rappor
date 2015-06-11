@@ -19,51 +19,28 @@
 # be easily extended to support more.
 #
 # Usage:
-#       $ ./assoc_sim.R -n 1000
+#       $ ./assoc_sim_expt.R --inp sim_inp.json
 # Inputs: uvals, params, reports, map, num, unif
 #         see how options are parsed below for more information
 # Outputs:
 #         reports.csv file containing reports
 #         map_{1, 2, ...}.csv file(s) containing maps of variables
 
+library("jsonlite")
 library("optparse")
 
 options(stringsAsFactors = FALSE)
 
 if(!interactive()) {
   option_list <- list(
-    make_option(c("--uvals", "-v"),
-                help = "Filename for list of values over which
-                distributions are simulated. The file is a list of
-                comma-separated strings each line of which refers
-                to a new variable."),
-    make_option(c("--params", "-p"), default = "params.csv",
-                help = "Filename for RAPPOR parameters"),
-    make_option(c("--reports", "-r"), default = "reports.csv",
-                help = "Filename for reports"),
-    make_option(c("--true", "-t"), default = "truedist.csv",
-                help = "Filename for the true distribution"),
-    make_option(c("--map", "-m"), default = "map",
-                help = "Filename *prefix* for map(s)"),
-    make_option(c("--num", "-n"), default = 1e05,
-                help = "Number of reports"),
-    make_option(c("--var1_num", "-z"), default = 100,
-                help = "Number of values for var1"),
-    make_option(c("--var2_num", "-y"), default = 20,
-                help = "Number of values for var2"),
-    make_option(c("--extras", "-e"), default = 1e05,
-                help = "How many spurious candidates does the 1st map have?"),
-    make_option(c("--distr", "-d"), default = "zipf3",
-                help = "Type of distribution. Choose between
-                {unif, poisson, poisson2, zipf2}"),
-    make_option(c("--prefix", "-x"), default = "./",
-                help = "Path to prefix all default files")
-  )
+    make_option(c("--inp"), default = "assoc_inp.json",
+                help = "JSON file with inputs for assoc_sim_expt"))
   opts <- parse_args(OptionParser(option_list = option_list))
+  inp <- fromJSON(opts$inp)
 }
 
 apply_prefix <- function(path) {
-  paste(opts$prefix, path, sep = "")
+  paste(inp$prefix, path, sep = "")
 }
 
 source("analysis/R/encode.R")
@@ -103,13 +80,12 @@ GetUniqueValsFromFile <- function(filename) {
 #                 {unif, poisson, poisson2, zipfg}
 #         extras = whether map_1.csv has spurious candidates or not
 #         truefile = name of the file with true distribution
-#         var1_num = number of var1 candidates
-#         var2_num = number of var2 candidates
+#         varcandidates = list of number of candidates for each var
 #         *** FOR ASSOCTEST TEST SUITE, USE ONLY ZIPF2 / ZIPF3 ***
 #         mapfile = file to write maps into (with .csv suffixes)
 #         reportsfile = file to write reports into (with .csv suffix)
 SimulateReports <- function(N, uvals, params, distr, extras, truefile,
-                            var1_num, var2_num,
+                            varcandidates,
                             mapfile, reportsfile) {
   # Compute true distribution
   m <- params$m
@@ -142,6 +118,9 @@ SimulateReports <- function(N, uvals, params, distr, extras, truefile,
     v2_samples[v1_samples %% 2 == 1] <- pr75[v1_samples %% 2 == 1]
   } else if (distr == "zipf2" || distr == "zipf3") {
 
+    var1_num <- varcandidates[[1]]
+    var2_num <- varcandidates[[2]]
+    
     # Zipfian over var1_num strings
     partition <- RandomPartition(N, ComputePdf("zipf1.5", var1_num))
     v1_samples <- rep(1:var1_num, partition)  # expand partition
@@ -170,12 +149,11 @@ SimulateReports <- function(N, uvals, params, distr, extras, truefile,
     }
   }
 
-  if(distr == "zipf2") {
-    tmp_samples <- list(v1_samples, v2_samples)
-  } else if(distr == "zipf3") {
+  if(length(varcandidates) == 3) {
     tmp_samples <- list(v1_samples, v2_samples, v3_samples)
+  } else if (length(varcandidates) == 2) {
+    tmp_samples <- list(v1_samples, v2_samples)
   }
-
 
   # Function to pad strings to uval_vec if sample_vec has
   # larger support than the number of strings in uval_vec
@@ -196,16 +174,20 @@ SimulateReports <- function(N, uvals, params, distr, extras, truefile,
   }
 
   # Pad and update uvals
-  uvals <- lapply(1:2, function(i) PadStrings(tmp_samples[[i]],
+  uvals <- lapply(1:length(varcandidates),
+                  function(i) PadStrings(tmp_samples[[i]],
                                               uvals[[i]]))
-  
-  uvals[[3]] <- c("true", "false")
   # Replace integers in tmp_samples with actual sample strings
-  samples <- lapply(1:3, function(i) uvals[[i]][tmp_samples[[i]]])
+  samples <- lapply(1:length(varcandidates),
+                    function(i) uvals[[i]][tmp_samples[[i]]])
 
   print("TRUE DISTR")
   td <- table(samples)/sum(table(samples))
-  td <- td[order(rowSums(td), decreasing = TRUE),,]
+  if (length(varcandidates) == 2) {
+    td <- td[order(rowSums(td), decreasing = TRUE),]
+  } else {
+    td <- td[order(rowSums(td), decreasing = TRUE),,]
+  }
   print(td)
   write.table(td, file = truefile, sep = ",", col.names = TRUE,
               row.names = TRUE, quote = FALSE)
@@ -223,45 +205,46 @@ SimulateReports <- function(N, uvals, params, distr, extras, truefile,
                 sep = ",", col.names = FALSE, na = "", quote = FALSE)
   write.table(map[[2]]$map_pos, file = paste(mapfile, "_2.csv", sep = ""),
               sep = ",", col.names = FALSE, na = "", quote = FALSE)
-  write.table(map[[3]]$map_pos, file = paste(mapfile, "_3.csv", sep = ""),
+  if(length(varcandidates) == 3) {
+    write.table(map[[3]]$map_pos, file = paste(mapfile, "_3.csv", sep = ""),
               sep = ",", col.names = FALSE, na = "", quote = FALSE)
+  }
 
   # Write reports into a csv file
   # Format:
   #     cohort, bloom filter var1, bloom filter var2
-  reports <- lapply(1:3, function(i)
+  reports <- lapply(1:length(varcandidates), function(i)
     EncodeAll(samples[[i]], cohorts, map[[i]]$map, params))
   # Organize cohorts and reports into format
   write_matrix <- cbind(as.matrix(cohorts),
-                        as.matrix(lapply(reports[[1]],
-                            function(x) paste(x, collapse = ""))),
-                        as.matrix(lapply(reports[[2]],
-                            function(x) paste(x, collapse = ""))),
-                        as.matrix(lapply(reports[[3]],
-                            function(x) paste(x, collapse = ""))))
+                        sapply(reports,
+                               function(x) as.matrix(lapply(x,
+                                                            function(z) paste(z, collapse = "")))))
   write.table(write_matrix, file = reportsfile, quote = FALSE,
               row.names = FALSE, col.names = FALSE, sep = ",")
 }
 
-main <- function(opts) {
+main <- function(inp) {
   ptm <- proc.time()
-
-  if(is.null(opts$uvals)) {
-    uvals = list(var1 = c("str1"), var2 = c("option1"))
+  
+  if(is.null(inp$uvals)) {
+    # One off case.
+    # TODO(pseudorandom): More sensible defaults.
+    uvals = list(var1 = c("str1", "str2"), var2 = c("option1", "option2", "option3"))
   } else {
-    uvals <- GetUniqueValsFromFile(apply_prefix(opts$uvals))
+    uvals <- GetUniqueValsFromFile(apply_prefix(inp$uvals))
   }
-  params <- ReadParameterFile(apply_prefix(opts$params))
-  SimulateReports(opts$num, uvals, params,  opts$distr,   # inuts
-                  opts$extras,  apply_prefix(opts$true),  # inputs
-                  opts$var1_num,  opts$var2_num,          # inputs
-                  apply_prefix(opts$map),
-                  apply_prefix(opts$reports))             # outputs
+  params <- ReadParameterFile(apply_prefix(inp$params))
+  SimulateReports(inp$num, uvals, params,  inp$distr,   # inuts
+                  inp$extras,  apply_prefix(inp$true),  # inputs
+                  inp$varcandidates,          # inputs
+                  apply_prefix(inp$map),
+                  apply_prefix(inp$reports))             # outputs
 
   print("PROC.TIME")
   print(proc.time() - ptm)
 }
 
 if(!interactive()) {
-  main(opts)
+  main(inp)
 }
