@@ -89,20 +89,60 @@ CombineMaps <- function(map1, map2) {
   length2 <- dim(map2)[[1]]
   width2 <- dim(map2)[[2]]
   
+  # Now process map1
   map1fn <- function(i, j) {
-    i1 <- seq(1, length2) + (i-1) * length2
-    j1 <- seq(1, width2) + (j-1) * width2
-    indices1 <- expand.grid(i1, j1)
+    i1 <- seq(1, length2) + ((i-1) * length2)
+    j1 <- seq(1, width2) + ((j-1) * width2)
+    expand.grid(i1, j1)  
   }
   map1indices <- do.call(rbind,
                          mapply(map1fn, rows1, cols1, SIMPLIFY = FALSE))
   map1_big <- sparseMatrix(map1indices[,"Var1"],
-                           map1indices[,"var2"],
+                           map1indices[,"Var2"],
                            dims = c(length1 * length2,
                                     width1 * width2))
-  colnames(map1_big) <- outer(function(x, y) paste(x, y, sep = "x"),
-                              colnames(map1),
-                              colnames(map2))
+  colnames(map1_big) <- t(outer(colnames(map1),
+                              colnames(map2),
+                              function(x, y) paste(x, y, sep = "x")))
+  
+  # Now process map2
+  map2fn <- function(i, j) {
+    i2 <- i + (seq(0, length1 - 1) * length2)
+    j2 <- j + (seq(0, width1 - 1) * width2)
+    expand.grid(i2, j2)
+  }
+  map2indices <- do.call(rbind,
+                         mapply(map2fn, rows2, cols2, SIMPLIFY = FALSE))
+  map2_big <- sparseMatrix(map2indices[,"Var1"],
+                           map2indices[,"Var2"],
+                           dims = c(length1 * length2,
+                                    width1 * width2))
+  colnames(map2_big) <- t(outer(colnames(map1),
+                              colnames(map2),
+                              function(x, y) paste(x, y, sep = "x")))
+  
+  # Now collate two maps with entries in (1000, 0100, 0010, 0001)
+  # (m1&m2, !m1 & m2, m1 & !m2, !(m1 & m2)) respectively
+  findices <- which(map1_big & map2_big, arr.ind = TRUE)
+  # 1000
+  findices[, 1] <- findices[, 1] * 4 - 3
+  # 0100
+  indices_0100 <- which((!map1_big) & map2_big, arr.ind = TRUE)
+  indices_0100[, 1] <- indices_0100[, 1] * 4 - 2
+  findices <- rbind(findices, indices_0100)
+  # 0010
+  indices_0010 <- which(map1_big & (!map2_big), arr.ind = TRUE)
+  indices_0010[, 1] <- indices_0010[, 1] * 4 - 1
+  findices <- rbind(findices, indices_0010)
+  # 0001
+  indices_0001 <- which(!(map1_big & map2_big), arr.ind = TRUE)
+  indices_0001[, 1] <- indices_0001[, 1] * 4
+  findices <- rbind(findices, indices_0001)
+  sm <- sparseMatrix(findices[, 1], findices[, 2],
+                     dims = c(4 * length1 * length2,
+                        width1 * width2))
+  colnames(sm) <- colnames(map1_big)
+  sm
 }
 
 
