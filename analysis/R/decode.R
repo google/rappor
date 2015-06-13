@@ -19,6 +19,67 @@ library(glmnet)
 
 source('analysis/R/alternative.R')
 
+Estimate2WayBloomCounts <- function(params, obs_counts) {
+  p <- params$p
+  q <- params$q
+  f <- params$f
+  m <- params$m
+  
+  stopifnot(m == nrow(obs_counts), params$k + 1 == ncol(obs_counts))
+  
+  p11 <- q * (1 - f/2) + p * f / 2  # probability of a true 1 reported as 1
+  p01 <- p * (1 - f/2) + q * f / 2  # probability of a true 0 reported as 1
+  p10 <- 1 - p11  # probability of a true 1 reported as 0
+  p00 <- 1 - p01  # probability of a true 0 reported as 0
+  p2 <- p11 - p01  # == (1 - f) * (q - p)
+  
+  ests <- apply(obs_counts, 1, function(x) {
+    N <- x[1]  # sample size of cohort
+    inds <- seq(0, m/4 - 1)
+    v <- x[-1]  # counts for individual bits
+    # 11 or (1000) estimates
+    v[inds*4 + 2] <- 
+      (v[inds*4 + 2] - (p11**2)*N) / (2*p01*p11 + p01**2 - p11**2)
+    
+    # 10 or (0100) estimates
+    v[inds*4 + 3] <-
+      (v[inds*4 + 3] - (p11*p00)*N) / (p10*p11 + p01*p10 + p01*p00 - p11*p00)
+    
+    # 01 or (0010) estimates
+    v[inds*4 + 4] <-
+      (v[inds*4 + 4] - (p11*p00)*N) / (p10*p11 + p01*p10 + p01*p00 - p11*p00)
+    
+    # 00 or (0001) estimates
+    v[inds*4 + 5] <-
+      (v[inds*4 + 5] - (p11**2)*N) / (2*p10*p00 + p10**2 - p00**2)
+    v
+  })
+  
+  if(FALSE) {
+    # TODO(pseudorandom): Compute variances
+    variances <- apply(obs_counts, 1, function(x) {
+      N <- x[1]
+      v <- x[-1]
+      p_hats <- (v - p01 * N) / (N * p2)  # expectation of a true 1
+      p_hats <- pmax(0, pmin(1, p_hats))  # clamp to [0,1]
+      r <- p_hats * p11 + (1 - p_hats) * p01  # expectation of a reported 1
+      N * r * (1 - r) / p2^2  # variance of the binomial
+    })
+  }
+  
+  # Transform counts from absolute values to fractional, removing bias due to
+  #      variability of reporting between cohorts.
+  ests <- apply(ests, 1, function(x) x / obs_counts[,1])
+  # stds <- apply(variances^.5, 1, function(x) x / obs_counts[,1])
+  
+  # Some estimates may be set to infinity, e.g. if f=1. We want to
+  #     account for this possibility, and set the corresponding counts
+  #     to 0.
+  ests[abs(ests) == Inf] <- 0
+  
+  list(estimates = ests, stds = ests)
+}
+
 EstimateBloomCounts <- function(params, obs_counts) {
   # Estimates the number of times each bit in each cohort was set in original
   # Bloom filters.

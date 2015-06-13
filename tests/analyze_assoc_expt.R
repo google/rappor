@@ -135,7 +135,7 @@ CombineMaps <- function(map1, map2) {
   indices_0010[, 1] <- indices_0010[, 1] * 4 - 1
   findices <- rbind(findices, indices_0010)
   # 0001
-  indices_0001 <- which(!(map1_big & map2_big), arr.ind = TRUE)
+  indices_0001 <- which((!map1_big) & (!map2_big), arr.ind = TRUE)
   indices_0001[, 1] <- indices_0001[, 1] * 4
   findices <- rbind(findices, indices_0001)
   sm <- sparseMatrix(findices[, 1], findices[, 2],
@@ -186,7 +186,7 @@ main <- function(opts) {
   CombineMaps(map[[1]]$map[[1]], map[[2]]$map[[1]])
   cmap <- mapply(CombineMaps, map[[1]]$map, map[[2]]$map)
   counts <- ComputeCounts(creports, cohorts[[1]], params2)
-  
+  ests <- Estimate2WayBloomCounts(params2, counts)
   
   return
   joint_dist <- ComputeDistributionEM(reports, cohorts, map,
