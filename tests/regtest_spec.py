@@ -105,8 +105,8 @@ ASSOC_TEST_CONFIG = {
     'distr': (#'fizz-tiny',
               #'fizz-small',
               'fizz',),#'fizz-large','fizz-2large'),# 'medium'),
-    'blooms': ('8x32',), # '8x32', '16x32'),
-    'privacy': ('eps_small',),#'uma_rappor_type'), # 'eps_small'),
+    'blooms': ('8x16', '8x32'), # '8x32', '16x32'),
+    'privacy': ('eps_small','uma_rappor_type'),#'uma_rappor_type'), # 'eps_small'),
 }
 
 #

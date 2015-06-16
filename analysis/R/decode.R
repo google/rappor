@@ -71,7 +71,8 @@ Estimate2WayBloomCounts <- function(params, obs_counts) {
   ests[abs(ests) == Inf] <- 0
     
   list(estimates = ests,
-       stds = matrix(rep(5, 2 * length(ests[1,])), 2))
+       stds = matrix(rep(5, length(ests[,1]) * length(ests[1,])),
+                     length(ests[,1])))
 }
 
 EstimateBloomCounts <- function(params, obs_counts) {
@@ -277,7 +278,8 @@ FitDistribution <- function(estimates_stds, map) {
 
   support_coefs <- 1:S
 
-  if (S > length(estimates_stds$estimates) * .8) {
+  if (TRUE) {
+  # if (S > length(estimates_stds$estimates) * .8) {
     # the system is close to being underdetermined
     lasso <- FitLasso(map, as.vector(t(estimates_stds$estimates)))
 

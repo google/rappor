@@ -91,14 +91,24 @@ _run-one-instance() {
 
   banner "Running association input simulation"
 
-  tests/assoc_sim.R \
-    -p $case_dir/case_params.csv \
-    -r $instance_dir/reports.csv \
-    -t $instance_dir/truedist.csv \
-    -m $instance_dir/map \
-    -n $num_clients \
-    --var1_num $num_unique_values \
-    --var2_num $num_unique_values2
+  # Setting up JSON file containing assoc_sim inputs with python
+  python -c "import json; \
+    f = file('$instance_dir/assoc_inp.json', 'w'); \
+    inp = dict(); \
+    inp['params'] = '$case_dir/case_params.csv'; \
+    inp['reports'] = '$instance_dir/reports.csv'; \
+    inp['true'] = '$instance_dir/truedist.csv'; \
+    inp['map'] = '$instance_dir/map'; \
+    inp['num'] = $num_clients; \
+    inp['extras'] = 0; \
+    inp['distr'] = 'zipf2'; \
+    inp['prefix'] = './'; \
+    inp['vars'] = 2; \
+    inp['varcandidates'] = [$num_unique_values, $num_unique_values2]; \
+    json.dump(inp, f); \
+    f.close();"
+
+  tests/assoc_sim_expt.R --inp $instance_dir/assoc_inp.json
 
   local out_dir=${instance_dir}_report
   mkdir --verbose -p $out_dir
@@ -107,15 +117,24 @@ _run-one-instance() {
   # engine, which excludes R's loading time and reading of the (possibly
   # substantial) map file. Timing below is more inclusive.
   TIMEFORMAT='Running analyze.R took %R seconds'
+
+  # Setting up JSON file with python
+  python -c "import json; \
+    f = file('$instance_dir/analyze_inp.json', 'w'); \
+    inp = dict(); \
+    inp['maps'] = ['$instance_dir/map_1.csv',\
+                   '$instance_dir/map_2.csv']; \
+    inp['reports'] = '$instance_dir/reports.csv'; \
+    inp['truefile'] = '$instance_dir/truedist.csv'; \
+    inp['outdir'] = '.'; \
+    inp['params'] = '$case_dir/case_params.csv'; \
+    inp['newalg'] = 'false'; \
+    inp['numvars'] = 2; \
+    json.dump(inp, f); \
+    f.close();"
+
   time {
-    tests/analyze_assoc.R \
-      --map1 $instance_dir/map_1.csv \
-      --map2 $instance_dir/map_2.csv \
-      --map3 $instance_dir/map_3.csv \
-      --reports $instance_dir/reports.csv \
-      --truefile $instance_dir/truedist.csv \
-      --outdir $out_dir \
-      --params $case_dir/case_params.csv
+    tests/analyze_assoc_expt.R --inp $instance_dir/analyze_inp.json
   }
 }
 

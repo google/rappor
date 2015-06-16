@@ -189,10 +189,15 @@ main <- function(opts) {
   cmap <- mapply(CombineMaps, map[[1]]$map, map[[2]]$map)
   # Combine cohorts into one map. Needed for Decode2Way
   inds <- lapply(cmap, function(x) which(x, arr.ind = TRUE))
-  inds[[2]][, 1] <- inds[[2]][, 1] + dim(cmap[[1]])[1]
-  inds <- rbind(inds[[1]], inds[[2]])
+  for (i in seq(1, length(inds))) {
+    inds[[i]][, 1] <- inds[[i]][, 1] + (i-1) * dim(cmap[[1]])[1]
+  }
+  inds <- do.call("rbind", inds)
+  
+  # inds[[2]][, 1] <- inds[[2]][, 1] + dim(cmap[[1]])[1]
+  # inds <- rbind(inds[[1]], inds[[2]])
   crmap <- sparseMatrix(inds[, 1], inds[, 2], dims = c(
-                                                nrow(cmap[[1]]) + nrow(cmap[[2]]),
+                                                nrow(cmap[[1]]) * length(cmap),
                                                 ncol(cmap[[1]])))
   colnames(crmap) <- colnames(cmap[[1]])
   counts <- ComputeCounts(creports, cohorts[[1]], params2)
