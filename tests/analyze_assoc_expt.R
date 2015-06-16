@@ -236,7 +236,7 @@ main <- function(opts) {
   metrics <- list(
     td_chisq = chisq.test(td)[1][[1]][[1]],
     ed_chisq = chisq.test(ed)[1][[1]][[1]],
-    tv = l1d(td, ed, "")/2,
+    tv = l1d(td, ed, ""),
     time = time_taken[1],
     dim1 = dim(ed)[[2]],
     dim2 = dim(ed)[[1]]

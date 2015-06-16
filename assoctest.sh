@@ -126,7 +126,7 @@ _run-one-instance() {
                    '$instance_dir/map_2.csv']; \
     inp['reports'] = '$instance_dir/reports.csv'; \
     inp['truefile'] = '$instance_dir/truedist.csv'; \
-    inp['outdir'] = '.'; \
+    inp['outdir'] = '$out_dir'; \
     inp['params'] = '$case_dir/case_params.csv'; \
     inp['newalg'] = 'false'; \
     inp['numvars'] = 2; \
