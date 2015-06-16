@@ -35,7 +35,7 @@ install-plyr-with-friends() {
   wget --directory _tmp \
     http://cran.r-project.org/src/contrib/Archive/Rcpp/Rcpp_0.11.4.tar.gz
   wget --directory _tmp \
-     http://cran.r-project.org/src/contrib/Archive/plyr/plyr_1.8.1.tar.gz
+    http://cran.r-project.org/src/contrib/Archive/plyr/plyr_1.8.1.tar.gz
   sudo R CMD INSTALL _tmp/Rcpp_0.11.4.tar.gz
   sudo R CMD INSTALL _tmp/plyr_1.8.1.tar.gz 
   sudo R -e \
