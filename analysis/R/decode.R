@@ -71,7 +71,7 @@ Estimate2WayBloomCounts <- function(params, obs_counts) {
   ests[abs(ests) == Inf] <- 0
     
   list(estimates = ests,
-       stds = matrix(rep(1, 2 * length(ests[1,])), 2))
+       stds = matrix(rep(5, 2 * length(ests[1,])), 2))
 }
 
 EstimateBloomCounts <- function(params, obs_counts) {
