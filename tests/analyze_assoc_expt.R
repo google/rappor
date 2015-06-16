@@ -62,12 +62,14 @@ ProcessMap <- function(map, params) {
 # Function to combine reports
 # Currently assume 2-way marginals
 CombineReports <- function(reports1, reports2) {
-  two_bits <- list(c(0, 0, 0, 1), c(0, 0, 1, 0), c(0, 1, 0, 0), c(1, 0, 0, 0))
+  # Encoding (var1, var2) \in {(0, 0), (0, 1), (1, 0), (1, 1)}
+  two_bits <- list(c(0, 0, 0, 1), c(0, 1, 0, 0), c(0, 0, 1, 0), c(1, 0, 0, 0))
   OuterProd <- function(x, y) {
     as.vector(outer(x, y,
                     function(z, t) z + 2 * t))
   }
-  creports <- mapply(OuterProd, reports1, reports2,
+  # "report1-major" order
+  creports <- mapply(OuterProd, reports2, reports1,
                      SIMPLIFY = FALSE)
   # Collapse counts to bit vector according to two_bits
   lapply(creports,
@@ -183,55 +185,68 @@ main <- function(opts) {
   creports <- CombineReports(reports[[1]], reports[[2]])
   params2 <- params
   params2$k <- (params$k ** 2) * 4
-  CombineMaps(map[[1]]$map[[1]], map[[2]]$map[[1]])
+  # CombineMaps(map[[1]]$map[[1]], map[[2]]$map[[1]])
   cmap <- mapply(CombineMaps, map[[1]]$map, map[[2]]$map)
+  # Combine cohorts into one map. Needed for Decode2Way
+  inds <- lapply(cmap, function(x) which(x, arr.ind = TRUE))
+  inds[[2]][, 1] <- inds[[2]][, 1] + length(inds[[1]][, 1])
+  inds <- rbind(inds[[1]], inds[[2]])
+  crmap <- sparseMatrix(inds[, 1], inds[, 2], dims = c(
+                                                nrow(cmap[[1]]) + nrow(cmap[[2]]),
+                                                ncol(cmap[[1]])))
+  colnames(crmap) <- colnames(cmap[[1]])
   counts <- ComputeCounts(creports, cohorts[[1]], params2)
-  ests <- Estimate2WayBloomCounts(params2, counts)
+  marginal <- Decode2Way(counts, crmap, params2)$fit
+  print(marginal)
   
-  return
-  joint_dist <- ComputeDistributionEM(reports, cohorts, map,
-                                      ignore_other = TRUE,
-                                      quick = TRUE,
-                                      params, marginals = NULL,
-                                      estimate_var = FALSE,
-                                      new_alg = inp$newalg)
-
-  
-  td <- read.csv(file = inp$truefile)
-  ed <- joint_dist$orig$fit
-  if(length(reports) == 3) {
-    ed <- as.data.frame(ed) 
+  if (FALSE) {
+    joint_dist <- ComputeDistributionEM(reports, cohorts, map,
+                                        ignore_other = TRUE,
+                                        quick = TRUE,
+                                        params, marginals = NULL,
+                                        estimate_var = FALSE,
+                                        new_alg = inp$newalg)
   }
   
-  # We can see if chi-squared tests show different results
-  # for estimated vs real distribution
-  print("CHI-SQUARED")
-  td_chisq <- chisq.test(td)
-  ed_chisq <- chisq.test(ed)
-  print(td_chisq)
-  print(ed_chisq)
-  print(l1d(td, ed, "L1 DISTANCE"))
-  l1d_metric <- l1d(td, ed, "")
-  print("JOINT_DIST$FIT")
-  print(signif(ed[order(rowSums(ed)),], 4))
-  td_metric <- td_chisq[1][[1]][[1]]
-  ed_metric <- ed_chisq[1][[1]][[1]]
+  td <- read.csv(file = inp$truefile)
+  print(td)
   
-  print("PROC.TIME")
-  time_taken <- proc.time() - ptm
-  print(time_taken)
-  
-  metrics <- list(td_chisq = td_metric,
-                  ed_chisq = ed_metric,
-                  tv = l1d_metric/2,
-                  time = time_taken[1],
-                  dim1 = dim(ed)[[2]],
-                  dim2 = dim(ed)[[1]])
-  
-  # Write metrics to metrics.csv
-  # Report l1 distance / 2 to be consistent with histogram analysis
-  filename <- file.path(inp$outdir, 'metrics.csv')
-  write.csv(metrics, file = filename, row.names = FALSE)
+  if(FALSE) {
+    ed <- joint_dist$orig$fit
+    if(length(reports) == 3) {
+      ed <- as.data.frame(ed) 
+    }
+    
+    # We can see if chi-squared tests show different results
+    # for estimated vs real distribution
+    print("CHI-SQUARED")
+    td_chisq <- chisq.test(td)
+    ed_chisq <- chisq.test(ed)
+    print(td_chisq)
+    print(ed_chisq)
+    print(l1d(td, ed, "L1 DISTANCE"))
+    l1d_metric <- l1d(td, ed, "")
+    print("JOINT_DIST$FIT")
+    print(signif(ed[order(rowSums(ed)),], 4))
+    td_metric <- td_chisq[1][[1]][[1]]
+    ed_metric <- ed_chisq[1][[1]][[1]]
+    
+    print("PROC.TIME")
+    time_taken <- proc.time() - ptm
+    print(time_taken)
+    
+    metrics <- list(td_chisq = td_metric,
+                    ed_chisq = ed_metric,
+                    tv = l1d_metric/2,
+                    time = time_taken[1],
+                    dim1 = dim(ed)[[2]],
+                    dim2 = dim(ed)[[1]])
+    
+    # Write metrics to metrics.csv
+    # Report l1 distance / 2 to be consistent with histogram analysis
+    filename <- file.path(inp$outdir, 'metrics.csv')
+    write.csv(metrics, file = filename, row.names = FALSE)
+  }
 }
 
 # L1 distance = 1 - sum(min(df1|x, df2|x)) where

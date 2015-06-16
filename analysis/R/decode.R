@@ -24,6 +24,7 @@ Estimate2WayBloomCounts <- function(params, obs_counts) {
   q <- params$q
   f <- params$f
   m <- params$m
+  k <- params$k
   
   stopifnot(m == nrow(obs_counts), params$k + 1 == ncol(obs_counts))
   
@@ -31,28 +32,20 @@ Estimate2WayBloomCounts <- function(params, obs_counts) {
   p01 <- p * (1 - f/2) + q * f / 2  # probability of a true 0 reported as 1
   p10 <- 1 - p11  # probability of a true 1 reported as 0
   p00 <- 1 - p01  # probability of a true 0 reported as 0
-  p2 <- p11 - p01  # == (1 - f) * (q - p)
+  
+  NoiseMatrix <- matrix(rep(0, 16), 4)
+  NoiseMatrix[1,] <- c(p11**2, p11*p10, p10*p11, p10**2)
+  NoiseMatrix[2,] <- c(p11*p01, p11*p00, p10*p01, p10*p00)
+  NoiseMatrix[3,] <- c(p01*p11, p01*p10, p00*p11, p00*p01)
+  NoiseMatrix[4,] <- c(p01**2, p00*p01, p01*p00, p00**2)
   
   ests <- apply(obs_counts, 1, function(x) {
-    N <- x[1]  # sample size of cohort
-    inds <- seq(0, m/4 - 1)
-    v <- x[-1]  # counts for individual bits
-    # 11 or (1000) estimates
-    v[inds*4 + 2] <- 
-      (v[inds*4 + 2] - (p11**2)*N) / (2*p01*p11 + p01**2 - p11**2)
-    
-    # 10 or (0100) estimates
-    v[inds*4 + 3] <-
-      (v[inds*4 + 3] - (p11*p00)*N) / (p10*p11 + p01*p10 + p01*p00 - p11*p00)
-    
-    # 01 or (0010) estimates
-    v[inds*4 + 4] <-
-      (v[inds*4 + 4] - (p11*p00)*N) / (p10*p11 + p01*p10 + p01*p00 - p11*p00)
-    
-    # 00 or (0001) estimates
-    v[inds*4 + 5] <-
-      (v[inds*4 + 5] - (p11**2)*N) / (2*p10*p00 + p10**2 - p00**2)
-    v
+    N <- x[1]
+    inds <- seq(0, (k/4)-1)
+    v <- x[-1]
+    sapply(inds, function(i){
+      as.vector(t(Solve(NoiseMatrix)) %*% v[(i*4 + 1):((i+1)*4)])
+    })
   })
   
   if(FALSE) {
@@ -76,8 +69,9 @@ Estimate2WayBloomCounts <- function(params, obs_counts) {
   #     account for this possibility, and set the corresponding counts
   #     to 0.
   ests[abs(ests) == Inf] <- 0
-  
-  list(estimates = ests, stds = ests)
+    
+  list(estimates = ests,
+       stds = matrix(rep(1, 2 * length(ests[1,])), 2))
 }
 
 EstimateBloomCounts <- function(params, obs_counts) {
@@ -313,6 +307,37 @@ Resample <- function(e) {
   result$stds <- e$stds * 2^.5
 
   result
+}
+
+Decode2Way <- function(counts, map, params) {
+  k <- params$k
+  p <- params$p
+  q <- params$q
+  f <- params$f
+  h <- params$h
+  m <- params$m
+  
+  S <- ncol(map)  # total number of candidates
+  
+  N <- sum(counts[, 1])
+  
+  filter_cohorts <- which(counts[, 1] != 0)  # exclude cohorts with zero reports
+  
+  # stretch cohorts to bits
+  filter_bits <- as.vector(
+    t(matrix(1:nrow(map), nrow = m, byrow = TRUE)[filter_cohorts,]))
+  
+  es <- Estimate2WayBloomCounts(params, counts)
+  e <- list(estimates = es$estimates[filter_cohorts, , drop = FALSE],
+            stds = es$stds[filter_cohorts, , drop = FALSE])
+  coefs <- FitDistribution(e, map[filter_bits, , drop = FALSE])
+  mod <- list(coefs = coefs, stds = coefs)
+  inf <- PerformInference(map[filter_bits, , drop = FALSE],
+                          as.vector(t(es$estimates)),
+                          N, mod, params, alpha = (0.05/S),
+                          correction = "Bonferroni")
+  fit <- inf$fit
+  list(fit = fit)
 }
 
 Decode <- function(counts, map, params, quick = FALSE, alpha = 0.05,

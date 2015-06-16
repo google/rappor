@@ -230,7 +230,7 @@ main <- function(inp) {
   if(is.null(inp$uvals)) {
     # One off case.
     # TODO(pseudorandom): More sensible defaults.
-    uvals = list(var1 = c("str1", "str2"), var2 = c("option1", "option2", "option3"))
+    uvals = list(var1 = c("str1", "str2"), var2 = c("option1", "option2"))
   } else {
     uvals <- GetUniqueValsFromFile(apply_prefix(inp$uvals))
   }
