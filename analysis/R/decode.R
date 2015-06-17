@@ -141,7 +141,7 @@ PerformInference <- function(X, Y, N, mod, params, alpha, correction) {
 #   # 1-sided t-test.
 #   p_values <- pnorm(z_values, lower = FALSE)
 
-  fit <- data.frame(String = colnames(X), Estimate = betas,
+  fit <- data.frame(strings = colnames(X), Estimate = betas,
                     SD = mod$stds, # z_stat = z_values, pvalue = p_values,
                     stringsAsFactors = FALSE)
 
@@ -160,7 +160,7 @@ PerformInference <- function(X, Y, N, mod, params, alpha, correction) {
   fit <- fit[order(fit$Estimate, decreasing = TRUE), ]
 
   if (nrow(fit) > 0) {
-    str_names <- fit$String
+    str_names <- fit$strings
     str_names <- str_names[!is.na(str_names)]
     if (length(str_names) > 0 && length(str_names) < nrow(X)) {
       this_data <- as.data.frame(as.matrix(X[, str_names]))
@@ -326,15 +326,14 @@ Decode <- function(counts, map, params, alpha = 0.05,
 
   # Estimates from the model are per instance so must be multipled by h.
   # Standard errors are also adjusted.
-  fit$Total_Est <- floor(fit$Estimate)
-  fit$Total_SD <- floor(fit$SD)
-  fit$Prop <- fit$Total_Est / N
-  fit$LPB <- fit$Prop - 1.96 * fit$Total_SD / N
-  fit$UPB <- fit$Prop + 1.96 * fit$Total_SD / N
+  fit$estimate <- floor(fit$Estimate)
+  fit$std_error <- floor(fit$SD)
+  fit$proportion <- fit$estimate / N
+  fit$lower_bound <- fit$proportion - 1.96 * fit$std_error / N
+  fit$upper_bound <- fit$proportion + 1.96 * fit$std_error / N
 
-  fit <- fit[, c("String", "Total_Est", "Total_SD", "Prop", "LPB", "UPB")]
-  colnames(fit) <- c("strings", "estimate", "std_dev", "proportion",
-                     "lower_bound", "upper_bound")
+  fit <- fit[, c("strings", "estimate", "std_error", "proportion",
+                 "lower_bound", "upper_bound")]
 
   allocated_mass <- sum(fit$proportion)
   num_detected <- nrow(fit)
