@@ -141,7 +141,7 @@ PerformInference <- function(X, Y, N, mod, params, alpha, correction) {
 #   # 1-sided t-test.
 #   p_values <- pnorm(z_values, lower = FALSE)
 
-  fit <- data.frame(strings = colnames(X), Estimate = betas,
+  fit <- data.frame(string = colnames(X), Estimate = betas,
                     SD = mod$stds, # z_stat = z_values, pvalue = p_values,
                     stringsAsFactors = FALSE)
 
@@ -160,7 +160,7 @@ PerformInference <- function(X, Y, N, mod, params, alpha, correction) {
   fit <- fit[order(fit$Estimate, decreasing = TRUE), ]
 
   if (nrow(fit) > 0) {
-    str_names <- fit$strings
+    str_names <- fit$string
     str_names <- str_names[!is.na(str_names)]
     if (length(str_names) > 0 && length(str_names) < nrow(X)) {
       this_data <- as.data.frame(as.matrix(X[, str_names]))
@@ -335,7 +335,7 @@ Decode <- function(counts, map, params, alpha = 0.05,
   fit$prop_low <- fit$proportion - fit$prop_std_error
   fit$prop_high <- fit$proportion + fit$prop_std_error
 
-  fit <- fit[, c("strings", "estimate", "std_error", "proportion",
+  fit <- fit[, c("string", "estimate", "std_error", "proportion",
                  "prop_std_error", "prop_low", "prop_high")]
 
   allocated_mass <- sum(fit$proportion)

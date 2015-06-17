@@ -254,7 +254,7 @@ GenerateSamples <- function(N = 10^5, params, pop_params, alpha = .05,
                 correction = correction)
 
   # Add truth column.
-  fit$fit$Truth <- table(samp)[fit$fit$strings]
+  fit$fit$Truth <- table(samp)[fit$fit$string]
   fit$fit$Truth[is.na(fit$fit$Truth)] <- 0
 
   fit$map <- map$map
