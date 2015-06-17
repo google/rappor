@@ -327,13 +327,16 @@ Decode <- function(counts, map, params, alpha = 0.05,
   # Estimates from the model are per instance so must be multipled by h.
   # Standard errors are also adjusted.
   fit$estimate <- floor(fit$Estimate)
-  fit$std_error <- floor(fit$SD)
   fit$proportion <- fit$estimate / N
-  fit$lower_bound <- fit$proportion - 1.96 * fit$std_error / N
-  fit$upper_bound <- fit$proportion + 1.96 * fit$std_error / N
+
+  fit$std_error <- floor(fit$SD)
+  fit$prop_std_error <- fit$std_error / N
+
+  fit$prop_low <- fit$proportion - fit$prop_std_error
+  fit$prop_high <- fit$proportion + fit$prop_std_error
 
   fit <- fit[, c("strings", "estimate", "std_error", "proportion",
-                 "lower_bound", "upper_bound")]
+                 "prop_std_error", "prop_low", "prop_high")]
 
   allocated_mass <- sum(fit$proportion)
   num_detected <- nrow(fit)
