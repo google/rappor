@@ -40,6 +40,7 @@ source("analysis/R/decode.R")
 source("analysis/R/simulation.R")
 source("analysis/R/read_input.R")
 source("analysis/R/association.R")
+source("tests/gen_counts.R")
 
 # This function processes the maps loaded using ReadMapFile
 # Association analysis requires a map object with a map
@@ -177,6 +178,9 @@ main <- function(opts) {
   if(direct_simulation == TRUE) {
     # TWO WAY ASSOCIATIONS; INPUTS SIMULATED DIRECTLY
     strconstant <- c("string", "option")
+    N <- inp$num
+    n1 <- inp$varcandidates[[1]]
+    n2 <- inp$varcandidates[[2]]
     
     # Construct unique vals for each variable using strconstant
     stopifnot(length(strconstant) == inp$numvars)
@@ -190,22 +194,83 @@ main <- function(opts) {
     # Add extras if any
     if(inp$extras > 0) {
       uvals[[1]] <- c(uvals[[1]], apply(as.matrix(1:inp$extras), 1,
-                          function(z) sprintf("%s%d", strconstant[[1]], z + inp$varcandidates[[1]])))
+                          function(z) sprintf("%s%d", strconstant[[1]], z + n1)))
     }
     
     map <- lapply(uvals, function(u) CreateMap(u, params))
     trim <- function(map) {
-      lapply(map, function(z) z[,1:inp$varcandidates[[1]]])
+      lapply(map, function(z) z[,1:n1])
     }
     # Trim maps to real # of candidates
     # Use extras only for decoding
     tmap <- trim(map[[1]]$map)
     crmap_trimmed <- CombineMaps(tmap, map[[2]]$map)$crmap
     
-    cohorts <- as.matrix(
-      apply(as.data.frame(partition), 1,
-            function(count) RandomPartition(count, rep(1, params$m))))
+    # Sample values to compute partition
+    # Zipfian over n1 strings
+    v1_part <- RandomPartition(N, ComputePdf("zipf1.5", n1))
+    # Zipfian over n2 strings for each of variable 1
+    # Distr. are correlated as in assoc_sim.R
+    final_part <- as.vector(sapply(1:n1,
+                    function(i) {
+                      v2_part <- RandomPartition(v1_part[[i]],
+                                                 ComputePdf("zipf1.5", n2))
+                      if (i %% 2 == 0) {v2_part} else {rev(v2_part)}
+                    }))
     
+    td <- matrix(final_part/sum(final_part), nrow = n1, ncol = n2, byrow = TRUE)
+    rownames(td) <- uvals[[1]][1:n1]  # Don't take into account extras
+    colnames(td) <- uvals[[2]]
+    print(signif(td, 4))
+    cohorts <- as.matrix(
+      apply(as.data.frame(final_part), 1,
+            function(count) RandomPartition(count, rep(1, params$m))))
+    expanded <- apply(cohorts, 2, function(vec) rep(vec, each = ((params$k)**2)*4))
+    true_ones <- apply(expanded * crmap_trimmed, 1, sum)
+    
+    p <- params$p
+    q <- params$q
+    f <- params$f
+    m <- params$m
+    k <- params$k
+    
+    p11 <- q * (1 - f/2) + p * f / 2  # probability of a true 1 reported as 1
+    p01 <- p * (1 - f/2) + q * f / 2  # probability of a true 0 reported as 1
+    p10 <- 1 - p11  # probability of a true 1 reported as 0
+    p00 <- 1 - p01  # probability of a true 0 reported as 0
+    
+    NoiseMatrix <- matrix(rep(0, 16), 4)
+    NoiseMatrix[1,] <- c(p11**2, p11*p10, p10*p11, p10**2)
+    NoiseMatrix[2,] <- c(p11*p01, p11*p00, p10*p01, p10*p00)
+    NoiseMatrix[3,] <- c(p01*p11, p01*p10, p00*p11, p00*p01)
+    NoiseMatrix[4,] <- c(p01**2, p00*p01, p01*p00, p00**2)
+
+    after_noise <- as.vector(sapply(1:(length(true_ones)/4), 
+                                    function(x) 
+                                      t(NoiseMatrix) %*% true_ones[((x-1)*4+1):(x*4)]))
+    counts <- cbind(apply(cohorts, 1, sum),
+                    matrix(after_noise,
+                           nrow = m,
+                           ncol = 4 * (k**2),
+                           byrow = TRUE))
+    params2 <- params
+    params2$k <- (params$k ** 2) * 4
+    crmap <- CombineMaps(map[[1]]$map, map[[2]]$map)$crmap
+    marginal <- Decode2Way(counts, crmap, params2)$fit
+    ed <- td
+    for (cols in colnames(td)) {
+      for (rows in rownames(td)) {
+        ed[rows, cols] <- marginal[paste(rows, cols, sep = "x"), "Estimate"]
+      }
+    }
+    
+    time_taken <- proc.time() - ptm
+    
+    print("2 WAY RESULTS")
+    print(signif(ed, 4))
+    print(l1d(td, ed, "L1 DISTANCE 2 WAY"))
+    print("PROC.TIME")
+    print(time_taken)
   } else {
     # ensure sufficient maps as required by number of vars
     stopifnot(inp$numvars == length(inp$maps))
