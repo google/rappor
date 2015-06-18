@@ -333,12 +333,11 @@ Decode2Way <- function(counts, map, params) {
   e <- list(estimates = es$estimates[filter_cohorts, , drop = FALSE],
             stds = es$stds[filter_cohorts, , drop = FALSE])
   coefs <- FitDistribution(e, map[filter_bits, , drop = FALSE])
-  mod <- list(coefs = coefs, stds = coefs)
-  inf <- PerformInference(map[filter_bits, , drop = FALSE],
-                          as.vector(t(es$estimates)),
-                          N, mod, params, alpha = (0.05/S),
-                          correction = "Bonferroni")
-  fit <- inf$fit
+  fit <- data.frame(String = colnames(map[filter_bits, , drop = FALSE]),
+                    Estimate = matrix(coefs, ncol = 1),
+                    SD = matrix(coefs, ncol = 1),
+                    stringsAsFactors = FALSE)
+  rownames(fit) <- fit[,"String"]
   list(fit = fit)
 }
 
