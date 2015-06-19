@@ -169,14 +169,37 @@ CombineMapsInternal <- function(map1, map2) {
   sm
 }
 
+GenerateNoiseMatrix <- function(params) {
+  p <- params$p
+  q <- params$q
+  f <- params$f
+  m <- params$m
+  k <- params$k
+  
+  p11 <- q * (1 - f/2) + p * f / 2  # probability of a true 1 reported as 1
+  p01 <- p * (1 - f/2) + q * f / 2  # probability of a true 0 reported as 1
+  p10 <- 1 - p11  # probability of a true 1 reported as 0
+  p00 <- 1 - p01  # probability of a true 0 reported as 0
+  
+  NoiseMatrix <- matrix(rep(0, 16), 4)
+  NoiseMatrix[1,] <- c(p11**2, p11*p10, p10*p11, p10**2)
+  NoiseMatrix[2,] <- c(p11*p01, p11*p00, p10*p01, p10*p00)
+  NoiseMatrix[3,] <- c(p01*p11, p01*p10, p00*p11, p00*p01)
+  NoiseMatrix[4,] <- c(p01**2, p00*p01, p01*p00, p00**2)
+
+  NoiseMatrix
+}
+
 
 main <- function(opts) {
   ptm <- proc.time()
   direct_simulation = TRUE
   inp <- fromJSON(opts$inp)
   params <- ReadParameterFile(inp$params)
+  
   if(direct_simulation == TRUE) {
     # TWO WAY ASSOCIATIONS; INPUTS SIMULATED DIRECTLY
+    
     strconstant <- c("string", "option")
     N <- inp$num
     n1 <- inp$varcandidates[[1]]
@@ -197,13 +220,12 @@ main <- function(opts) {
                           function(z) sprintf("%s%d", strconstant[[1]], z + n1)))
     }
     
+    # Compute map
     map <- lapply(uvals, function(u) CreateMap(u, params))
-    trim <- function(map) {
-      lapply(map, function(z) z[,1:n1])
-    }
+    
     # Trim maps to real # of candidates
     # Use extras only for decoding
-    tmap <- trim(map[[1]]$map)
+    tmap <- lapply(map[[1]]$map, function(i) i[, 1:n1])
     crmap_trimmed <- CombineMaps(tmap, map[[2]]$map)$crmap
     
     # Sample values to compute partition
@@ -219,8 +241,23 @@ main <- function(opts) {
                     }))
     
     td <- matrix(final_part/sum(final_part), nrow = n1, ncol = n2, byrow = TRUE)
+    v2_part <- RandomPartition(N, apply(td, 2, sum))
+    ow_parts <- list(v1_part, v2_part)
+    ow_parts[[1]] <- c(ow_parts[[1]], rep(0, inp$extra))
+    
+    # --------------
+    # Generate 1-way counts
+    ow_counts <- lapply(1:2, function(i)
+                        GenerateCounts(params, map[[i]]$rmap, ow_parts[[i]], 1))
+    found_strings <- lapply(1:2, function(i)
+                            Decode(ow_counts[[i]],
+                                   map[[i]]$rmap,
+                                   params, quick = TRUE)$fit$strings)
+    # --------------
+    
     rownames(td) <- uvals[[1]][1:n1]  # Don't take into account extras
     colnames(td) <- uvals[[2]]
+    print("TRUE DISTRIBUTION")
     print(signif(td, 4))
     cohorts <- as.matrix(
       apply(as.data.frame(final_part), 1,
@@ -228,49 +265,39 @@ main <- function(opts) {
     expanded <- apply(cohorts, 2, function(vec) rep(vec, each = ((params$k)**2)*4))
     true_ones <- apply(expanded * crmap_trimmed, 1, sum)
     
-    p <- params$p
-    q <- params$q
-    f <- params$f
-    m <- params$m
-    k <- params$k
     
-    p11 <- q * (1 - f/2) + p * f / 2  # probability of a true 1 reported as 1
-    p01 <- p * (1 - f/2) + q * f / 2  # probability of a true 0 reported as 1
-    p10 <- 1 - p11  # probability of a true 1 reported as 0
-    p00 <- 1 - p01  # probability of a true 0 reported as 0
     
-    NoiseMatrix <- matrix(rep(0, 16), 4)
-    NoiseMatrix[1,] <- c(p11**2, p11*p10, p10*p11, p10**2)
-    NoiseMatrix[2,] <- c(p11*p01, p11*p00, p10*p01, p10*p00)
-    NoiseMatrix[3,] <- c(p01*p11, p01*p10, p00*p11, p00*p01)
-    NoiseMatrix[4,] <- c(p01**2, p00*p01, p01*p00, p00**2)
     
-    NoiseMatrix2 <- matrix(rep(0, 16), 4)
-    NoiseMatrix2[1,] <- c(1, 0, 0, 0)
-    NoiseMatrix2[2,] <- c(0, 1, 0, 0)
-    NoiseMatrix2[3,] <- c(0, 0, 1, 0)
-    NoiseMatrix2[4,] <- c(0, 0, 0, 1)
-    
+    NoiseMatrix <- GenerateNoiseMatrix(params)
     after_noise <- as.vector(sapply(1:(length(true_ones)/4), 
                                     function(x) 
                                       t(NoiseMatrix) %*% true_ones[((x-1)*4+1):(x*4)]))
     counts <- cbind(apply(cohorts, 1, sum),
                     matrix(after_noise,
-                           nrow = m,
-                           ncol = 4 * (k**2),
+                           nrow = params$m,
+                           ncol = 4 * (params$k**2),
                            byrow = TRUE))
     
     params2 <- params
     params2$k <- (params$k ** 2) * 4
-    crmap <- CombineMaps(map[[1]]$map, map[[2]]$map)$crmap
+    
+    # Combine maps to feed into Decode2Way
+    # Prune first to found_strings
+    pruned <- lapply(1:2, function(i)
+                     lapply(map[[i]]$map, function(z) z[,found_strings[[i]]]))
+    crmap <- CombineMaps(pruned[[1]], pruned[[2]])$crmap
     marginal <- Decode2Way(counts, crmap, params2)$fit
-    ed <- td
+    
+    # Fill in estimated results with rows and cols from td
+    ed <- matrix(0, nrow = (n1+inp$extra), ncol = n2)
+    rownames(ed) <- uvals[[1]]
+    colnames(ed) <- uvals[[2]]
     for (cols in colnames(td)) {
       for (rows in rownames(td)) {
         ed[rows, cols] <- marginal[paste(rows, cols, sep = "x"), "Estimate"]
       }
     }
-    
+    ed[is.na(ed)] <- 0
     time_taken <- proc.time() - ptm
     
     print("2 WAY RESULTS")
@@ -278,14 +305,22 @@ main <- function(opts) {
     print(l1d(td, ed, "L1 DISTANCE 2 WAY"))
     print("PROC.TIME")
     print(time_taken)
+    chisq_td <- chisq.test(td)[1][[1]][[1]]
+    chisq_ed <- chisq.test(ed)[1][[1]][[1]]
+    if(is.nan(chisq_ed)) {
+      chisq_ed <- 0
+    }
+    if(is.nan(chisq_td)) {
+      chisq_td <- 0
+    }
     
     metrics <- list(
-      td_chisq = chisq.test(td)[1][[1]][[1]],
-      ed_chisq = chisq.test(ed)[1][[1]][[1]],
+      td_chisq = chisq_td,
+      ed_chisq = chisq_ed,
       tv = l1d(td, ed, ""),
       time = time_taken[1],
-      dim1 = dim(ed)[[2]],
-      dim2 = dim(ed)[[1]]
+      dim1 = length(found_strings[[1]]),
+      dim2 = length(found_strings[[2]])
     )
     filename <- file.path(inp$outdir, 'metrics.csv')
     write.csv(metrics, file = filename, row.names = FALSE)
@@ -371,14 +406,18 @@ main <- function(opts) {
     print(l1d(td, ed, "L1 DISTANCE 2 WAY"))
     print("PROC.TIME")
     print(time_taken)
+    chisq_ed <- chisq.test(ed)[1][[1]][[1]]
+    if(is.nan(chisq_ed)) {
+      chisq_ed <- 0
+    }
     
     metrics <- list(
       td_chisq = chisq.test(td)[1][[1]][[1]],
-      ed_chisq = chisq.test(ed)[1][[1]][[1]],
+      ed_chisq = chisq_ed,
       tv = l1d(td, ed, ""),
       time = time_taken[1],
-      dim1 = dim(ed)[[2]],
-      dim2 = dim(ed)[[1]]
+      dim1 = length(found_strings[[1]]),
+      dim2 = length(found_strings[[2]])
     )
     
     if(also_em == TRUE) {

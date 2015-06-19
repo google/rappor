@@ -52,14 +52,15 @@ _setup-one-case() {
   local num_unique_values=$2
   local num_unique_values2=$3
   local num_clients=$4
+  local num_extras=$5
 
   # RAPPOR params
-  local num_bits=$5
-  local num_hashes=$6
-  local num_cohorts=$7
-  local p=$8
-  local q=$9  # need curly braces to get the 10th arg
-  local f=${10}
+  local num_bits=$6
+  local num_hashes=$7
+  local num_cohorts=$8
+  local p=$9
+  local q=${10}  # need curly braces to get the 10th arg
+  local f=${11}
 
   banner 'Setting up parameters and candidate files for '$test_case
 
@@ -84,7 +85,8 @@ _run-one-instance() {
   local case_dir=$ASSOCTEST_DIR/$test_case
 
   read -r case_name num_unique_values num_unique_values2 \
-    num_clients num_bits num_hashes num_cohorts p q f < $case_dir/spec.txt
+    num_clients num_extras \
+    num_bits num_hashes num_cohorts p q f < $case_dir/spec.txt
 
   local instance_dir=$ASSOCTEST_DIR/$test_case/$test_instance
   mkdir --verbose -p $instance_dir
@@ -108,7 +110,7 @@ _run-one-instance() {
     json.dump(inp, f); \
     f.close();"
 
-  tests/assoc_sim_expt.R --inp $instance_dir/assoc_inp.json
+  # tests/assoc_sim_expt.R --inp $instance_dir/assoc_inp.json
 
   local out_dir=${instance_dir}_report
   mkdir --verbose -p $out_dir
@@ -130,6 +132,9 @@ _run-one-instance() {
     inp['params'] = '$case_dir/case_params.csv'; \
     inp['newalg'] = 'false'; \
     inp['numvars'] = 2; \
+    inp['num'] = $num_clients; \
+    inp['extras'] = $num_extras; \
+    inp['varcandidates'] = [$num_unique_values, $num_unique_values2]; \
     json.dump(inp, f); \
     f.close();"
 

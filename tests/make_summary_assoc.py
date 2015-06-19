@@ -18,6 +18,7 @@ SUMMARY_ROW = """\
 
   <!-- input params -->
   <td></td>
+  <td></td>
 
   <!-- RAPPOR params -->
   <td></td>
