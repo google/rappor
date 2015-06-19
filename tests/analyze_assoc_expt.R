@@ -244,7 +244,13 @@ main <- function(opts) {
     NoiseMatrix[2,] <- c(p11*p01, p11*p00, p10*p01, p10*p00)
     NoiseMatrix[3,] <- c(p01*p11, p01*p10, p00*p11, p00*p01)
     NoiseMatrix[4,] <- c(p01**2, p00*p01, p01*p00, p00**2)
-
+    
+    NoiseMatrix2 <- matrix(rep(0, 16), 4)
+    NoiseMatrix2[1,] <- c(1, 0, 0, 0)
+    NoiseMatrix2[2,] <- c(0, 1, 0, 0)
+    NoiseMatrix2[3,] <- c(0, 0, 1, 0)
+    NoiseMatrix2[4,] <- c(0, 0, 0, 1)
+    
     after_noise <- as.vector(sapply(1:(length(true_ones)/4), 
                                     function(x) 
                                       t(NoiseMatrix) %*% true_ones[((x-1)*4+1):(x*4)]))
@@ -253,6 +259,7 @@ main <- function(opts) {
                            nrow = m,
                            ncol = 4 * (k**2),
                            byrow = TRUE))
+    
     params2 <- params
     params2$k <- (params$k ** 2) * 4
     crmap <- CombineMaps(map[[1]]$map, map[[2]]$map)$crmap
@@ -271,6 +278,17 @@ main <- function(opts) {
     print(l1d(td, ed, "L1 DISTANCE 2 WAY"))
     print("PROC.TIME")
     print(time_taken)
+    
+    metrics <- list(
+      td_chisq = chisq.test(td)[1][[1]][[1]],
+      ed_chisq = chisq.test(ed)[1][[1]][[1]],
+      tv = l1d(td, ed, ""),
+      time = time_taken[1],
+      dim1 = dim(ed)[[2]],
+      dim2 = dim(ed)[[1]]
+    )
+    filename <- file.path(inp$outdir, 'metrics.csv')
+    write.csv(metrics, file = filename, row.names = FALSE)
   } else {
     # ensure sufficient maps as required by number of vars
     stopifnot(inp$numvars == length(inp$maps))
