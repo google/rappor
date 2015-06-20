@@ -279,7 +279,8 @@ run-all() {
 
   log "Running all tests. Can take a while."
   # a- for assoc tests
-  _run-tests '^a-' $instances T T
+  # F for sequential
+  _run-tests '^a-' $instances F T
 }
 
 "$@"
