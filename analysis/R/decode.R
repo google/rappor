@@ -17,8 +17,6 @@
 
 library(glmnet)
 
-source('analysis/R/alternative.R')
-
 EstimateBloomCounts <- function(params, obs_counts) {
   # Estimates the number of times each bit in each cohort was set in original
   # Bloom filters.
