@@ -21,8 +21,6 @@ source("analysis/R/read_input.R")
 source("analysis/R/decode.R")
 source("analysis/R/util.R")
 
-source("analysis/R/alternative.R")
-
 options(stringsAsFactors = FALSE)
 
 # Do command line parsing first to catch errors.  Loading libraries in R is
