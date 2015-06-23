@@ -90,28 +90,31 @@ FitLasso <- function(X, Y, intercept = TRUE) {
   #
   # Input:
   #    X: a design matrix of size km by M (the number of candidate strings).
-  #    Y: a vector of size km with estimated counts from EstimateBloomCounts().
+  #    Y: a vector of size km with estimated counts from EstimateBloomCounts(),
+	#       representing constraints
   #    intercept: whether to fit with intercept or not.
   #
   # Output:
   #    a vector of size ncol(X) of coefficients.
 
   # TODO(mironov): Test cv.glmnet instead of glmnet
-  mod <- try(glmnet(X, Y, standardize = FALSE, intercept = intercept,
-                    lower.limits = 0,  # outputs are non-negative
-                    # Cap the number of non-zero coefficients to 500 or
-                    # 80% of the length of Y, whichever is less. The 500 cap
-                    # is for performance reasons, 80% is to avoid overfitting.
-                    pmax = min(500, length(Y) * .8)),
-             silent = TRUE)
 
-  # If fitting fails, return an empty data.frame.
-  if (class(mod)[1] == "try-error") {
-    coefs <- setNames(rep(0, ncol(X)), colnames(X))
-  } else {
-    coefs <- coef(mod)
-    coefs <- coefs[-1, ncol(coefs), drop = FALSE]  # coefs[1] is the intercept
-  }
+	# Cap the number of non-zero coefficients to 500 or 80% of the number of
+	# constraints, whichever is less. The 500 cap is for performance reasons, 80%
+	# is to avoid overfitting.
+  cap <- min(500, nrow(X) * .8, ncol(X))
+
+  mod <- glmnet(X, Y, standardize = FALSE, intercept = intercept,
+                lower.limits = 0,  # outputs are non-negative
+                pmax = cap)
+
+  coefs <- coef(mod)
+  coefs <- coefs[-1, , drop = FALSE]  # drop the intercept
+  l1cap <- sum(colSums(coefs) <= 1.0)  # find all columns with L1 norm <= 1
+  if(l1cap > 0)
+   	coefs <- coefs[, l1cap]  # return the last set of coefficients with L1 <= 1
+  else
+   	coefs <- setNames(rep(0, ncol(X)), colnames(X))
   coefs
 }
 
@@ -224,27 +227,19 @@ FitDistribution <- function(estimates_stds, map, quiet = FALSE) {
 
   S <- ncol(map)  # total number of candidates
 
-  support_coefs <- 1:S
+  lasso <- FitLasso(map, as.vector(t(estimates_stds$estimates)))
 
-  if (S > length(estimates_stds$estimates) * .8) {
-    # the system is close to being underdetermined
-    lasso <- FitLasso(map, as.vector(t(estimates_stds$estimates)))
+  if(!quiet)
+    cat("LASSO selected ", sum(lasso > 0), " non-zero coefficients.\n")
 
-    # Select non-zero coefficients.
-    support_coefs <- which(lasso > 0)
+  coefs <- setNames(lasso, colnames(map))
 
-    if(!quiet)
-      cat("LASSO selected ", length(support_coefs), " non-zero coefficients.\n")
-  }
-
-  coefs <- setNames(rep(0, S), colnames(map))
-
-  if(length(support_coefs) > 0) {  # LASSO may return an empty list
-    constrained_coefs <- ConstrainedLinModel(map[, support_coefs, drop = FALSE],
-                                             estimates_stds)
-
-    coefs[support_coefs] <- constrained_coefs
-  }
+#   if(length(support_coefs) > 0) {  # LASSO may return an empty list
+#     constrained_coefs <- ConstrainedLinModel(map[, support_coefs, drop = FALSE],
+#                                              estimates_stds)
+#
+#     coefs[support_coefs] <- constrained_coefs
+#   }
 
   coefs
 }

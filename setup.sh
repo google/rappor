@@ -26,7 +26,7 @@ native-packages() {
 r-packages() {
   # Install as root so you can write to /usr/local/lib/R.
   sudo R -e \
-    'install.packages(c("glmnet", "optparse", "limSolve", "RUnit", "abind"), repos="http://cran.rstudio.com/")'
+    'install.packages(c("glmnet", "optparse", "RUnit", "abind"), repos="http://cran.rstudio.com/")'
 }
 
 # R 3.0.2 on Trusty is out of date with CRAN, so we need this workaround.
