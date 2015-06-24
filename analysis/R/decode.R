@@ -332,11 +332,12 @@ Decode <- function(counts, map, params, alpha = 0.05,
   fit$std_error <- floor(fit$SD)
   fit$prop_std_error <- fit$std_error / N
 
-  fit$prop_low <- fit$proportion - fit$prop_std_error
-  fit$prop_high <- fit$proportion + fit$prop_std_error
+  # 1.96 standard deviations gives 95% confidence interval.
+  fit$prop_low_95 <- fit$proportion - 1.96 * fit$prop_std_error
+  fit$prop_high_95 <- fit$proportion + 1.96 * fit$prop_std_error
 
   fit <- fit[, c("string", "estimate", "std_error", "proportion",
-                 "prop_std_error", "prop_low", "prop_high")]
+                 "prop_std_error", "prop_low_95", "prop_high_95")]
 
   allocated_mass <- sum(fit$proportion)
   num_detected <- nrow(fit)
