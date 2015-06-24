@@ -39,7 +39,7 @@ GetOtherProbs <- function(counts, map, marginal, params) {
   p <- params$p
 
   # List of known strings that were measured in the marginal.
-  candidate_strings <- marginal$strings
+  candidate_strings <- marginal$string
 
   # Counts to remove from each cohort.
   top_counts <- ceiling(marginal$proportion * N / params$m)
@@ -329,7 +329,7 @@ ComputeDistributionEM <- function(reports, report_cohorts,
     } else {
       marginal <- marginals[[j]]
     }
-    found_strings[[j]] <- marginal$strings
+    found_strings[[j]] <- marginal$string
 
     if (ignore_other) {
       prob_other <- vector(mode = "list", length = params$m)
