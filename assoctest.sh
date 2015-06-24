@@ -43,6 +43,13 @@ readonly ASSOCTEST_DIR=_tmp/assoctest
 # All the Python tools need this
 export PYTHONPATH=$CLIENT_DIR
 
+# Print true inputs into a file with selected prefix
+print-true-inputs() {
+  local num_unique_values=$1
+  local prefix=$2
+  seq 1 $num_unique_values | awk '{print "'$prefix'" $1}'
+}
+
 # Generate a single test case, specified by a line of the test spec.
 # This is a helper function for _run_tests().
 _setup-one-case() {
@@ -74,6 +81,21 @@ _setup-one-case() {
 
   echo 'k,h,m,p,q,f' > $params_path
   echo "$num_bits,$num_hashes,$num_cohorts,$p,$q,$f" >> $params_path
+
+  print-true-inputs $[num_unique_values+num_extras] \
+    "str" > $case_dir/case_true_inputs1.txt
+  print-true-inputs $num_unique_values2 "opt" > $case_dir/case_true_inputs2.txt
+
+  # Hash candidates
+  analysis/tools/hash_candidates.py \
+    $params_path \
+    < $case_dir/case_true_inputs1.txt \
+    > $case_dir/case_map1.csv
+
+  analysis/tools/hash_candidates.py \
+    $params_path \
+    < $case_dir/case_true_inputs2.txt \
+    > $case_dir/case_map2.csv
 }
 
 # Run a single test instance, specified by <test_name, instance_num>.

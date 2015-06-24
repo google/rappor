@@ -124,12 +124,18 @@ TEST_CONFIGS = [
 #    privacy params set)
 # The test config runs a test suite that is the cross product of all the above
 # sets
+#ASSOC_TEST_CONFIG = {
+#    'distr': ('fizz-tiny', 'fizz-tiny-bool',
+#              'fizz-small', 'fizz-small-bool',
+#              'fizz', 'fizz-bool'),
+#    'blooms': ('8x16','8x32',),# '16x32'),
+#    'privacy': ('eps_small','eps_chrome')
+#}
+
 ASSOC_TEST_CONFIG = {
-    'distr': ('fizz-tiny', 'fizz-tiny-bool',
-              'fizz-small', 'fizz-small-bool',
-              'fizz', 'fizz-bool'),
-    'blooms': ('8x16','8x32',)# '16x32'),
-    'privacy': ('eps_small','eps_chrome')
+  'distr': ('fizz-small',),
+  'blooms': ('8x32',),
+  'privacy': ('eps_small',)
 }
 
 #
