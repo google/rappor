@@ -168,7 +168,7 @@ _run-one-instance() {
     inp = dict(); \
     inp['maps'] = ['$case_dir/case_map1.csv',\
                    '$case_dir/case_map2.csv']; \
-    inp['reports'] = '$instance_dir/reports.csv'; \
+    inp['reports'] = '$instance_dir/case_out.csv'; \
     inp['truefile'] = '$instance_dir/case.csv'; \
     inp['outdir'] = '$out_dir'; \
     inp['params'] = '$case_dir/case_params.csv'; \
@@ -180,7 +180,7 @@ _run-one-instance() {
     inp['counts'] = ['$instance_dir/case_2way.csv',\
                      '$instance_dir/case_marg1.csv',\
                      '$instance_dir/case_marg2.csv']; \
-    inp['expt'] = 'external-counts'; \
+    inp['expt'] = ['external-counts', 'external-reports-em']; \
     json.dump(inp, f); \
     f.close();"
 

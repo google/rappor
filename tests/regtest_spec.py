@@ -127,13 +127,14 @@ TEST_CONFIGS = [
 # The test config runs a test suite that is the cross product of all the above
 # sets
 ASSOC_TEST_CONFIG = {
-  'distr': ('fizz-tiny',
+  'distr': (
+            'fizz-tiny',
             'fizz-tiny-bool',
-#            'fizz-small',
-#            'fizz-small-bool',
-#            'fizz',
-#            'fizz-bool',
-            'toy',),
+            'fizz-small',
+            'fizz-small-bool',
+            'fizz',
+            'fizz-bool',),
+#            'toy',),
 #            'compact-noextra-small',
 #            'loose-noextra-small',
 #            'compact-noextra-large',
