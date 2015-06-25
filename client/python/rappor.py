@@ -216,14 +216,16 @@ class Encoder(object):
     self.p_gen = self.rand_funcs.p_gen
     self.q_gen = self.rand_funcs.q_gen
 
-  def encode(self, word):
+  def encode(self, word, assigned_cohort = -1):
     """Compute rappor (Instantaneous Randomized Response)."""
     params = self.params
 
     cohort, uniform, f_mask = get_rappor_masks(self.user_id, word,
                                                params,
                                                self.rand_funcs)
-
+    if (assigned_cohort != -1) and (assigned_cohort in
+                                    range(0, params.num_cohorts)):
+      cohort = assigned_cohort
     bloom_bits_array = 0
     # Compute Bloom Filter
     for hash_no in xrange(params.num_hashes):

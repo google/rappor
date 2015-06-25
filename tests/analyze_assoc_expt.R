@@ -60,6 +60,18 @@ ProcessMap <- function(map, params) {
   map
 }
 
+# TV distance = L1 distance / 2 = 1 - sum(min(df1|x, df2|x)) where
+# df1|x / df2|x projects the distribution to the intersection x of the
+# supports of df1 and df2
+TVDistance <- function(df1, df2, statement = "TV DISTANCE") {
+  rowsi <- intersect(rownames(df1), rownames(df2))
+  colsi <- intersect(colnames(df1), colnames(df2))
+  print(statement)
+  1 - sum(mapply(min, 
+                 unlist(as.data.frame(df1)[rowsi, colsi], use.names = FALSE),
+                 unlist(as.data.frame(df2)[rowsi, colsi], use.names = FALSE)))
+}
+
 # Function to combine reports
 # Currently assume 2-way marginals
 CombineReports <- function(reports1, reports2) {
@@ -190,154 +202,273 @@ GenerateNoiseMatrix <- function(params) {
   NoiseMatrix
 }
 
-
-main <- function(opts) {
-  ptm <- proc.time()
-  direct_simulation = TRUE
-  inp <- fromJSON(opts$inp)
+# ------------------------------------------------------------------------
+##
+## Direct simulation of reports without simulated variance
+## 
+## Inputs:
+##
+## Outputs:
+#
+# ------------------------------------------------------------------------
+DirectSimulationOfReports <- function(inp) {
   params <- ReadParameterFile(inp$params)
+  # TWO WAY ASSOCIATIONS; INPUTS SIMULATED DIRECTLY
   
-  if(direct_simulation == TRUE) {
-    # TWO WAY ASSOCIATIONS; INPUTS SIMULATED DIRECTLY
-    
-    strconstant <- c("string", "option")
-    N <- inp$num
-    n1 <- inp$varcandidates[[1]]
-    n2 <- inp$varcandidates[[2]]
-    
-    # Construct unique vals for each variable using strconstant
-    stopifnot(length(strconstant) == inp$numvars)
-    uvals <- lapply(1:inp$numvars,
-                    function(i) {
-                      apply(as.matrix(1:inp$varcandidates[[i]]),
-                            1,
-                            function(z) sprintf("%s%d", strconstant[[i]], z))
-                    })
-    
-    # Add extras if any
-    if(inp$extras > 0) {
-      uvals[[1]] <- c(uvals[[1]], apply(as.matrix(1:inp$extras), 1,
-                          function(z) sprintf("%s%d", strconstant[[1]], z + n1)))
+  strconstant <- c("string", "option")
+  N <- inp$num
+  n1 <- inp$varcandidates[[1]]
+  n2 <- inp$varcandidates[[2]]
+  
+  # Construct unique vals for each variable using strconstant
+  stopifnot(length(strconstant) == inp$numvars)
+  uvals <- lapply(1:inp$numvars,
+                  function(i) {
+                    apply(as.matrix(1:inp$varcandidates[[i]]),
+                          1,
+                          function(z) sprintf("%s%d", strconstant[[i]], z))
+                  })
+  
+  # Add extras if any
+  if(inp$extras > 0) {
+    uvals[[1]] <- c(uvals[[1]], apply(as.matrix(1:inp$extras), 1,
+                                      function(z) sprintf("%s%d", strconstant[[1]], z + n1)))
+  }
+  
+  # Compute map
+  map <- lapply(uvals, function(u) CreateMap(u, params))
+  
+  # Trim maps to real # of candidates
+  # Use extras only for decoding
+  tmap <- lapply(map[[1]]$map, function(i) i[, 1:n1])
+  crmap_trimmed <- CombineMaps(tmap, map[[2]]$map)$crmap
+  
+  # Sample values to compute partition
+  # Zipfian over n1 strings
+  v1_part <- RandomPartition(N, ComputePdf("zipf1.5", n1))
+  # Zipfian over n2 strings for each of variable 1
+  # Distr. are correlated as in assoc_sim.R
+  final_part <- as.vector(sapply(1:n1,
+                                 function(i) {
+                                   v2_part <- RandomPartition(v1_part[[i]],
+                                                              ComputePdf("zipf1.5", n2))
+                                   if (i %% 2 == 0) {v2_part} else {rev(v2_part)}
+                                 }))
+  
+  td <- matrix(final_part/sum(final_part), nrow = n1, ncol = n2, byrow = TRUE)
+  v2_part <- RandomPartition(N, apply(td, 2, sum))
+  ow_parts <- list(v1_part, v2_part)
+  ow_parts[[1]] <- c(ow_parts[[1]], rep(0, inp$extra))
+  
+  # --------------
+  # Generate 1-way counts
+  ow_counts <- lapply(1:2, function(i)
+    GenerateCounts(params, map[[i]]$rmap, ow_parts[[i]], 1))
+  found_strings <- lapply(1:2, function(i)
+    Decode(ow_counts[[i]],
+           map[[i]]$rmap,
+           params, quick = TRUE)$fit$strings)
+  # --------------
+  
+  rownames(td) <- uvals[[1]][1:n1]  # Don't take into account extras
+  colnames(td) <- uvals[[2]]
+  print("TRUE DISTRIBUTION")
+  print(signif(td, 4))
+  cohorts <- as.matrix(
+    apply(as.data.frame(final_part), 1,
+          function(count) RandomPartition(count, rep(1, params$m))))
+  expanded <- apply(cohorts, 2, function(vec) rep(vec, each = ((params$k)**2)*4))
+  true_ones <- apply(expanded * crmap_trimmed, 1, sum)
+  
+  NoiseMatrix <- GenerateNoiseMatrix(params)
+  after_noise <- as.vector(sapply(1:(length(true_ones)/4), 
+                                  function(x) 
+                                    t(NoiseMatrix) %*% true_ones[((x-1)*4+1):(x*4)]))
+  counts <- cbind(apply(cohorts, 1, sum),
+                  matrix(after_noise,
+                         nrow = params$m,
+                         ncol = 4 * (params$k**2),
+                         byrow = TRUE))
+  
+  params2 <- params
+  params2$k <- (params$k ** 2) * 4
+  
+  # Combine maps to feed into Decode2Way
+  # Prune first to found_strings from Decode on 1-way counts
+  pruned <- lapply(1:2, function(i)
+    lapply(map[[i]]$map, function(z) z[,found_strings[[i]]]))
+  crmap <- CombineMaps(pruned[[1]], pruned[[2]])$crmap
+  marginal <- Decode2Way(counts, crmap, params2)$fit
+  
+  # Fill in estimated results with rows and cols from td
+  ed <- matrix(0, nrow = (n1+inp$extra), ncol = n2)
+  rownames(ed) <- uvals[[1]]
+  colnames(ed) <- uvals[[2]]
+  for (cols in colnames(td)) {
+    for (rows in rownames(td)) {
+      ed[rows, cols] <- marginal[paste(rows, cols, sep = "x"), "Estimate"]
     }
-    
-    # Compute map
-    map <- lapply(uvals, function(u) CreateMap(u, params))
-    
-    # Trim maps to real # of candidates
-    # Use extras only for decoding
-    tmap <- lapply(map[[1]]$map, function(i) i[, 1:n1])
-    crmap_trimmed <- CombineMaps(tmap, map[[2]]$map)$crmap
-    
-    # Sample values to compute partition
-    # Zipfian over n1 strings
-    v1_part <- RandomPartition(N, ComputePdf("zipf1.5", n1))
-    # Zipfian over n2 strings for each of variable 1
-    # Distr. are correlated as in assoc_sim.R
-    final_part <- as.vector(sapply(1:n1,
-                    function(i) {
-                      v2_part <- RandomPartition(v1_part[[i]],
-                                                 ComputePdf("zipf1.5", n2))
-                      if (i %% 2 == 0) {v2_part} else {rev(v2_part)}
-                    }))
-    
-    td <- matrix(final_part/sum(final_part), nrow = n1, ncol = n2, byrow = TRUE)
-    v2_part <- RandomPartition(N, apply(td, 2, sum))
-    ow_parts <- list(v1_part, v2_part)
-    ow_parts[[1]] <- c(ow_parts[[1]], rep(0, inp$extra))
-    
-    # --------------
-    # Generate 1-way counts
-    ow_counts <- lapply(1:2, function(i)
-                        GenerateCounts(params, map[[i]]$rmap, ow_parts[[i]], 1))
-    found_strings <- lapply(1:2, function(i)
-                            Decode(ow_counts[[i]],
-                                   map[[i]]$rmap,
-                                   params, quick = TRUE)$fit$strings)
-    # --------------
-    
-    rownames(td) <- uvals[[1]][1:n1]  # Don't take into account extras
-    colnames(td) <- uvals[[2]]
-    print("TRUE DISTRIBUTION")
-    print(signif(td, 4))
-    cohorts <- as.matrix(
-      apply(as.data.frame(final_part), 1,
-            function(count) RandomPartition(count, rep(1, params$m))))
-    expanded <- apply(cohorts, 2, function(vec) rep(vec, each = ((params$k)**2)*4))
-    true_ones <- apply(expanded * crmap_trimmed, 1, sum)
-    
-    
-    
-    
-    NoiseMatrix <- GenerateNoiseMatrix(params)
-    after_noise <- as.vector(sapply(1:(length(true_ones)/4), 
-                                    function(x) 
-                                      t(NoiseMatrix) %*% true_ones[((x-1)*4+1):(x*4)]))
-    counts <- cbind(apply(cohorts, 1, sum),
-                    matrix(after_noise,
-                           nrow = params$m,
-                           ncol = 4 * (params$k**2),
-                           byrow = TRUE))
-    
-    params2 <- params
-    params2$k <- (params$k ** 2) * 4
-    
-    # Combine maps to feed into Decode2Way
-    # Prune first to found_strings
-    pruned <- lapply(1:2, function(i)
-                     lapply(map[[i]]$map, function(z) z[,found_strings[[i]]]))
-    crmap <- CombineMaps(pruned[[1]], pruned[[2]])$crmap
-    marginal <- Decode2Way(counts, crmap, params2)$fit
-    
-    # Fill in estimated results with rows and cols from td
-    ed <- matrix(0, nrow = (n1+inp$extra), ncol = n2)
-    rownames(ed) <- uvals[[1]]
-    colnames(ed) <- uvals[[2]]
-    for (cols in colnames(td)) {
-      for (rows in rownames(td)) {
-        ed[rows, cols] <- marginal[paste(rows, cols, sep = "x"), "Estimate"]
-      }
+  }
+  ed[is.na(ed)] <- 0
+  time_taken <- proc.time() - ptm
+  
+  print("2 WAY RESULTS")
+  print(signif(ed, 4))
+  print(TVDistance(td, ed, "TV DISTANCE 2 WAY ALGORITHM"))
+  print("PROC.TIME")
+  print(time_taken)
+  chisq_td <- chisq.test(td)[1][[1]][[1]]
+  chisq_ed <- chisq.test(ed)[1][[1]][[1]]
+  if(is.nan(chisq_ed)) {
+    chisq_ed <- 0
+  }
+  if(is.nan(chisq_td)) {
+    chisq_td <- 0
+  }
+  
+  metrics <- list(
+    td_chisq = chisq_td,
+    ed_chisq = chisq_ed,
+    tv = TVDistance(td, ed, ""),
+    time = time_taken[1],
+    dim1 = length(found_strings[[1]]),
+    dim2 = length(found_strings[[2]])
+  )
+  filename <- file.path(inp$outdir, 'metrics.csv')
+  write.csv(metrics, file = filename, row.names = FALSE)
+}
+
+# ------------------------------------------------------------------------
+##
+## Externally provided counts (gen_assoc_counts.R and sum_assoc_reports.py)
+## 2 WAY ASSOCIATION ONLY
+## 
+## Inputs:
+##    count files (2 way counts, individual marginal counts)
+##    map files (2 variables)
+##
+## Outputs:
+#
+# ------------------------------------------------------------------------
+ExternalCounts <- function(inp) {
+  params <- ReadParameterFile(inp$params)
+  # Ensure sufficient maps as required by number of vars
+  stopifnot(inp$numvars == length(inp$maps))
+  map <- lapply(inp$maps, function(o)
+    ProcessMap(ReadMapFile(o, params = params),
+               params = params))
+
+  # (2 way counts, marginal 1 counts, marginal 2 counts)
+  counts <- lapply(1:3, function(i) ReadCountsFile(inp$counts[[i]]))
+  
+  params2 <- params
+  params2$k <- (params$k ** 2) * 4
+  
+  # Prune candidates
+  found_strings <- lapply(1:2, function(i)
+    Decode(counts[[i + 1]],
+           map[[i]]$rmap,
+           params, quick = FALSE)$fit$strings)
+  
+  cmap <- mapply(CombineMaps, map[[1]]$map, map[[2]]$map)
+  # Combine cohorts into one map. Needed for Decode2Way
+  inds <- lapply(cmap, function(x) which(x, arr.ind = TRUE))
+  for (i in seq(1, length(inds))) {
+    inds[[i]][, 1] <- inds[[i]][, 1] + (i-1) * dim(cmap[[1]])[1]
+  }
+  inds <- do.call("rbind", inds)
+  
+  # inds[[2]][, 1] <- inds[[2]][, 1] + dim(cmap[[1]])[1]
+  # inds <- rbind(inds[[1]], inds[[2]])
+  crmap <- sparseMatrix(inds[, 1], inds[, 2], dims = c(
+    nrow(cmap[[1]]) * length(cmap),
+    ncol(cmap[[1]])))
+  td <- read.csv(file = inp$truefile)
+  colnames(crmap) <- colnames(cmap[[1]])
+  counts <- ComputeCounts(creports, cohorts[[1]], params2)
+  marginal <- Decode2Way(counts, crmap, params2)$fit
+  
+  also_em = FALSE
+  ed_em <- list()
+  if(also_em == TRUE) {
+    joint_dist <- ComputeDistributionEM(reports, cohorts, map,
+                                        ignore_other = TRUE,
+                                        quick = TRUE,
+                                        params, marginals = NULL,
+                                        estimate_var = FALSE,
+                                        new_alg = inp$newalg)
+    ed_em <- joint_dist$orig$fit
+    if(length(reports) == 3) {
+      ed_em <- as.data.frame(ed_em)
     }
-    ed[is.na(ed)] <- 0
-    time_taken <- proc.time() - ptm
-    
-    print("2 WAY RESULTS")
-    print(signif(ed, 4))
-    print(l1d(td, ed, "L1 DISTANCE 2 WAY"))
-    print("PROC.TIME")
-    print(time_taken)
-    chisq_td <- chisq.test(td)[1][[1]][[1]]
-    chisq_ed <- chisq.test(ed)[1][[1]][[1]]
-    if(is.nan(chisq_ed)) {
-      chisq_ed <- 0
+  }
+  
+  ed <- td
+  for (cols in colnames(td)) {
+    for (rows in rownames(td)) {
+      ed[rows, cols] <- marginal[paste(rows, cols, sep = "x"), "Estimate"]
     }
-    if(is.nan(chisq_td)) {
-      chisq_td <- 0
-    }
-    
-    metrics <- list(
-      td_chisq = chisq_td,
-      ed_chisq = chisq_ed,
-      tv = l1d(td, ed, ""),
-      time = time_taken[1],
-      dim1 = length(found_strings[[1]]),
-      dim2 = length(found_strings[[2]])
-    )
-    filename <- file.path(inp$outdir, 'metrics.csv')
-    write.csv(metrics, file = filename, row.names = FALSE)
-  } else {
-    # ensure sufficient maps as required by number of vars
-    stopifnot(inp$numvars == length(inp$maps))
-    opts_map <- inp$maps
-    map <- lapply(opts_map, function(o)
-                    ProcessMap(ReadMapFile(o, params = params),
-                               params = params))
+  }
+  
+  time_taken <- proc.time() - ptm
+  
+  print("2 WAY RESULTS")
+  print(signif(ed[order(rowSums(ed)), ], 4))
+  print(TVDistance(td, ed, "TV DISTANCE 2 WAY"))
+  print("PROC.TIME")
+  print(time_taken)
+  chisq_ed <- chisq.test(ed)[1][[1]][[1]]
+  if(is.nan(chisq_ed)) {
+    chisq_ed <- 0
+  }
+  
+  metrics <- list(
+    td_chisq = chisq.test(td)[1][[1]][[1]],
+    ed_chisq = chisq_ed,
+    tv = TVDistance(td, ed, ""),
+    time = time_taken[1],
+    dim1 = length(found_strings[[1]]),
+    dim2 = length(found_strings[[2]])
+  )
+  
+  if(also_em == TRUE) {
+    # Add EM metrics
+    metrics <- c(metrics,
+                 list(ed_em_chisq = chisq.test(ed_em)[1][[1]][[1]],
+                      tv_em = TVDistance(td, ed_em, "")/2))
+  }
+  
+  # Write metrics to metrics.csv
+  filename <- file.path(inp$outdir, 'metrics.csv')
+  write.csv(metrics, file = filename, row.names = FALSE)
+}
+
+# ------------------------------------------------------------------------
+##
+## Externally provided reports
+## 2 OR 3 WAY ASSOCIATION
+## 
+## Inputs:
+##    
+## Outputs:
+#
+# ------------------------------------------------------------------------
+ExternalReports <- function(inp) {
+  params <- ReadParameterFile(inp$params)
+  # Ensure sufficient maps as required by number of vars
+  stopifnot(inp$numvars == length(inp$maps))
+  map <- lapply(inp$maps, function(o)
+    ProcessMap(ReadMapFile(o, params = params),
+               params = params))
+  
+  if (read_reports_flag == TRUE) {
     # Reports must be of the format
     #     cohort no, rappor bitstring 1, rappor bitstring 2, ...
     reportsObj <- read.csv(inp$reports,
                            colClasses = c("integer",
                                           rep("character", inp$numvars)),
                            header = FALSE)
-  
+    
     # Parsing reportsObj
     # ComputeDistributionEM allows for different sets of cohorts
     # for each variable. Here, both sets of cohorts are identical
@@ -345,7 +476,7 @@ main <- function(opts) {
     cohorts <- rep(list(co), inp$numvars)
     # Parse reports from reportObj cols 2, 3, ...
     reports <- lapply(1:inp$numvars, function(x) as.list(reportsObj[x + 1]))
-  
+    
     # Split strings into bit arrays (as required by assoc analysis)
     reports <- lapply(1:inp$numvars, function(i) {
       # apply the following function to each of reports[[1]] and reports[[2]]
@@ -354,96 +485,111 @@ main <- function(opts) {
         as.numeric(strsplit(x, split = "")[[1]])
       })
     })
-  
+    
     creports <- CombineReports(reports[[1]], reports[[2]])
-    params2 <- params
-    params2$k <- (params$k ** 2) * 4
-    # CombineMaps(map[[1]]$map[[1]], map[[2]]$map[[1]])
-    cmap <- mapply(CombineMaps, map[[1]]$map, map[[2]]$map)
-    # Combine cohorts into one map. Needed for Decode2Way
-    inds <- lapply(cmap, function(x) which(x, arr.ind = TRUE))
-    for (i in seq(1, length(inds))) {
-      inds[[i]][, 1] <- inds[[i]][, 1] + (i-1) * dim(cmap[[1]])[1]
+  }
+  
+  params2 <- params
+  params2$k <- (params$k ** 2) * 4
+  # CombineMaps(map[[1]]$map[[1]], map[[2]]$map[[1]])
+  cmap <- mapply(CombineMaps, map[[1]]$map, map[[2]]$map)
+  # Combine cohorts into one map. Needed for Decode2Way
+  inds <- lapply(cmap, function(x) which(x, arr.ind = TRUE))
+  for (i in seq(1, length(inds))) {
+    inds[[i]][, 1] <- inds[[i]][, 1] + (i-1) * dim(cmap[[1]])[1]
+  }
+  inds <- do.call("rbind", inds)
+  
+  # inds[[2]][, 1] <- inds[[2]][, 1] + dim(cmap[[1]])[1]
+  # inds <- rbind(inds[[1]], inds[[2]])
+  crmap <- sparseMatrix(inds[, 1], inds[, 2], dims = c(
+    nrow(cmap[[1]]) * length(cmap),
+    ncol(cmap[[1]])))
+  td <- read.csv(file = inp$truefile)
+  colnames(crmap) <- colnames(cmap[[1]])
+  counts <- ComputeCounts(creports, cohorts[[1]], params2)
+  marginal <- Decode2Way(counts, crmap, params2)$fit
+  
+  also_em = FALSE
+  ed_em <- list()
+  if(also_em == TRUE) {
+    joint_dist <- ComputeDistributionEM(reports, cohorts, map,
+                                        ignore_other = TRUE,
+                                        quick = TRUE,
+                                        params, marginals = NULL,
+                                        estimate_var = FALSE,
+                                        new_alg = inp$newalg)
+    ed_em <- joint_dist$orig$fit
+    if(length(reports) == 3) {
+      ed_em <- as.data.frame(ed_em)
     }
-    inds <- do.call("rbind", inds)
-    
-    # inds[[2]][, 1] <- inds[[2]][, 1] + dim(cmap[[1]])[1]
-    # inds <- rbind(inds[[1]], inds[[2]])
-    crmap <- sparseMatrix(inds[, 1], inds[, 2], dims = c(
-                                                  nrow(cmap[[1]]) * length(cmap),
-                                                  ncol(cmap[[1]])))
-    td <- read.csv(file = inp$truefile)
-    colnames(crmap) <- colnames(cmap[[1]])
-    counts <- ComputeCounts(creports, cohorts[[1]], params2)
-    marginal <- Decode2Way(counts, crmap, params2)$fit
-    
-    also_em = FALSE
-    ed_em <- list()
-    if(also_em == TRUE) {
-      joint_dist <- ComputeDistributionEM(reports, cohorts, map,
-                                          ignore_other = TRUE,
-                                          quick = TRUE,
-                                          params, marginals = NULL,
-                                          estimate_var = FALSE,
-                                          new_alg = inp$newalg)
-      ed_em <- joint_dist$orig$fit
-      if(length(reports) == 3) {
-        ed_em <- as.data.frame(ed_em)
-      }
+  }
+  
+  ed <- td
+  for (cols in colnames(td)) {
+    for (rows in rownames(td)) {
+      ed[rows, cols] <- marginal[paste(rows, cols, sep = "x"), "Estimate"]
     }
-    
-    ed <- td
-    for (cols in colnames(td)) {
-      for (rows in rownames(td)) {
-        ed[rows, cols] <- marginal[paste(rows, cols, sep = "x"), "Estimate"]
-      }
-    }
-    
-    time_taken <- proc.time() - ptm
-    
-    print("2 WAY RESULTS")
-    print(signif(ed[order(rowSums(ed)), ], 4))
-    print(l1d(td, ed, "L1 DISTANCE 2 WAY"))
-    print("PROC.TIME")
-    print(time_taken)
-    chisq_ed <- chisq.test(ed)[1][[1]][[1]]
-    if(is.nan(chisq_ed)) {
-      chisq_ed <- 0
-    }
-    
-    metrics <- list(
-      td_chisq = chisq.test(td)[1][[1]][[1]],
-      ed_chisq = chisq_ed,
-      tv = l1d(td, ed, ""),
-      time = time_taken[1],
-      dim1 = length(found_strings[[1]]),
-      dim2 = length(found_strings[[2]])
-    )
-    
-    if(also_em == TRUE) {
-      # Add EM metrics
-      metrics <- c(metrics,
-                   list(ed_em_chisq = chisq.test(ed_em)[1][[1]][[1]],
-                        tv_em = l1d(td, ed_em, "")/2))
-    }
-    
-    # Write metrics to metrics.csv
-    # Report l1 distance / 2 to be consistent with histogram analysis
-    filename <- file.path(inp$outdir, 'metrics.csv')
-    write.csv(metrics, file = filename, row.names = FALSE)
-  }  
+  }
+  
+  time_taken <- proc.time() - ptm
+  
+  print("2 WAY RESULTS")
+  print(signif(ed[order(rowSums(ed)), ], 4))
+  print(TVDistance(td, ed, "TV DISTANCE 2 WAY"))
+  print("PROC.TIME")
+  print(time_taken)
+  chisq_ed <- chisq.test(ed)[1][[1]][[1]]
+  if(is.nan(chisq_ed)) {
+    chisq_ed <- 0
+  }
+  
+  metrics <- list(
+    td_chisq = chisq.test(td)[1][[1]][[1]],
+    ed_chisq = chisq_ed,
+    tv = TVDistance(td, ed, ""),
+    time = time_taken[1],
+    dim1 = length(found_strings[[1]]),
+    dim2 = length(found_strings[[2]])
+  )
+  
+  if(also_em == TRUE) {
+    # Add EM metrics
+    metrics <- c(metrics,
+                 list(ed_em_chisq = chisq.test(ed_em)[1][[1]][[1]],
+                      tv_em = TVDistance(td, ed_em, "")/2))
+  }
+  
+  # Write metrics to metrics.csv
+  filename <- file.path(inp$outdir, 'metrics.csv')
+  write.csv(metrics, file = filename, row.names = FALSE)
 }
 
-# L1 distance = 1 - sum(min(df1|x, df2|x)) where
-# df1|x / df2|x projects the distribution to the intersection x of the
-# supports of df1 and df2
-l1d <- function(df1, df2, statement = "L1 DISTANCE") {
-  rowsi <- intersect(rownames(df1), rownames(df2))
-  colsi <- intersect(colnames(df1), colnames(df2))
-  print(statement)
-  1 - sum(mapply(min, 
-                 unlist(as.data.frame(df1)[rowsi, colsi], use.names = FALSE),
-                 unlist(as.data.frame(df2)[rowsi, colsi], use.names = FALSE)))
+main <- function(opts) {
+  ptm <- proc.time()
+  direct_simulation = FALSE
+  inp <- fromJSON(opts$inp)
+  
+  # Choose from a set of experiments to run
+  # direct -> direct simulation of reports (without variances)
+  # external-counts -> externally supplied counts for 2 way and marginals
+  # external-reports -> externally supplied reports 
+  if (!(inp$expt %in% c("direct", "external-counts", "external-reports"))) {
+    stop("Incorrect experiment in JSON file.")
+  }
+  
+  if(inp$expt == "direct") {
+    print("---------- RUNNING EXPERIMENT \"DIRECT\" ----------")
+    DirectSimulationOfReports(inp)
+  } 
+  if (inp$expt == "external-counts") {
+    print("---------- RUNNING EXPERIMENT \"EXT COUNTS\" ----------")
+    ExternalCounts(inp)  
+  }
+  if (inp$expt == "external-reports") {
+    print("---------- RUNNING EXPERIMENT \"EXT REPORTS\" ----------")
+    ExternalReports(inp)
+  }
 }
 
 if(!interactive()) {

@@ -113,7 +113,28 @@ _run-one-instance() {
   local instance_dir=$ASSOCTEST_DIR/$test_case/$test_instance
   mkdir --verbose -p $instance_dir
 
-  banner "Running association input simulation"
+  banner "Generating input"
+
+  tests/gen_assoc_reports.R $num_unique_values $num_unique_values2 \
+                            $num_clients $instance_dir/case.csv
+
+  banner "Running RAPPOR client"
+  tests/rappor_assoc_sim.py \
+    --num-bits $num_bits \
+    --num-hashes $num_hashes \
+    --num-cohorts $num_cohorts \
+    -p $p \
+    -q $q \
+    -f $f \
+    -i $instance_dir/case.csv \
+    --out-prefix "$instance_dir/case"
+
+  analysis/tools/sum_bits_assoc.py \
+    $case_dir/case_params.csv \
+    "$instance_dir/case" \
+    < $instance_dir/case_out.csv
+
+  return
 
   # Setting up JSON file containing assoc_sim inputs with python
   python -c "import json; \
@@ -146,8 +167,8 @@ _run-one-instance() {
   python -c "import json; \
     f = file('$instance_dir/analyze_inp.json', 'w'); \
     inp = dict(); \
-    inp['maps'] = ['$instance_dir/map_1.csv',\
-                   '$instance_dir/map_2.csv']; \
+    inp['maps'] = ['$case_dir/case_map1.csv',\
+                   '$case_dir/case_map2.csv']; \
     inp['reports'] = '$instance_dir/reports.csv'; \
     inp['truefile'] = '$instance_dir/truedist.csv'; \
     inp['outdir'] = '$out_dir'; \

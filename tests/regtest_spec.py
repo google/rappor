@@ -69,6 +69,7 @@ DISTRIBUTION_PARAMS_ASSOC = {
     'fizz': (100, 20, int(1e05), int(1e04)),
     'fizz-bool': (100, 2, int(1e05), int(1e04)),
 
+    'toy': (5, 2, 1e04, 20),  # for testing purposes only
     'compact-noextra-small': (40, 5, 1e04, 0),
     'loose-noextra-small': (100, 20, 1e04, 0),
     'compact-noextra-large': (40, 5, 1e06, 0),
@@ -94,6 +95,7 @@ BLOOMFILTER_PARAMS = {
 
 # 'p, q, f' as in params file.
 PRIVACY_PARAMS = {
+    'eps_zero': (0, 0.99, 0),  # testing purposes only!
     'eps_1_1': (0.39, 0.61, 0.45),  # eps_1 = 1, eps_inf = 5:
     'eps_1_5': (0.225, 0.775, 0.0),  # eps_1 = 5, no eps_inf
     'eps_verysmall': (0.125, 0.875, 0.125),
@@ -133,9 +135,9 @@ TEST_CONFIGS = [
 #}
 
 ASSOC_TEST_CONFIG = {
-  'distr': ('fizz-small',),
-  'blooms': ('8x32',),
-  'privacy': ('eps_small',)
+  'distr': ('toy',),
+  'blooms': ('16x32',),
+  'privacy': ('eps_zero',)
 }
 
 #
