@@ -274,8 +274,10 @@ _run-tests() {
   else
     func=_run-one-instance-logged
     processors=$(grep -c ^processor /proc/cpuinfo || echo 4)  # POSIX-specific
-    if test $processors -gt 1; then  # leave one CPU for the OS
-      processors=$(expr $processors - 1)
+    if test $processors -gt 3; then  # leave few CPUs for the OS
+      processors=$(expr $processors - 3)
+    else
+      processors=1
     fi
     log "Running $processors parallel processes"
   fi
@@ -326,7 +328,7 @@ run-all() {
   log "Running all tests. Can take a while."
   # a- for assoc tests
   # F for sequential
-  _run-tests '^a-' $instances F T
+  _run-tests '^a-' $instances T T
 }
 
 "$@"

@@ -370,11 +370,16 @@ ExternalCounts <- function(inp) {
     Decode(counts[[i + 1]],
            map[[i]]$rmap,
            params, quick = FALSE)$fit$strings)
+  if (length(found_strings[[1]]) == 0 || length(found_strings[[2]]) == 0) {
+    print("FOUND_STRINGS")
+    print(found_strings)
+    stop("No strings found in 1-way marginal.")
+  }
   
   # Combine maps to feed into Decode2Way
   # Prune first to found_strings from Decode on 1-way counts
   pruned <- lapply(1:2, function(i)
-    lapply(map[[i]]$map, function(z) z[,found_strings[[i]]]))
+    lapply(map[[i]]$map, function(z) z[,found_strings[[i]], drop = FALSE]))
   crmap <- CombineMaps(pruned[[1]], pruned[[2]])$crmap
   marginal <- Decode2Way(counts[[1]], crmap, params2)$fit
   td <- read.csv(file = inp$truefile, header = FALSE)
@@ -386,19 +391,24 @@ ExternalCounts <- function(inp) {
       ed[rows, cols] <- marginal[paste(rows, cols, sep = "x"), "Estimate"]
     }
   }
+  ed[is.na(ed)] <- 0
   
   time_taken <- proc.time() - ptm
   
   print(TVDistance(td, ed, "TV DISTANCE 2 WAY"))
   print("PROC.TIME")
   print(time_taken)
+  chisq_td <- chisq.test(td)[1][[1]][[1]]
   chisq_ed <- chisq.test(ed)[1][[1]][[1]]
+  if(is.nan(chisq_td)) {
+    chisq_td <- 0
+  }
   if(is.nan(chisq_ed)) {
     chisq_ed <- 0
   }
   
   metrics <- list(
-    td_chisq = chisq.test(td)[1][[1]][[1]],
+    td_chisq = chisq_td,
     ed_chisq = chisq_ed,
     tv = TVDistance(td, ed, ""),
     time = time_taken[1],
@@ -414,14 +424,16 @@ ExternalCounts <- function(inp) {
 # ------------------------------------------------------------------------
 ##
 ## Externally provided reports
-## 2 OR 3 WAY ASSOCIATION
+## EM ALGORITHM
+## TODO: Also support 3 way association
 ## 
 ## Inputs:
 ##    
 ## Outputs:
 #
 # ------------------------------------------------------------------------
-ExternalReports <- function(inp) {
+ExternalReportsEM <- function(inp) {
+  ptm <- proc.time()
   params <- ReadParameterFile(inp$params)
   # Ensure sufficient maps as required by number of vars
   stopifnot(inp$numvars == length(inp$maps))
@@ -429,107 +441,68 @@ ExternalReports <- function(inp) {
     ProcessMap(ReadMapFile(o, params = params),
                params = params))
   
-  if (read_reports_flag == TRUE) {
-    # Reports must be of the format
-    #     cohort no, rappor bitstring 1, rappor bitstring 2, ...
-    reportsObj <- read.csv(inp$reports,
-                           colClasses = c("integer",
+  # Reports must be of the format
+  #     cohort no, rappor bitstring 1, rappor bitstring 2, ...
+  reportsObj <- read.csv(inp$reports,
+                           colClasses = c("integer", "integer",
                                           rep("character", inp$numvars)),
-                           header = FALSE)
+                           header = TRUE)
+  # Ignore the first column
+  reportsObj <- reportsObj[,-1]
+  # Parsing reportsObj
+  # ComputeDistributionEM allows for different sets of cohorts
+  # for each variable. Here, both sets of cohorts are identical
+  co <- as.list(reportsObj[1])[[1]]
+  co <- co + 1  # 1 indexing
+  cohorts <- rep(list(co), inp$numvars)
+  # Parse reports from reportObj cols 2, 3, ...
+  reports <- lapply(1:inp$numvars, function(x) as.list(reportsObj[x + 1]))
     
-    # Parsing reportsObj
-    # ComputeDistributionEM allows for different sets of cohorts
-    # for each variable. Here, both sets of cohorts are identical
-    co <- as.list(reportsObj[1])[[1]]
-    cohorts <- rep(list(co), inp$numvars)
-    # Parse reports from reportObj cols 2, 3, ...
-    reports <- lapply(1:inp$numvars, function(x) as.list(reportsObj[x + 1]))
-    
-    # Split strings into bit arrays (as required by assoc analysis)
-    reports <- lapply(1:inp$numvars, function(i) {
-      # apply the following function to each of reports[[1]] and reports[[2]]
-      lapply(reports[[i]][[1]], function(x) {
-        # function splits strings and converts them to numeric values
-        as.numeric(strsplit(x, split = "")[[1]])
-      })
+  # Split strings into bit arrays (as required by assoc analysis)
+  reports <- lapply(1:inp$numvars, function(i) {
+    # apply the following function to each of reports[[1]] and reports[[2]]
+    lapply(reports[[i]][[1]], function(x) {
+      # function splits strings and converts them to numeric values
+      # rev needed for endianness
+      rev(as.numeric(strsplit(x, split = "")[[1]]))
     })
+  })
     
-    creports <- CombineReports(reports[[1]], reports[[2]])
-  }
-  
-  params2 <- params
-  params2$k <- (params$k ** 2) * 4
-  # CombineMaps(map[[1]]$map[[1]], map[[2]]$map[[1]])
-  cmap <- mapply(CombineMaps, map[[1]]$map, map[[2]]$map)
-  # Combine cohorts into one map. Needed for Decode2Way
-  inds <- lapply(cmap, function(x) which(x, arr.ind = TRUE))
-  for (i in seq(1, length(inds))) {
-    inds[[i]][, 1] <- inds[[i]][, 1] + (i-1) * dim(cmap[[1]])[1]
-  }
-  inds <- do.call("rbind", inds)
-  
-  # inds[[2]][, 1] <- inds[[2]][, 1] + dim(cmap[[1]])[1]
-  # inds <- rbind(inds[[1]], inds[[2]])
-  crmap <- sparseMatrix(inds[, 1], inds[, 2], dims = c(
-    nrow(cmap[[1]]) * length(cmap),
-    ncol(cmap[[1]])))
-  td <- read.csv(file = inp$truefile)
-  colnames(crmap) <- colnames(cmap[[1]])
-  counts <- ComputeCounts(creports, cohorts[[1]], params2)
-  marginal <- Decode2Way(counts, crmap, params2)$fit
-  
-  also_em = FALSE
-  ed_em <- list()
-  if(also_em == TRUE) {
-    joint_dist <- ComputeDistributionEM(reports, cohorts, map,
-                                        ignore_other = TRUE,
-                                        quick = TRUE,
-                                        params, marginals = NULL,
-                                        estimate_var = FALSE,
-                                        new_alg = inp$newalg)
-    ed_em <- joint_dist$orig$fit
-    if(length(reports) == 3) {
-      ed_em <- as.data.frame(ed_em)
-    }
-  }
-  
-  ed <- td
-  for (cols in colnames(td)) {
-    for (rows in rownames(td)) {
-      ed[rows, cols] <- marginal[paste(rows, cols, sep = "x"), "Estimate"]
-    }
-  }
-  
+  joint_dist <- ComputeDistributionEM(reports, cohorts, map,
+                                      ignore_other = TRUE,
+                                      quick = TRUE,
+                                      params, marginals = NULL,
+                                      estimate_var = FALSE,
+                                      new_alg = inp$newalg)
+  em <- joint_dist$orig$fit
+  td <- read.csv(file = inp$truefile, header = FALSE)
+  td <- table(td[,2:3])
+  td <- td / sum(td)
   time_taken <- proc.time() - ptm
   
-  print("2 WAY RESULTS")
-  print(signif(ed[order(rowSums(ed)), ], 4))
-  print(TVDistance(td, ed, "TV DISTANCE 2 WAY"))
+  print(TVDistance(td, em, "TV DISTANCE EM"))
   print("PROC.TIME")
   print(time_taken)
-  chisq_ed <- chisq.test(ed)[1][[1]][[1]]
+  chisq_td <- chisq.test(td)[1][[1]][[1]]
+  chisq_ed <- chisq.test(em)[1][[1]][[1]]
+  if(is.nan(chisq_td)) {
+    chisq_td <- 0
+  }
   if(is.nan(chisq_ed)) {
     chisq_ed <- 0
   }
   
   metrics <- list(
-    td_chisq = chisq.test(td)[1][[1]][[1]],
+    td_chisq = chisq_td,
     ed_chisq = chisq_ed,
-    tv = TVDistance(td, ed, ""),
+    tv = TVDistance(td, em, ""),
     time = time_taken[1],
-    dim1 = length(found_strings[[1]]),
-    dim2 = length(found_strings[[2]])
+    dim1 = dim(em)[[1]],
+    dim2 = dim(em)[[2]]
   )
   
-  if(also_em == TRUE) {
-    # Add EM metrics
-    metrics <- c(metrics,
-                 list(ed_em_chisq = chisq.test(ed_em)[1][[1]][[1]],
-                      tv_em = TVDistance(td, ed_em, "")/2))
-  }
-  
   # Write metrics to metrics.csv
-  filename <- file.path(inp$outdir, 'metrics.csv')
+  filename <- file.path(inp$outdir, 'metrics_2.csv')
   write.csv(metrics, file = filename, row.names = FALSE)
 }
 
@@ -540,21 +513,21 @@ main <- function(opts) {
   # direct -> direct simulation of reports (without variances)
   # external-counts -> externally supplied counts for 2 way and marginals
   # external-reports -> externally supplied reports 
-  if (!(inp$expt %in% c("direct", "external-counts", "external-reports"))) {
+  if (!(inp$expt %in% c("direct", "external-counts", "external-reports-em"))) {
     stop("Incorrect experiment in JSON file.")
   }
   
-  if(inp$expt == "direct") {
+  if("direct" %in% inp$expt) {
     print("---------- RUNNING EXPERIMENT DIRECT ----------")
     DirectSimulationOfReports(inp)
   } 
-  if (inp$expt == "external-counts") {
+  if ("external-counts" %in% inp$expt) {
     print("---------- RUNNING EXPERIMENT EXT COUNTS ----------")
     ExternalCounts(inp)  
   }
-  if (inp$expt == "external-reports") {
+  if ("external-reports-em" %in% inp$expt) {
     print("---------- RUNNING EXPERIMENT EXT REPORTS ----------")
-    ExternalReports(inp)
+    ExternalReportsEM(inp)
   }
 }
 

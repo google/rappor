@@ -124,7 +124,7 @@ def MeanOfMeans(dict_of_lists):
     return None
 
 
-def ParseSpecFile(spec_filename):
+def ParseSpecFile(spec_filename, empty = False):
   """Parses the spec (parameters) file.
 
   Returns:
@@ -135,6 +135,8 @@ def ParseSpecFile(spec_filename):
     spec_row = s.readline().split()
 
   spec_in_html = ' '.join('<td>%s</td>' % cell for cell in spec_row[3:])
+  if empty == True:
+    spec_in_html = ' '.join('<td></td>' for cell in spec_row[3:])
 
   return spec_in_html
 
@@ -320,6 +322,13 @@ def main(argv):
           metrics[m][test_case] += metrics_dict[m]
 
     print '<tr>{}{}{}</tr>'.format(cell1_html, spec_html, metrics_html)
+
+    # Printing metrics 2 if available
+    metrics_file = os.path.join(report_dir, 'metrics_2.csv')
+    if (os.path.isfile(metrics_file)):
+      metrics_dict, metrics_html = ParseMetrics(metrics_file, log_file)
+      print '<tr><td></td>{}{}</tr>'.format(ParseSpecFile(spec_file, empty =
+                                                        True), metrics_html)
 
   print FormatSummaryRow(metrics)
 
