@@ -185,7 +185,7 @@ CheckDecodeHelper <- function(params, map, pdf, num_clients,
 
   decoded <- Decode(counts, map, params, quiet = TRUE)
 
-  decoded_partition <- setNames(decoded$fit$estimate, decoded$fit$strings)
+  decoded_partition <- setNames(decoded$fit$estimate, decoded$fit$string)
 
   checkTrue(L1Distance(decoded_partition, partition) < total^.5 * tolerance_l1,
             "L1 distance is too large")
@@ -194,7 +194,7 @@ CheckDecodeHelper <- function(params, map, pdf, num_clients,
               max(partition)^.5 * tolerance_linf, "L_inf distance is too large")
 
   list(estimates = decoded_partition,
-       stds = setNames(decoded$fit$std_dev, decoded$fit$strings))
+       stds = setNames(decoded$fit$std_error, decoded$fit$string))
 }
 
 CheckDecodeAveAndStds <- function(...) {

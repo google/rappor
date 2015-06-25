@@ -119,7 +119,7 @@ CompareRapporVsActual <- function(ctx) {
   StringToInt <- function(x) as.integer(substring(x, 2))
 
   actual_values <- StringToInt(actual$string)
-  rappor_values <- StringToInt(rappor$strings)
+  rappor_values <- StringToInt(rappor$string)
 
   # False negatives: AnalyzeRAPPOR failed to find this value (e.g. because it
   # occurs too rarely)
