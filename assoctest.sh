@@ -134,7 +134,6 @@ _run-one-instance() {
     "$instance_dir/case" \
     < $instance_dir/case_out.csv
 
-  return
 
   # Setting up JSON file containing assoc_sim inputs with python
   python -c "import json; \
@@ -170,7 +169,7 @@ _run-one-instance() {
     inp['maps'] = ['$case_dir/case_map1.csv',\
                    '$case_dir/case_map2.csv']; \
     inp['reports'] = '$instance_dir/reports.csv'; \
-    inp['truefile'] = '$instance_dir/truedist.csv'; \
+    inp['truefile'] = '$instance_dir/case.csv'; \
     inp['outdir'] = '$out_dir'; \
     inp['params'] = '$case_dir/case_params.csv'; \
     inp['newalg'] = 'false'; \
@@ -178,6 +177,10 @@ _run-one-instance() {
     inp['num'] = $num_clients; \
     inp['extras'] = $num_extras; \
     inp['varcandidates'] = [$num_unique_values, $num_unique_values2]; \
+    inp['counts'] = ['$instance_dir/case_2way.csv',\
+                     '$instance_dir/case_marg1.csv',\
+                     '$instance_dir/case_marg2.csv']; \
+    inp['expt'] = 'external-counts'; \
     json.dump(inp, f); \
     f.close();"
 
@@ -267,7 +270,7 @@ _run-tests() {
   local processors=1
 
   if test $parallel = F; then
-    func=_run-one-instance  # output to the console
+    func=_run-one-instance-logged  # output to the console
   else
     func=_run-one-instance-logged
     processors=$(grep -c ^processor /proc/cpuinfo || echo 4)  # POSIX-specific

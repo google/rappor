@@ -137,7 +137,7 @@ TEST_CONFIGS = [
 ASSOC_TEST_CONFIG = {
   'distr': ('toy',),
   'blooms': ('16x32',),
-  'privacy': ('eps_zero',)
+  'privacy': ('eps_small',)
 }
 
 #

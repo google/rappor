@@ -68,8 +68,8 @@ TVDistance <- function(df1, df2, statement = "TV DISTANCE") {
   colsi <- intersect(colnames(df1), colnames(df2))
   print(statement)
   1 - sum(mapply(min, 
-                 unlist(as.data.frame(df1)[rowsi, colsi], use.names = FALSE),
-                 unlist(as.data.frame(df2)[rowsi, colsi], use.names = FALSE)))
+                 unlist(as.data.frame(df1[rowsi, colsi]), use.names = FALSE),
+                 unlist(as.data.frame(df2[rowsi, colsi]), use.names = FALSE)))
 }
 
 # Function to combine reports
@@ -351,6 +351,7 @@ DirectSimulationOfReports <- function(inp) {
 #
 # ------------------------------------------------------------------------
 ExternalCounts <- function(inp) {
+  ptm <- proc.time()
   params <- ReadParameterFile(inp$params)
   # Ensure sufficient maps as required by number of vars
   stopifnot(inp$numvars == length(inp$maps))
@@ -370,39 +371,15 @@ ExternalCounts <- function(inp) {
            map[[i]]$rmap,
            params, quick = FALSE)$fit$strings)
   
-  cmap <- mapply(CombineMaps, map[[1]]$map, map[[2]]$map)
-  # Combine cohorts into one map. Needed for Decode2Way
-  inds <- lapply(cmap, function(x) which(x, arr.ind = TRUE))
-  for (i in seq(1, length(inds))) {
-    inds[[i]][, 1] <- inds[[i]][, 1] + (i-1) * dim(cmap[[1]])[1]
-  }
-  inds <- do.call("rbind", inds)
-  
-  # inds[[2]][, 1] <- inds[[2]][, 1] + dim(cmap[[1]])[1]
-  # inds <- rbind(inds[[1]], inds[[2]])
-  crmap <- sparseMatrix(inds[, 1], inds[, 2], dims = c(
-    nrow(cmap[[1]]) * length(cmap),
-    ncol(cmap[[1]])))
-  td <- read.csv(file = inp$truefile)
-  colnames(crmap) <- colnames(cmap[[1]])
-  counts <- ComputeCounts(creports, cohorts[[1]], params2)
-  marginal <- Decode2Way(counts, crmap, params2)$fit
-  
-  also_em = FALSE
-  ed_em <- list()
-  if(also_em == TRUE) {
-    joint_dist <- ComputeDistributionEM(reports, cohorts, map,
-                                        ignore_other = TRUE,
-                                        quick = TRUE,
-                                        params, marginals = NULL,
-                                        estimate_var = FALSE,
-                                        new_alg = inp$newalg)
-    ed_em <- joint_dist$orig$fit
-    if(length(reports) == 3) {
-      ed_em <- as.data.frame(ed_em)
-    }
-  }
-  
+  # Combine maps to feed into Decode2Way
+  # Prune first to found_strings from Decode on 1-way counts
+  pruned <- lapply(1:2, function(i)
+    lapply(map[[i]]$map, function(z) z[,found_strings[[i]]]))
+  crmap <- CombineMaps(pruned[[1]], pruned[[2]])$crmap
+  marginal <- Decode2Way(counts[[1]], crmap, params2)$fit
+  td <- read.csv(file = inp$truefile, header = FALSE)
+  td <- table(td[,2:3])
+  td <- td / sum(td)
   ed <- td
   for (cols in colnames(td)) {
     for (rows in rownames(td)) {
@@ -412,8 +389,6 @@ ExternalCounts <- function(inp) {
   
   time_taken <- proc.time() - ptm
   
-  print("2 WAY RESULTS")
-  print(signif(ed[order(rowSums(ed)), ], 4))
   print(TVDistance(td, ed, "TV DISTANCE 2 WAY"))
   print("PROC.TIME")
   print(time_taken)
@@ -430,13 +405,6 @@ ExternalCounts <- function(inp) {
     dim1 = length(found_strings[[1]]),
     dim2 = length(found_strings[[2]])
   )
-  
-  if(also_em == TRUE) {
-    # Add EM metrics
-    metrics <- c(metrics,
-                 list(ed_em_chisq = chisq.test(ed_em)[1][[1]][[1]],
-                      tv_em = TVDistance(td, ed_em, "")/2))
-  }
   
   # Write metrics to metrics.csv
   filename <- file.path(inp$outdir, 'metrics.csv')
@@ -566,8 +534,6 @@ ExternalReports <- function(inp) {
 }
 
 main <- function(opts) {
-  ptm <- proc.time()
-  direct_simulation = FALSE
   inp <- fromJSON(opts$inp)
   
   # Choose from a set of experiments to run
@@ -579,15 +545,15 @@ main <- function(opts) {
   }
   
   if(inp$expt == "direct") {
-    print("---------- RUNNING EXPERIMENT \"DIRECT\" ----------")
+    print("---------- RUNNING EXPERIMENT DIRECT ----------")
     DirectSimulationOfReports(inp)
   } 
   if (inp$expt == "external-counts") {
-    print("---------- RUNNING EXPERIMENT \"EXT COUNTS\" ----------")
+    print("---------- RUNNING EXPERIMENT EXT COUNTS ----------")
     ExternalCounts(inp)  
   }
   if (inp$expt == "external-reports") {
-    print("---------- RUNNING EXPERIMENT \"EXT REPORTS\" ----------")
+    print("---------- RUNNING EXPERIMENT EXT REPORTS ----------")
     ExternalReports(inp)
   }
 }
