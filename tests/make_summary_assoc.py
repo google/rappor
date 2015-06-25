@@ -157,7 +157,7 @@ def ExtractTime(log_filename):
   return None
 
 
-def ParseMetrics(metrics_file, log_file):
+def ParseMetrics(metrics_file, log_file, italics = False):
   """Processes the metrics file.
 
   Args:
@@ -200,7 +200,11 @@ def ParseMetrics(metrics_file, log_file):
   }
 
   # return metrics formatted as HTML table entries
-  return (metrics_row_dict,
+  if(italics == True):
+    return (metrics_row_dict,
+          ' '.join('<td><i>%s</i></td>' % cell for cell in metrics_row_str))
+  else:
+    return (metrics_row_dict,
           ' '.join('<td>%s</td>' % cell for cell in metrics_row_str))
 
 
@@ -326,7 +330,8 @@ def main(argv):
     # Printing metrics 2 if available
     metrics_file = os.path.join(report_dir, 'metrics_2.csv')
     if (os.path.isfile(metrics_file)):
-      metrics_dict, metrics_html = ParseMetrics(metrics_file, log_file)
+      metrics_dict, metrics_html = ParseMetrics(metrics_file, log_file,
+                                                italics = True)
       print '<tr><td></td>{}{}</tr>'.format(ParseSpecFile(spec_file, empty =
                                                         True), metrics_html)
 

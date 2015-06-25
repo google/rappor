@@ -383,7 +383,7 @@ Decode <- function(counts, map, params, quick = FALSE, alpha = 0.05,
   
   # Only select coefficients more than two standard deviations from 0. May
   # inflate empirical SD of the estimates.
-  reported <- which(coefs_ave > 1E-6 + 2 * coefs_ssd)
+  reported <- which(coefs_ave > 1E-6 + 1 * coefs_ssd)
   
   mod <- list(coefs = coefs_ave[reported], stds = coefs_ssd[reported])
 

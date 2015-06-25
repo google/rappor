@@ -131,9 +131,9 @@ ASSOC_TEST_CONFIG = {
             'fizz-tiny',
             'fizz-tiny-bool',
             'fizz-small',
-            'fizz-small-bool',
-            'fizz',
-            'fizz-bool',),
+            'fizz-small-bool',),
+#            'fizz',
+#            'fizz-bool',),
 #            'toy',),
 #            'compact-noextra-small',
 #            'loose-noextra-small',
@@ -147,10 +147,12 @@ ASSOC_TEST_CONFIG = {
 #            'loose-excess-small',
 #            'compact-excess-large',
 #            'loose-excess-large'),
-  'blooms': ('8x32',
-             '16x32'),
-  'privacy': ('eps_small',
-              'eps_chrome')
+  'blooms': (
+             '8x32',
+             '16x32',),
+  'privacy': (
+              'eps_small',
+              'eps_chrome',)
 }
 
 #
