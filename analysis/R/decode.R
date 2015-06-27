@@ -89,7 +89,7 @@ FitLasso <- function(X, Y, intercept = TRUE) {
   # Input:
   #    X: a design matrix of size km by M (the number of candidate strings).
   #    Y: a vector of size km with estimated counts from EstimateBloomCounts(),
-	#       representing constraints
+  #       representing constraints
   #    intercept: whether to fit with intercept or not.
   #
   # Output:
@@ -97,9 +97,9 @@ FitLasso <- function(X, Y, intercept = TRUE) {
 
   # TODO(mironov): Test cv.glmnet instead of glmnet
 
-	# Cap the number of non-zero coefficients to 500 or 80% of the number of
-	# constraints, whichever is less. The 500 cap is for performance reasons, 80%
-	# is to avoid overfitting.
+  # Cap the number of non-zero coefficients to 500 or 80% of the number of
+  # constraints, whichever is less. The 500 cap is for performance reasons, 80%
+  # is to avoid overfitting.
   cap <- min(500, nrow(X) * .8, ncol(X))
 
   mod <- glmnet(X, Y, standardize = FALSE, intercept = intercept,
@@ -110,10 +110,10 @@ FitLasso <- function(X, Y, intercept = TRUE) {
   coefs <- coefs[-1, , drop = FALSE]  # drop the intercept
   l1cap <- sum(colSums(coefs) <= 1.0)  # find all columns with L1 norm <= 1
   if(l1cap > 0)
-   	coefs <- coefs[, l1cap]  # return the last set of coefficients with L1 <= 1
+   	distr <- coefs[, l1cap]  # return the last set of coefficients with L1 <= 1
   else
-   	coefs <- setNames(rep(0, ncol(X)), colnames(X))
-  coefs
+   	distr <- setNames(rep(0, ncol(X)), colnames(X))
+  distr
 }
 
 PerformInference <- function(X, Y, N, mod, params, alpha, correction) {
@@ -230,17 +230,10 @@ FitDistribution <- function(estimates_stds, map, quiet = FALSE) {
   if(!quiet)
     cat("LASSO selected ", sum(lasso > 0), " non-zero coefficients.\n")
 
-  coefs <- setNames(lasso, colnames(map))
+  names(lasso) <- colnames(map)
 
-#   if(length(support_coefs) > 0) {  # LASSO may return an empty list
-#     constrained_coefs <- ConstrainedLinModel(map[, support_coefs, drop = FALSE],
-#                                              estimates_stds)
-#
-#     coefs[support_coefs] <- constrained_coefs
-#   }
-
-  coefs
-}
+  lasso
+ }
 
 Resample <- function(e) {
   # Simulate resampling of the Bloom filter estimates by adding Gaussian noise
@@ -282,7 +275,7 @@ Decode <- function(counts, map, params, alpha = 0.05,
 
   # Run the fitting procedure several times (5 seems to be sufficient and not
   # too many) to estimate standard deviation of the output.
-  for(r in 1:5) {
+  for(r in 1:10) {
     if(r > 1)
       e <- Resample(estimates_stds_filtered)
     else
