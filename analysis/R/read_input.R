@@ -102,8 +102,9 @@ ReadMapFile <- function(map_file, params = NULL, quote = "") {
 }
 
 LoadMapFile <- function(map_file, params = NULL, quote = "") {
-  # Reads the map file and creates an R binary .rda.
-  # If .rda file already exists, just loads that file.
+  # Reads the map file and creates an R binary .rda. If the .rda file already
+  # exists, just loads that file. NOTE: It assumes the map file is
+  # immutable.
 
   rda_file <- sub(".csv", ".rda", map_file, fixed = TRUE)
 

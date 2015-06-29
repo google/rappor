@@ -26,6 +26,8 @@ analysis-tool() {
     --output_dir _tmp
 
   cat _tmp/results.csv 
+  echo
+  cat _tmp/metrics.json
 
   popd
 }

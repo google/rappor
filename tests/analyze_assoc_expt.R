@@ -369,7 +369,7 @@ ExternalCounts <- function(inp) {
   found_strings <- lapply(1:2, function(i)
     Decode(counts[[i + 1]],
            map[[i]]$rmap,
-           params, quick = TRUE)$fit$strings)
+           params, quick = FALSE)$fit[,"string"])
   if (length(found_strings[[1]]) == 0 || length(found_strings[[2]]) == 0) {
     print("FOUND_STRINGS")
     print(found_strings)

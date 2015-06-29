@@ -39,7 +39,7 @@ GetOtherProbs <- function(counts, map, marginal, params) {
   p <- params$p
 
   # List of known strings that were measured in the marginal.
-  candidate_strings <- marginal$strings
+  candidate_strings <- marginal$string
 
   # Counts to remove from each cohort.
   top_counts <- ceiling(marginal$proportion * N / params$m)
@@ -421,19 +421,20 @@ ComputeDistributionEM <- function(reports, report_cohorts,
   joint_conditional = NULL
   found_strings <- list()
   cd_for_reports <- list()
-  
+
   for (j in (1:num_variables)) {
     ptm <- proc.time()
     variable_report <- reports[[j]]
     variable_cohort <- report_cohorts[[j]]
     map <- maps[[j]]
-    
+
     # Compute the probability of the "other" category
     variable_counts <- NULL
     if (is.null(marginals)) {
       ptm2 <- proc.time()
       variable_counts <- ComputeCounts(variable_report, variable_cohort, params)
-      marginal <- Decode(variable_counts, map$rmap, params, quick)$fit
+      marginal <- Decode(variable_counts, map$rmap, params, quick,
+                         quiet = TRUE)$fit
       print("TIME IN MARGINALS")
       print(proc.time() - ptm2)
       if (nrow(marginal) == 0) {
@@ -442,7 +443,7 @@ ComputeDistributionEM <- function(reports, report_cohorts,
     } else {
       marginal <- marginals[[j]]
     }
-    found_strings[[j]] <- marginal$strings
+    found_strings[[j]] <- marginal$string
 
     if (ignore_other) {
       prob_other <- vector(mode = "list", length = params$m)
@@ -466,7 +467,7 @@ ComputeDistributionEM <- function(reports, report_cohorts,
                          prob_other[[idx]])
       rep
     })
-    
+
     if(new_alg) {
       # Report conditional distributions as lists
       if (j == 1) {
@@ -485,7 +486,7 @@ ComputeDistributionEM <- function(reports, report_cohorts,
     print("TIME IN COND_REPORT_DIST")
     print(proc.time()-ptm)
   }
-  
+
   ptm <- proc.time()
   # Run expectation maximization to find joint distribution
   if (new_alg) {
@@ -498,7 +499,7 @@ ComputeDistributionEM <- function(reports, report_cohorts,
   print("TIME IN EM")
   print(proc.time() - ptm)
   dimnames(em$est) <- found_strings
-  
+
   # Return results in a usable format
   list(orig = list(fit = em$est, sd = em$sd, em = em))
 }

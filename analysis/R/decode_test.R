@@ -22,20 +22,21 @@ source('tests/gen_counts.R')
 L1Distance <- function(X, Y) {
   # Computes the L1 distance between two named vectors
   common <- intersect(names(X), names(Y))
-  union <- rbind(X[common], Y[common])
 
-  (sum(abs(union[1,]-union[2,])) + sum(X[!names(X) %in% common])
-                                 + sum(Y[!names(Y) %in% common])) / 2
+  L1_intersect <- sum(abs(X[common] - Y[common]))
+  L1_X_minus_Y <- sum(X[!names(X) %in% common])
+  L1_Y_minus_X <- sum(Y[!names(Y) %in% common])
+
+  (L1_intersect + L1_X_minus_Y + L1_Y_minus_X) / 2
 }
 
 LInfDistance <- function(X, Y) {
-  # Computes the L1 distance between two named vectors
+  # Computes the L_infinity distance between two named vectors
   common <- intersect(names(X), names(Y))
-  union <- rbind(X[common], Y[common])
 
-  max(abs(union[1,]-union[2,]),
-      X[!names(X) %in% common],
-      Y[!names(Y) %in% common])
+  max(abs(X[common] - Y[common]),
+      abs(X[!names(X) %in% common]),
+      abs(Y[!names(Y) %in% common]))
 }
 
 MatrixVectorMerge <- function(mat, vec) {
@@ -63,39 +64,40 @@ MatrixVectorMerge <- function(mat, vec) {
 }
 
 RunMultipleTests <- function(title, fun, repetitions, ...) {
-  # Run a function with an annotated progress indicator
+  # Run a function with an annotated progress indicator. The function's outputs
+  # are concatenated and returned as a list of length repetitions.
   cat(title, ": ")
 
   if(repetitions == 1) {
     # only run once
-    fun(...)
+    results <- list(fun(...))
 
-    cat(" Done.")
-  }
-  else {  # run multiple times
+    cat(" Done.\n")
+  } else {  # run multiple times
     pb <- txtProgressBar(min = 0, max = repetitions,
                          width = getOption("width") - 20 - nchar(title))
 
+    results <- vector(mode = "list", repetitions)
     for(i in 1:repetitions) {
       setTxtProgressBar(pb, i)
-      fun(...)
+      results[[i]] <- fun(...)
     }
     cat(" Done.")
     close(pb)
   }
+
+  results
 }
 
-TestEstimatesAndStdsHelper <- function(params, map, pdf, total) {
+CheckEstimatesAndStdsHelper <- function(params, map, pdf, total) {
   # Helper function for TestEstimateBloomCounts.
   partition <- RandomPartition(total, pdf)
   counts <- GenerateCounts(params, map, partition, 1)
-  e <- EstimateBloomCounts(params, counts)
 
-  results$estimates <<- abind(results$estimates, e$estimates, along = 3)
-  results$stds <<- abind(results$stds, e$stds, along = 3)
+  EstimateBloomCounts(params, counts)
 }
 
-TestEstimatesAndStds <- function(repetitions, title, params, map, pdf, total) {
+CheckEstimatesAndStds <- function(repetitions, title, params, map, pdf, total) {
   # Checks that the expectations returned by EstimateBloomCounts on simulated
   # inputs match the ground truth and the empirical standard deviation matches
   # EstimateBloomCounts outputs.
@@ -108,14 +110,16 @@ TestEstimatesAndStds <- function(repetitions, title, params, map, pdf, total) {
   #   pdf: probability density function of the distribution from which simulated
   #        clients are sampled
   #   total: number of reports
-  results <<- c(estimates = list(), stds = list())
 
-  RunMultipleTests(title, TestEstimatesAndStdsHelper, repetitions,
-                   params, map, pdf, total)
+  results <- RunMultipleTests(title, CheckEstimatesAndStdsHelper, repetitions,
+                              params, map, pdf, total)
 
-  ave_e <- apply(results$estimates,1:2, mean)
-  observed_stds <- apply(results$estimates,1:2, sd)
-  ave_stds <- apply(results$stds,1:2, mean)
+  estimates <- abind(lapply(results, function(r) r$estimates), along = 3)
+  stds <- abind(lapply(results, function(r) r$stds), along = 3)
+
+  ave_e <- apply(estimates, 1:2, mean)
+  observed_stds <- apply(estimates, 1:2, sd)
+  ave_stds <- apply(stds, 1:2, mean)
 
   ground_truth <- matrix(map %*% pdf, nrow = params$m, byrow = TRUE)
 
@@ -148,12 +152,12 @@ TestEstimateBloomCounts <- function() {
 
   noise0 <- list(p = 0, q = 1, f = 0)  # no noise at all
 
-  TestEstimatesAndStds(repetitions = 1000, "Testing estimates and stds (1/3)",
-                       c(report4x2, noise0), map0, pdf0, 100)
+  CheckEstimatesAndStds(repetitions = 1000, "Testing estimates and stds (1/3)",
+                        c(report4x2, noise0), map0, pdf0, 100)
 
   noise1 <- list(p = 0.4, q = .6, f = 0.5)
-  TestEstimatesAndStds(repetitions = 1000, "Testing estimates and stds (2/3)",
-                       c(report4x2, noise1), map0, pdf0, 100)
+  CheckEstimatesAndStds(repetitions = 1000, "Testing estimates and stds (2/3)",
+                        c(report4x2, noise1), map0, pdf0, 100)
 
   # MEDIUM TEST: 100 values, 32 cohorts, 8 bits each, 10^6 reports
   values <- 100
@@ -166,51 +170,50 @@ TestEstimateBloomCounts <- function() {
 
   pdf1 <- ComputePdf("zipf1", values)
 
-  TestEstimatesAndStds(repetitions = 100, "Testing estimates and stds (3/3)",
-                       c(report8x32, noise1), map1, pdf1, 10^9)
+  CheckEstimatesAndStds(repetitions = 100, "Testing estimates and stds (3/3)",
+                        c(report8x32, noise1), map1, pdf1, 10^9)
 }
 
-TestDecodeHelper <- function(params, map, pdf, num_clients,
+CheckDecodeHelper <- function(params, map, pdf, num_clients,
                              tolerance_l1, tolerance_linf) {
   # Helper function for TestDecode. Simulates a RAPPOR run and checks results of
-  # Decode's output against the ground truth. Results are appended to a global
-  # list.
+  # Decode's output against the ground truth. Output is returned as a list.
 
   partition <- RandomPartition(num_clients, pdf)
   counts <- GenerateCounts(params, map, partition, 1)
   total <- sum(partition)
 
-  decoded <- Decode(counts, map, params)
+  decoded <- Decode(counts, map, params, quiet = TRUE)
 
-  decoded_partition <- setNames(decoded$fit$estimate, decoded$fit$strings)
-
-  results$estimates <<- MatrixVectorMerge(results$estimates, decoded_partition)
-  results$stds <<- MatrixVectorMerge(results$stds,
-                                          setNames(decoded$fit$std_dev,
-                                                   decoded$fit$strings))
+  decoded_partition <- setNames(decoded$fit$estimate, decoded$fit$string)
 
   checkTrue(L1Distance(decoded_partition, partition) < total^.5 * tolerance_l1,
             "L1 distance is too large")
 
   checkTrue(LInfDistance(decoded_partition, partition) <
               max(partition)^.5 * tolerance_linf, "L_inf distance is too large")
+
+  list(estimates = decoded_partition,
+       stds = setNames(decoded$fit$std_error, decoded$fit$string))
 }
 
-TestDecodeAveAndStds <- function(...) {
+CheckDecodeAveAndStds <- function(...) {
   # Runs Decode multiple times (specified by the repetition argument), checks
   # individuals runs against the ground truth, and the estimates of the standard
   # error against empirical observations.
 
-  results <<- list(estimates = matrix(nrow = 0, ncol = 0),
-                   stds = matrix(nrow = 0, ncol = 0))
+  results <- RunMultipleTests(...)
 
-  RunMultipleTests(...)
+  estimates <- matrix(nrow = 0, ncol = 0)
+  lapply(results, function(r) MatrixVectorMerge(estimates, r$estimates))
 
-  empirical_stds <- apply(results$estimates, 2, sd, na.rm = TRUE)
-  estimated_stds <- apply(results$stds, 2, mean, na.rm = TRUE)
+  stds <- matrix(nrow = 0, ncol = 0)
+  lapply(results, function(r) MatrixVectorMerge(stds, r$stds))
 
-  if(dim(results$estimates)[1] > 1)
-  {
+  empirical_stds <- apply(estimates, 2, sd, na.rm = TRUE)
+  estimated_stds <- apply(stds, 2, mean, na.rm = TRUE)
+
+  if(dim(estimates)[1] > 1) {
     checkTrue(any(estimated_stds > empirical_stds / 2),
               "Our estimate for the standard deviation is too low")
 
@@ -239,22 +242,22 @@ TestDecode <- function() {
   # match the ground truth. Must be close enough though.
   noise0 <- list(p = 0, q = 1, f = 0)  # no noise whatsoever
 
-  TestDecodeAveAndStds("Testing Decode (1/5)", TestDecodeHelper, 100,
-                       c(report4x2, noise0), map0, distribution0, 100,
-                       tolerance_l1 = 5,
-                       tolerance_linf = 3)
+  CheckDecodeAveAndStds("Testing Decode (1/5)", CheckDecodeHelper, 100,
+                        c(report4x2, noise0), map0, distribution0, 100,
+                        tolerance_l1 = 5,
+                        tolerance_linf = 3)
 
   noise1 <- list(p = .4, q = .6, f = .5)  # substantial noise, very few reports
-  TestDecodeAveAndStds("Testing Decode (2/5)", TestDecodeHelper, 100,
-                       c(report4x2, noise1), map0, distribution0, 100,
-                       tolerance_l1 = 20,
-                       tolerance_linf = 20)
+  CheckDecodeAveAndStds("Testing Decode (2/5)", CheckDecodeHelper, 100,
+                        c(report4x2, noise1), map0, distribution0, 100,
+                        tolerance_l1 = 20,
+                        tolerance_linf = 20)
 
   # substantial noise, many reports
-  TestDecodeAveAndStds("Testing Decode (3/5)", TestDecodeHelper, 100,
-                       c(report4x2, noise1), map0, distribution0, 100000,
-                       tolerance_l1 = 50,
-                       tolerance_linf = 40)
+  CheckDecodeAveAndStds("Testing Decode (3/5)", CheckDecodeHelper, 100,
+                        c(report4x2, noise1), map0, distribution0, 100000,
+                        tolerance_l1 = 50,
+                        tolerance_linf = 40)
 
   # MEDIUM TEST: 100 values, 32 cohorts, 8 bits each, 10^6 reports
   values <- 100
@@ -267,10 +270,10 @@ TestDecode <- function() {
 
   distribution1 <- ComputePdf("zipf1", values)
   names(distribution1) <- colnames(map1)
-  TestDecodeAveAndStds("Testing Decode (4/5)", TestDecodeHelper, 100,
-                   c(report8x32, noise1), map1, distribution1, 10^6,
-                   tolerance_l1 = values * 3,
-                    tolerance_linf = 100)
+  CheckDecodeAveAndStds("Testing Decode (4/5)", CheckDecodeHelper, 100,
+                        c(report8x32, noise1), map1, distribution1, 10^6,
+                        tolerance_l1 = values * 3,
+                        tolerance_linf = 100)
 
   # Testing LASSO: 500 values, 32 cohorts, 8 bits each, 10^6 reports
   values <- 500
@@ -284,16 +287,15 @@ TestDecode <- function() {
   distribution2 <- ComputePdf("zipf1.5", values)
   names(distribution2) <- colnames(map2)
 
-  TestDecodeAveAndStds("Testing Decode (5/5)", TestDecodeHelper, 1,
-                   c(report8x32, noise1), map2, distribution2, 10^6,
-                   tolerance_l1 = values * 3,
-                   tolerance_linf = 80)
-
+  CheckDecodeAveAndStds("Testing Decode (5/5)", CheckDecodeHelper, 1,
+                        c(report8x32, noise1), map2, distribution2, 10^6,
+                        tolerance_l1 = values * 3,
+                        tolerance_linf = 80)
 }
 
-TestAll <- function() {
+RunAll <- function() {
   TestEstimateBloomCounts()
   TestDecode()
 }
 
-TestAll()
+RunAll()

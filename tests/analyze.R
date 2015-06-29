@@ -50,14 +50,7 @@ if (library(Cairo, quietly = TRUE, logical.return = TRUE)) {
 source("analysis/R/analysis_lib.R")
 source("analysis/R/read_input.R")
 source("analysis/R/decode.R")
-
-source("analysis/R/alternative.R")  # temporary
-
-Log <- function(...) {
-  cat('analyze.R: ')
-  cat(sprintf(...))
-  cat('\n')
-}
+source("analysis/R/util.R")
 
 LoadContext <- function(prefix_case) {
   # Creates the context, filling it with privacy parameters
@@ -126,7 +119,7 @@ CompareRapporVsActual <- function(ctx) {
   StringToInt <- function(x) as.integer(substring(x, 2))
 
   actual_values <- StringToInt(actual$string)
-  rappor_values <- StringToInt(rappor$strings)
+  rappor_values <- StringToInt(rappor$string)
 
   # False negatives: AnalyzeRAPPOR failed to find this value (e.g. because it
   # occurs too rarely)
@@ -180,6 +173,8 @@ CompareRapporVsActual <- function(ctx) {
   Log("False negatives:")
   str(false_neg)
 
+  # NOTE: We should call Decode() directly, and then num_rappor is
+  # metrics$num_detected, and sum_proportion is metrics$allocated_mass.
   metrics <- list(
       num_actual = nrow(actual),  # data frames
       num_rappor = nrow(rappor),

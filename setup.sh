@@ -25,15 +25,21 @@ native-packages() {
 
 r-packages() {
   # Install as root so you can write to /usr/local/lib/R.
+
+  # glmnet, limSolve: solvers for decode.R
+  # RJSONIO: for analysis_tool.R
   sudo R -e \
-    'install.packages(c("glmnet", "optparse", "limSolve", "RUnit", "abind"), repos="http://cran.rstudio.com/")'
+    'install.packages(c("glmnet", "optparse", "RUnit", "abind", "RJSONIO"), repos="http://cran.rstudio.com/")'
 }
 
 # R 3.0.2 on Trusty is out of date with CRAN, so we need this workaround.
 install-plyr-with-friends() {
   mkdir -p _tmp
   wget --directory _tmp \
+    http://cran.r-project.org/src/contrib/Archive/Rcpp/Rcpp_0.11.4.tar.gz
+  wget --directory _tmp \
     http://cran.r-project.org/src/contrib/Archive/plyr/plyr_1.8.1.tar.gz
+  sudo R CMD INSTALL _tmp/Rcpp_0.11.4.tar.gz
   sudo R CMD INSTALL _tmp/plyr_1.8.1.tar.gz 
   sudo R -e \
     'install.packages(c("reshape2", "ggplot2", "data.table"), repos="http://cran.rstudio.com/")'
