@@ -104,6 +104,12 @@ RunOne <- function(opts) {
   results_csv_path <- file.path(opts$output_dir, 'results.csv')
   write.csv(fit, file = results_csv_path, row.names = FALSE)
 
+  # Dump residual histograph as png.
+  results_png_path <- file.path(opts$output_dir, 'residual.png')
+  png(results_png_path)
+  plot(hist(res$residual, breaks = 200))
+  dev.off()
+
   # Write summary as JSON (scalar values).
   metrics_json_path <- file.path(opts$output_dir, 'metrics.json')
   m <- toJSON(res$metrics)
