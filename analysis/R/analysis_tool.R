@@ -107,7 +107,8 @@ RunOne <- function(opts) {
   # Dump residual histograph as png.
   results_png_path <- file.path(opts$output_dir, 'residual.png')
   png(results_png_path)
-  plot(hist(res$residual, breaks = 200))
+  plot(hist(res$residual, breaks = 200),
+  		 main = "Histogram of the residual")
   dev.off()
 
   # Write summary as JSON (scalar values).
