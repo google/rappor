@@ -206,11 +206,11 @@ _run-one-instance() {
   # Currently, the summary file shows and aggregates timing of the inference
   # engine, which excludes R's loading time and reading of the (possibly 
   # substantial) map file. Timing below is more inclusive.
-  TIMEFORMAT='Running analyze.R took %R seconds'
+  TIMEFORMAT='Running compare_dist.R took %R seconds'
   time {
     # Input prefix, output dir
-    tests/analyze.R -t "Test case: $test_case (instance $test_instance)" \
-                       "$case_dir/case" "$instance_dir/case" $out_dir
+    tests/compare_dist.R -t "Test case: $test_case (instance $test_instance)" \
+                         "$case_dir/case" "$instance_dir/case" $out_dir
   }
 }
 
