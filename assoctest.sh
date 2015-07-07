@@ -180,7 +180,7 @@ _run-one-instance() {
     inp['counts'] = ['$instance_dir/case_2way.csv',\
                      '$instance_dir/case_marg1.csv',\
                      '$instance_dir/case_marg2.csv']; \
-    inp['expt'] = ['external-counts', 'external-reports-em']; \
+    inp['expt'] = ['external-counts', 'external-counts-new']; \
     json.dump(inp, f); \
     f.close();"
 
@@ -206,8 +206,9 @@ _run-one-instance-logged() {
 make-summary() {
   local dir=$1
   local filename=${2:-results.html}
+  local instances=${3:-1}
 
-  tests/make_summary_assoc.py $dir > $dir/rows.html
+  tests/make_summary_assoc.py $dir $instances > $dir/rows.html
 
   pushd $dir >/dev/null
 

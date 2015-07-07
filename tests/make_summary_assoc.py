@@ -272,6 +272,7 @@ def FormatPlots(base_dir, test_instances):
 
 def main(argv):
   base_dir = argv[1]
+  num_instances = int(argv[2])
 
   # This file has the test case names, in the order that they should be
   # displayed.
@@ -293,6 +294,8 @@ def main(argv):
   # file. Instead, rows' names are links to the corresponding .png files.
   include_plots = len(test_instances) < 20
   include_plots = False
+  l1d_list = []
+  l1d_list2 = []
 
   for instance in test_instances:
     # A test instance is idenfied by the test name and the test run.
@@ -314,10 +317,14 @@ def main(argv):
     cell1_html = FormatCell1(test_case, test_instance, metrics_file, log_file,
                              plot_file, include_plots)
 
+    if(int(test_instance) == 1):
+      l1d_list = [] 
+      l1d_list2 = []
+
     if os.path.isfile(metrics_file):
       # ParseMetrics outputs an HTML table row and also updates lists
       metrics_dict, metrics_html = ParseMetrics(metrics_file, log_file)
-
+      l1d_list += metrics_dict['l1d']
       # Update the metrics structure. Initialize dictionaries if necessary.
       for m in metrics:
         if not test_case in metrics[m]:
@@ -332,8 +339,27 @@ def main(argv):
     if (os.path.isfile(metrics_file)):
       metrics_dict, metrics_html = ParseMetrics(metrics_file, log_file,
                                                 italics = True)
+      l1d_list2 += metrics_dict['l1d']
       print '<tr><td></td>{}{}</tr>'.format(ParseSpecFile(spec_file, empty =
                                                         True), metrics_html)
+
+    # Print summary of test instances
+    if(int(test_instance) == num_instances):
+      row_str = ['', '', '', '', 
+        '%.3f&plusmn;%.3f' % (Mean(l1d_list), StandardErrorEstimate(l1d_list)),
+        '',
+      ]
+      row_str2 = ['', '', '', '', 
+        '%.3f&plusmn;%.3f' % (Mean(l1d_list2), StandardErrorEstimate(l1d_list2)),
+        '',
+      ]
+      print '<tr><td></td>{}{}</tr>'.format(ParseSpecFile(spec_file, empty =
+              True), ' '.join('<td><b>%s</b></td>' % cell for cell in
+                              row_str))
+      if (os.path.isfile(metrics_file)):
+        print '<tr><td></td>{}{}</tr>'.format(ParseSpecFile(spec_file, empty =
+              True), ' '.join('<td><b><i>%s</i></b></td>' % cell for cell in
+                              row_str2))
 
   print FormatSummaryRow(metrics)
 

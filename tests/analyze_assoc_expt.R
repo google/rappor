@@ -350,7 +350,7 @@ DirectSimulationOfReports <- function(inp) {
 ## Outputs:
 #
 # ------------------------------------------------------------------------
-ExternalCounts <- function(inp) {
+ExternalCounts <- function(inp, new_decode = FALSE) {
   ptm <- proc.time()
   params <- ReadParameterFile(inp$params)
   # Ensure sufficient maps as required by number of vars
@@ -381,7 +381,7 @@ ExternalCounts <- function(inp) {
   pruned <- lapply(1:2, function(i)
     lapply(map[[i]]$map, function(z) z[,found_strings[[i]], drop = FALSE]))
   crmap <- CombineMaps(pruned[[1]], pruned[[2]])$crmap
-  marginal <- Decode2Way(counts[[1]], crmap, params2)$fit
+  marginal <- Decode2Way(counts[[1]], crmap, params2, new_decode = new_decode)$fit
   td <- read.csv(file = inp$truefile, header = FALSE)
   td <- table(td[,2:3])
   td <- td / sum(td)
@@ -417,7 +417,11 @@ ExternalCounts <- function(inp) {
   )
   
   # Write metrics to metrics.csv
-  filename <- file.path(inp$outdir, 'metrics.csv')
+  if (new_decode == TRUE) {
+    filename <- file.path(inp$outdir, 'metrics_2.csv')
+  } else {
+    filename <- file.path(inp$outdir, 'metrics.csv')
+  }
   write.csv(metrics, file = filename, row.names = FALSE)
 }
 
@@ -524,6 +528,10 @@ main <- function(opts) {
   if ("external-counts" %in% inp$expt) {
     print("---------- RUNNING EXPERIMENT EXT COUNTS ----------")
     ExternalCounts(inp)  
+  }
+  if ("external-counts-new" %in% inp$expt) {
+    print("---------- RUNNING EXPERIMENT EXT COUNTS ----------")
+    ExternalCounts(inp, new_decode = TRUE)  
   }
   if ("external-reports-em" %in% inp$expt) {
     print("---------- RUNNING EXPERIMENT EXT REPORTS ----------")

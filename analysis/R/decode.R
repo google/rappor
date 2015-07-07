@@ -268,6 +268,10 @@ ComputePrivacyGuarantees <- function(params, alpha, N) {
   privacy
 }
 
+FitDistribution2 <- function(estimates_stds, map) {
+  FitDistribution(estimates_stds, map)
+}
+
 FitDistribution <- function(estimates_stds, map, quiet = FALSE) {
   # Find a distribution over rows of map that approximates estimates_stds best
   #
@@ -301,7 +305,7 @@ Resample <- function(e) {
   list(estimates = estimates, stds = stds)
 }
 
-Decode2Way <- function(counts, map, params) {
+Decode2Way <- function(counts, map, params, new_decode = FALSE) {
   k <- params$k
   p <- params$p
   q <- params$q
@@ -322,7 +326,11 @@ Decode2Way <- function(counts, map, params) {
   es <- Estimate2WayBloomCounts(params, counts)
   e <- list(estimates = es$estimates[filter_cohorts, , drop = FALSE],
             stds = es$stds[filter_cohorts, , drop = FALSE])
-  coefs <- FitDistribution(e, map[filter_bits, , drop = FALSE])
+  if (new_decode == TRUE) {
+    coefs <- FitDistribution2(e, map[filter_bits, , drop = FALSE])
+  } else {
+    coefs <- FitDistribution(e, map[filter_bits, , drop = FALSE])
+  }
   fit <- data.frame(String = colnames(map[filter_bits, , drop = FALSE]),
                     Estimate = matrix(coefs, ncol = 1),
                     SD = matrix(coefs, ncol = 1),
@@ -371,6 +379,8 @@ Decode <- function(counts, map, params, quick = FALSE, alpha = 0.05,
                        FitDistribution(e, map[filter_bits, , drop = FALSE],
                                        quiet))
   }
+  
+  FitDistribution(e, map[filter_bits, , drop = FALSE], quiet)
   coefs_ssd <- N * apply(coefs_all, 2, sd)  # compute sample standard deviations
   coefs_ave <- N * apply(coefs_all, 2, mean)
 
