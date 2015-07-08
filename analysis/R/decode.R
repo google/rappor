@@ -268,8 +268,38 @@ ComputePrivacyGuarantees <- function(params, alpha, N) {
   privacy
 }
 
+# Implements lsei
+# FitDistribution2 <- function(estimates_stds, map) {
+#   X <- map
+#   Y <- as.vector(t(estimates_stds$estimates))
+#   m <- dim(X)[1]
+#   n <- dim(X)[2]
+#   
+#   G <- rbind2(Diagonal(n), rep(-1, n))
+#   H <- c(rep(0, n), -1)
+#   lsei(A = X, B = Y, G = G, H = H, type = 2)$X
+# }
+
 FitDistribution2 <- function(estimates_stds, map) {
-  FitDistribution(estimates_stds, map)
+  X <- map
+  Y <- as.vector(t(estimates_stds$estimates))
+  m <- dim(X)[1]
+  n <- dim(X)[2]
+  
+  # Random projection params
+  size <- 10 * n
+  density <- 0.05
+  rproj <- matrix(0, size, m)
+  rproj[sample(length(rproj), size = density * length(rproj))] <- rnorm(density * length(rproj))
+  # rproj <- matrix(rnorm(10*n*m), 10*n, m)
+  Xproj <- rproj %*% X
+  Yproj <- as.vector(rproj %*% Y)
+  mproj <- dim(Xproj)[1]
+  nproj <- dim(Xproj)[2]
+  
+  G <- rbind2(Diagonal(nproj), rep(-1, nproj))
+  H <- c(rep(0, nproj), -1)
+  lsei(A = Xproj, B = Yproj, G = G, H = H, type = 2)$X
 }
 
 FitDistribution <- function(estimates_stds, map, quiet = FALSE) {

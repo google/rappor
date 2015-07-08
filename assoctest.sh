@@ -301,7 +301,7 @@ _run-tests() {
 
   log "Done running all test instances"
 
-  make-summary $ASSOCTEST_DIR
+  make-summary $ASSOCTEST_DIR "results.html" $instances
 }
 
 # Run tests sequentially
@@ -329,7 +329,7 @@ run-all() {
   log "Running all tests. Can take a while."
   # a- for assoc tests
   # F for sequential
-  _run-tests '^a-' $instances T T
+  _run-tests '^a-' $instances F T
 }
 
 "$@"

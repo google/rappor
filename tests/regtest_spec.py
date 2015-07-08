@@ -131,16 +131,16 @@ ASSOC_TEST_CONFIG = {
 #            'fizz-tiny',
 #            'fizz-tiny-bool',
 #            'fizz-small',
-#            'fizz-small-bool',),
-            'fizz',
-            'fizz-bool',
+#            'fizz-small-bool',
+#            'fizz',
+#            'fizz-bool',),
 #            'toy',),
             'compact-noextra-small',
-            'loose-noextra-small',),
-#            'compact-extra-small',
-#            'loose-extra-small',
-#            'compact-excess-small',
-#            'loose-excess-small',
+            'loose-noextra-small',
+            'compact-extra-small',
+            'loose-extra-small',
+            'compact-excess-small',
+            'loose-excess-small',),
 #            'compact-noextra-large',
 #            'loose-noextra-large',
 #            'compact-extra-large',
@@ -158,7 +158,6 @@ ASSOC_TEST_CONFIG = {
 #
 # END TEST CONFIGURATION
 #
-
 
 def main(argv):
   rows = []
