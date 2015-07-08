@@ -18,34 +18,6 @@ GetFN <- function(name) {
   strsplit(basename(name), ".", fixed = TRUE)[[1]][1]
 }
 
-ValidateInput <- function(params, counts, map) {
-  val <- "valid"
-  if (is.null(counts)) {
-    val <- "No counts file found. Skipping"
-    return(val)
-  }
-
-  if (nrow(map) != (params$m * params$k)) {
-    val <- paste("Map does not match the counts file!",
-                 "mk = ", params$m * params$k,
-                 "nrow(map):", nrow(map),
-                 collapse = " ")
-  }
-
-  if ((ncol(counts) - 1) != params$k) {
-    val <- paste("Dimensions of counts file do not match:",
-                 "m =", params$m, "counts rows: ", nrow(counts),
-                 "k =", params$k, "counts cols: ", ncol(counts) - 1,
-                 collapse = " ")
-  }
-
-  # numerically correct comparison
-  if(isTRUE(all.equal((1 - params$f) * (params$p - params$q), 0)))
-    stop("Information is lost. Cannot decode.")
-
-  val
-}
-
 AnalyzeRAPPOR <- function(params, counts, map, correction, alpha,
                           experiment_name = "", map_name = "", config_name = "",
                           date = NULL, date_num = NULL, ...) {
