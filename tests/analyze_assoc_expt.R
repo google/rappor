@@ -366,10 +366,13 @@ ExternalCounts <- function(inp, new_decode = FALSE) {
   params2$k <- (params$k ** 2) * 4
   
   # Prune candidates
-  found_strings <- lapply(1:2, function(i)
+  fit <- lapply(1:2, function(i)
     Decode(counts[[i + 1]],
            map[[i]]$rmap,
-           params, quick = FALSE)$fit[,"string"])
+           params, quick = FALSE)$fit)
+  
+  found_strings = list(fit[[1]][,"string"], fit[[2]][,"string"])
+
   if (length(found_strings[[1]]) == 0 || length(found_strings[[2]]) == 0) {
     print("FOUND_STRINGS")
     print(found_strings)
@@ -381,7 +384,7 @@ ExternalCounts <- function(inp, new_decode = FALSE) {
   pruned <- lapply(1:2, function(i)
     lapply(map[[i]]$map, function(z) z[,found_strings[[i]], drop = FALSE]))
   crmap <- CombineMaps(pruned[[1]], pruned[[2]])$crmap
-  marginal <- Decode2Way(counts[[1]], crmap, params2, new_decode = new_decode)$fit
+  marginal <- Decode2Way(counts[[1]], crmap, params2, new_decode = new_decode, fit = fit)$fit
   td <- read.csv(file = inp$truefile, header = FALSE)
   td <- table(td[,2:3])
   td <- td / sum(td)
@@ -392,6 +395,7 @@ ExternalCounts <- function(inp, new_decode = FALSE) {
     }
   }
   ed[is.na(ed)] <- 0
+  ed[ed<0] <- 0
   
   time_taken <- proc.time() - ptm
   

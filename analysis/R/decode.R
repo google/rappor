@@ -269,7 +269,7 @@ ComputePrivacyGuarantees <- function(params, alpha, N) {
 }
 
 # Implements lsei
-# FitDistribution2 <- function(estimates_stds, map) {
+# FitDistribution <- function(estimates_stds, map, quiet = FALSE) {
 #   X <- map
 #   Y <- as.vector(t(estimates_stds$estimates))
 #   m <- dim(X)[1]
@@ -280,26 +280,55 @@ ComputePrivacyGuarantees <- function(params, alpha, N) {
 #   lsei(A = X, B = Y, G = G, H = H, type = 2)$X
 # }
 
-FitDistribution2 <- function(estimates_stds, map) {
-  X <- map
+FitDistribution2 <- function(estimates_stds, map, fit) {
+
+  X <- as.matrix(map)
   Y <- as.vector(t(estimates_stds$estimates))
   m <- dim(X)[1]
   n <- dim(X)[2]
+  wt <- 1000  # weight to marginal constraints
+  
+  G <- rbind2(Diagonal(n), rep(-1, n))
+  H <- c(rep(0, n), -1)
+  
+  # Adding marginals constraints to X and Y
+  fstrs <- lapply(fit, function(x) x[,"string"])  # found strings
+  
+  Y <- c(Y, wt * t(fit[[1]]["proportion"]), wt * t(fit[[2]]["proportion"]))
+  
+  for (strs in fstrs[[1]]) {
+    indices <- which(colnames(map) %in% outer(strs,
+                                              fstrs[[2]],
+                                              function(x, y) paste(x, y, sep = "x")))
+    vec <- rep(0, n)
+    vec[indices] <- wt
+    X <- rbind2(X, vec)
+  }
+  for (strs in fstrs[[2]]) {
+    indices <- which(colnames(map) %in% outer(fstrs[[1]],
+                                              strs,
+                                              function(x, y) paste(x, y, sep = "x")))
+    vec <- rep(0, n)
+    vec[indices] <- wt
+    X <- rbind2(X, vec)
+  }
+  
+  lsei(A = X, B = Y, G = G, H = H, type = 2)$X
   
   # Random projection params
-  size <- 10 * n
-  density <- 0.05
-  rproj <- matrix(0, size, m)
-  rproj[sample(length(rproj), size = density * length(rproj))] <- rnorm(density * length(rproj))
-  # rproj <- matrix(rnorm(10*n*m), 10*n, m)
-  Xproj <- rproj %*% X
-  Yproj <- as.vector(rproj %*% Y)
-  mproj <- dim(Xproj)[1]
-  nproj <- dim(Xproj)[2]
-  
-  G <- rbind2(Diagonal(nproj), rep(-1, nproj))
-  H <- c(rep(0, nproj), -1)
-  lsei(A = Xproj, B = Yproj, G = G, H = H, type = 2)$X
+#   size <- 10 * n
+#   density <- 0.05
+#   rproj <- matrix(0, size, m)
+#   rproj[sample(length(rproj), size = density * length(rproj))] <- rnorm(density * length(rproj))
+#   # rproj <- matrix(rnorm(10*n*m), 10*n, m)
+#   Xproj <- rproj %*% X
+#   Yproj <- as.vector(rproj %*% Y)
+#   mproj <- dim(Xproj)[1]
+#   nproj <- dim(Xproj)[2]
+#   
+#   G <- rbind2(Diagonal(nproj), rep(-1, nproj))
+#   H <- c(rep(0, nproj), -1)
+#   lsei(A = Xproj, B = Yproj, G = G, H = H, type = 2)$X
 }
 
 FitDistribution <- function(estimates_stds, map, quiet = FALSE) {
@@ -335,7 +364,7 @@ Resample <- function(e) {
   list(estimates = estimates, stds = stds)
 }
 
-Decode2Way <- function(counts, map, params, new_decode = FALSE) {
+Decode2Way <- function(counts, map, params, new_decode = FALSE, fit = NULL) {
   k <- params$k
   p <- params$p
   q <- params$q
@@ -357,7 +386,7 @@ Decode2Way <- function(counts, map, params, new_decode = FALSE) {
   e <- list(estimates = es$estimates[filter_cohorts, , drop = FALSE],
             stds = es$stds[filter_cohorts, , drop = FALSE])
   if (new_decode == TRUE) {
-    coefs <- FitDistribution2(e, map[filter_bits, , drop = FALSE])
+    coefs <- FitDistribution2(e, map[filter_bits, , drop = FALSE], fit)
   } else {
     coefs <- FitDistribution(e, map[filter_bits, , drop = FALSE])
   }

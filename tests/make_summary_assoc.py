@@ -349,14 +349,14 @@ def main(argv):
         '%.3f&plusmn;%.3f' % (Mean(l1d_list), StandardErrorEstimate(l1d_list)),
         '',
       ]
-      row_str2 = ['', '', '', '', 
-        '%.3f&plusmn;%.3f' % (Mean(l1d_list2), StandardErrorEstimate(l1d_list2)),
-        '',
-      ]
       print '<tr><td></td>{}{}</tr>'.format(ParseSpecFile(spec_file, empty =
               True), ' '.join('<td><b>%s</b></td>' % cell for cell in
                               row_str))
       if (os.path.isfile(metrics_file)):
+        row_str2 = ['', '', '', '', 
+          '%.3f&plusmn;%.3f' % (Mean(l1d_list2), StandardErrorEstimate(l1d_list2)),
+          '',
+        ]
         print '<tr><td></td>{}{}</tr>'.format(ParseSpecFile(spec_file, empty =
               True), ' '.join('<td><b><i>%s</i></b></td>' % cell for cell in
                               row_str2))
