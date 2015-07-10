@@ -16,6 +16,7 @@
 # This library implements the RAPPOR marginal decoding algorithms using LASSO.
 
 library(glmnet)
+library(mclust)
 
 EstimateBloomCounts <- function(params, obs_counts) {
   # Estimates the number of times each bit in each cohort was set in original
@@ -246,6 +247,60 @@ Resample <- function(e) {
   list(estimates = estimates, stds = stds)
 }
 
+IsMissingCandidate <- function(params, cluster) {
+	# Decides whether a sequence of residuals likely results from a missing candidates.
+
+	# Test 1: Compares the size of the cluster with a footprint of a candidate.
+	expected_size <- params$m * params$h * (1 - params$h * (params$h - 1) / (2 * params$k))
+	if(abs(length(cluster) - expected_size) > .25 * expected_size)
+		return(FALSE)
+
+	# Test 2: Checks whether most of the cohorts contain the same number of the cluster's elements.
+	distr <- hist(as.numeric(names(cluster)), c(1, 1:params$m * params$k), plot = FALSE)$counts
+	if(sum(distr == params$h) < params$m * .5)
+	  return(FALSE)
+
+	return(TRUE)
+}
+
+FindMissingCandidates <- function(params, residual) {
+	# Identifies "humps" in the residual that likely come from missing candidates.
+	#
+	# Input:
+	#   params   : RAPPOR parameters
+	#   residual : an m * k list of residuals
+	#
+	# Output:
+	#   a list of named triples (mean, sd, mass) encoding Gaussians corresponding to
+	#   "humps" in the residual. The first hump is the heaviest, and typically
+	#   (although not necessarily) is the residual from the known candidates.
+
+	# Isolates the heaviest cluster
+	model1 <- densityMclust(residual)
+	peak <- which.max(model1$parameters$pro)
+	humps <- list(list(mean = model1$parameters$mean[peak], sd = model1$parameters$variance$sigmasq[peak]^.5, mass = model1$parameters$pro[peak]))
+
+	# Removes the heaviest cluster using rejection sampling
+	d1 <- dnorm(as.vector(residual), mean = humps[[1]]$mean, sd = humps[[1]]$sd) * humps[[1]]$mass
+	p_reject <- d1 / model1$density
+	p_reject[p_reject > 1] <- 1
+	total <- length(residual)
+  residual <- residual[rbinom(length(residual), 1, p_reject) == 0]
+
+  # Fits the second model under assumption that all other clusters have the same variance
+	model2 <- Mclust(residual, modelNames = "E")
+  clustering <- predict(model2)$classification
+  for(cluster in unique(clustering)) {
+  	if (IsMissingCandidate(params, residual[clustering == cluster])) {
+			model3 <- mvn(modelName = "X", residual[clustering == cluster])
+  		humps <- c(humps, list(list(mean = model3$parameters$mean,
+  																sd = model3$parameters$variance$sigmasq^.5,
+  																mass = sum(clustering == cluster) / total)))
+  	}
+  }
+  humps
+}
+
 Decode <- function(counts, map, params, alpha = 0.05,
                    correction = c("Bonferroni"), quiet = FALSE, ...) {
   k <- params$k
@@ -298,8 +353,10 @@ Decode <- function(counts, map, params, alpha = 0.05,
   coefs_ave_zeroed <- coefs_ave
   coefs_ave_zeroed[-reported] <- 0
 
-  residual <- map_filtered %*% coefs_ave_zeroed -
-  	N * as.vector(t(estimates_stds_filtered$estimates))
+  residual <- map_filtered %*% coefs_ave_zeroed / N -
+  	as.vector(t(estimates_stds_filtered$estimates))
+
+  humps <- FindMissingCandidates(params, setNames(as.vector(residual), 1:length(residual)))
 
   if (correction == "Bonferroni") {
     alpha <- alpha / S
@@ -368,6 +425,7 @@ Decode <- function(counts, map, params, alpha = 0.05,
   list(fit = fit, summary = res_summary, privacy = privacy, params = params,
        lasso = NULL, ests = as.vector(t(estimates_stds_filtered$estimates)),
        residual = as.vector(residual),
+  		 humps = humps,
        counts = counts[, -1], resid = NULL, metrics = metrics)
 }
 

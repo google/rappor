@@ -108,8 +108,18 @@ main <- function(opts) {
   # Dump residual histograph as png.
   results_png_path <- file.path(opts$output_dir, 'residual.png')
   png(results_png_path)
-  plot(hist(res$residual, breaks = 200),
+  breaks <- pretty(res$residual, n = 200)
+  step <- breaks[2] - breaks[1]  # distance between bins
+  histogram <- hist(res$residual, breaks, plot = FALSE)
+  histogram$counts <- histogram$counts / sum(histogram$counts)  # conver the histogram to frequencies
+  plot(histogram,
   		 main = "Histogram of the residual")
+  lapply(res$humps, function(hump) {
+  	gaussian <- function(x) dnorm(x, mean = hump$mean, sd = hump$sd) * hump$mass * step
+  	points_x <- c(breaks, rev(breaks))  # there and back
+  	points_y <- c(rep(0, length(breaks)), rev(gaussian(breaks)))
+  	polygon(points_x, points_y, col = adjustcolor("blue", alpha.f=0.3), border = NA)
+  	curve(gaussian, add = TRUE)} )
   dev.off()
 
   # Write summary as JSON (scalar values).
