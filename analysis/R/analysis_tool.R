@@ -111,7 +111,7 @@ main <- function(opts) {
   breaks <- pretty(res$residual, n = 200)
   step <- breaks[2] - breaks[1]  # distance between bins
   histogram <- hist(res$residual, breaks, plot = FALSE)
-  histogram$counts <- histogram$counts / sum(histogram$counts)  # conver the histogram to frequencies
+  histogram$counts <- histogram$counts / sum(histogram$counts)  # convert the histogram to frequencies
   plot(histogram,
   		 main = "Histogram of the residual")
   lapply(res$humps, function(hump) {

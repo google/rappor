@@ -252,12 +252,12 @@ IsMissingCandidate <- function(params, cluster) {
 
 	# Test 1: Compares the size of the cluster with a footprint of a candidate.
 	expected_size <- params$m * params$h * (1 - params$h * (params$h - 1) / (2 * params$k))
-	if(abs(length(cluster) - expected_size) > .25 * expected_size)
+	if (abs(length(cluster) - expected_size) > .25 * expected_size)
 		return(FALSE)
 
 	# Test 2: Checks whether most of the cohorts contain the same number of the cluster's elements.
 	distr <- hist(as.numeric(names(cluster)), c(1, 1:params$m * params$k), plot = FALSE)$counts
-	if(sum(distr == params$h) < params$m * .5)
+	if (sum(distr == params$h) < params$m * .5)
 	  return(FALSE)
 
 	return(TRUE)
@@ -276,7 +276,7 @@ FindMissingCandidates <- function(params, residual) {
 	#   (although not necessarily) is the residual from the known candidates.
 
 	# Isolates the heaviest cluster
-	model1 <- densityMclust(residual)
+	model1 <- densityMclust(residual, modelName = "V")
 	peak <- which.max(model1$parameters$pro)
 	humps <- list(list(mean = model1$parameters$mean[peak], sd = model1$parameters$variance$sigmasq[peak]^.5, mass = model1$parameters$pro[peak]))
 
@@ -287,16 +287,19 @@ FindMissingCandidates <- function(params, residual) {
 	total <- length(residual)
   residual <- residual[rbinom(length(residual), 1, p_reject) == 0]
 
-  # Fits the second model under assumption that all other clusters have the same variance
-	model2 <- Mclust(residual, modelNames = "E")
-  clustering <- predict(model2)$classification
-  for(cluster in unique(clustering)) {
-  	if (IsMissingCandidate(params, residual[clustering == cluster])) {
-			model3 <- mvn(modelName = "X", residual[clustering == cluster])
-  		humps <- c(humps, list(list(mean = model3$parameters$mean,
-  																sd = model3$parameters$variance$sigmasq^.5,
-  																mass = sum(clustering == cluster) / total)))
-  	}
+  if (length(residual) > 0) {
+		# Fits the second model under assumption that all other clusters have the same variance
+		model2 <- Mclust(residual, modelNames = "E")
+		clustering <- predict(model2)$classification
+		for (cluster in unique(clustering)) {
+			if (IsMissingCandidate(params, residual[clustering == cluster])) {
+				# Fit a Gaussian to a single isolated cluster
+				model3 <- mvn(modelName = "X", residual[clustering == cluster])
+				humps <- c(humps, list(list(mean = model3$parameters$mean,
+																		sd = model3$parameters$variance$sigmasq^.5,
+																		mass = sum(clustering == cluster) / total)))
+			}
+		}
   }
   humps
 }
