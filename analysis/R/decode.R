@@ -102,16 +102,23 @@ FitLasso <- function(X, Y, intercept = TRUE) {
   # is to avoid overfitting.
   cap <- min(500, nrow(X) * .8, ncol(X))
 
-  mod <- glmnet(X, Y, standardize = FALSE, intercept = intercept,
+  if (ncol(X) == 1)
+  	XX <- cbind2(X, rep(0, nrow(X)))  # add a dummy variable since glmnet can't handle a single-column matrix
+  else
+  	XX <- X
+
+  mod <- glmnet(XX, Y, standardize = FALSE, intercept = intercept,
                 lower.limits = 0,  # outputs are non-negative
                 pmax = cap)
 
   coefs <- coef(mod)
   coefs <- coefs[-1, , drop = FALSE]  # drop the intercept
   l1cap <- sum(colSums(coefs) <= 1.0)  # find all columns with L1 norm <= 1
-  if(l1cap > 0)
+  if (l1cap > 0) {
    	distr <- coefs[, l1cap]  # return the last set of coefficients with L1 <= 1
-  else
+    if (ncol(X) == 1)
+      distr <- distr[1]  # dropping the dummy variable
+  } else
    	distr <- setNames(rep(0, ncol(X)), colnames(X))
   distr
 }
