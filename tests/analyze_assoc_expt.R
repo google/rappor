@@ -480,8 +480,7 @@ ExternalReportsEM <- function(inp) {
                                       ignore_other = TRUE,
                                       quick = TRUE,
                                       params, marginals = NULL,
-                                      estimate_var = FALSE,
-                                      new_alg = inp$newalg)
+                                      estimate_var = FALSE)
   em <- joint_dist$orig$fit
   td <- read.csv(file = inp$truefile, header = FALSE)
   td <- table(td[,2:3])
@@ -521,10 +520,7 @@ main <- function(opts) {
   # direct -> direct simulation of reports (without variances)
   # external-counts -> externally supplied counts for 2 way and marginals
   # external-reports -> externally supplied reports 
-  if (!(inp$expt %in% c("direct", "external-counts", "external-reports-em"))) {
-    stop("Incorrect experiment in JSON file.")
-  }
-  
+
   if("direct" %in% inp$expt) {
     print("---------- RUNNING EXPERIMENT DIRECT ----------")
     DirectSimulationOfReports(inp)

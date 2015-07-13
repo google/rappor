@@ -292,8 +292,7 @@ ComputeDistributionEM <- function(reports, report_cohorts,
                                   maps, ignore_other = FALSE,
                                   params, quick = FALSE,
                                   marginals = NULL,
-                                  estimate_var = FALSE,
-                                  new_alg = FALSE) {
+                                  estimate_var = FALSE) {
   # Computes the distribution of num_variables variables, where
   #     num_variables is chosen by the client, using the EM algorithm.
   #
@@ -368,33 +367,16 @@ ComputeDistributionEM <- function(reports, report_cohorts,
       rep
     })
 
-    if(new_alg) {
-      # Report conditional distributions as lists
-      if (j == 1) {
-        # Conditional distribution for reports
-        joint_conditional <- lapply(cond_report_dist, "list")
-      } else {
-        joint_conditional <- mapply(function (x, y) c(x, list(y)),
-                                 joint_conditional, cond_report_dist,
-                                 SIMPLIFY = FALSE)
-      }
-    } else {
-      # Update the joint conditional distribution of all variables
-      joint_conditional <- UpdateJointConditional(cond_report_dist,
-                                                joint_conditional)
-    }
+    # Update the joint conditional distribution of all variables
+    joint_conditional <- UpdateJointConditional(cond_report_dist,
+                                              joint_conditional)
     print("TIME IN COND_REPORT_DIST")
     print(proc.time()-ptm)
   }
 
   ptm <- proc.time()
   # Run expectation maximization to find joint distribution
-  if (new_alg) {
-    funct <- EM3
-  } else {
-    funct <- EM
-  }
-  em <- funct(joint_conditional, epsilon = 10 ^ -5, verbose = FALSE,
+  em <- EM(joint_conditional, epsilon = 10 ^ -5, verbose = FALSE,
            estimate_var = estimate_var)
   print("TIME IN EM")
   print(proc.time() - ptm)
