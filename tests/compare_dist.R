@@ -47,7 +47,6 @@ if (library(Cairo, quietly = TRUE, logical.return = TRUE)) {
   cat('Using png\n')
 }
 
-source("analysis/R/analysis_lib.R")
 source("analysis/R/read_input.R")
 source("analysis/R/decode.R")
 source("analysis/R/util.R")
@@ -81,25 +80,23 @@ RunRappor <- function(prefix_case, prefix_instance, ctx) {
   m <- paste0(prefix_case, '_map.csv')
   map <- ReadMapFile(m)  # Switch to LoadMapFile if want to cache the result
 
-
+  # Main decode.R API
   timing <- system.time({
-    # Calls AnalyzeRAPPOR to run the analysis code
-    rappor <- AnalyzeRAPPOR(ctx$params, counts, map$map, "FDR", 0.05,
-                          date="01/01/01", date_num="100001")
+    res <- Decode(counts, map$map, ctx$params)
   })
 
   # The line is searched for, and elapsed time is extracted, by make_summary.py.
   # Should the formating or wording change, make_summary must be updated too.
   Log("Inference took %.3f seconds", timing[["elapsed"]])
 
-  if (is.null(rappor)) {
+  if (is.null(res)) {
     stop("RAPPOR analysis failed.")
   }
 
-  Log("Analysis Results:")
-  str(rappor)
+  Log("Decoded results:")
+  str(res$fit)
 
-  rappor
+  res$fit
 }
 
 LoadActual <- function(prefix_instance) {
