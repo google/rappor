@@ -137,33 +137,6 @@ GetJointConditionalProb <- function(cond_x, cond_y) {
   mapply("outer", cond_x, cond_y, SIMPLIFY = FALSE)
 }
 
-UpdatePij2 <- function(pij, reports, cohorts, cand_strs,
-                       params, map) {
-
-  accum <- array(0, dim(pij))
-  # For each report
-  for (i in seq(length(reports[[1]]))) {
-    # For each var
-    for (var in seq(length(reports))) {
-      idx <- cohorts[[var]][i]
-      rep <- GetCondProb(reports[[var]][[i]],
-                         candidate_strings = cand_strs[[var]],
-                         params = params,
-                         map[[var]]$map[[idx]], NULL)
-      if(var == 1) {
-        cond_joint_distr <- rep
-      } else {
-        cond_joint_distr <- outer(cond_joint_distr, rep)
-      }
-    }
-    z <- cond_joint_distr * pij
-    z <- z / sum(z)
-    z[is.nan(z)] <- 0
-    accum <- accum + z
-  }
-  accum / length(reports[[1]])
-}
-
 UpdatePij <- function(pij, cond_prob) {
   # Update the probability matrix based on the EM algorithm.
   #
@@ -179,23 +152,6 @@ UpdatePij <- function(pij, cond_prob) {
     z <- z / sum(z)
     z[is.nan(z)] <- 0
     z })
-  Reduce("+", wcp) / length(wcp)
-}
-
-UpdatePij3 <- function(pij, cond_prob) {
-  wcp <- lapply(cond_prob, function(x) {
-    for (i in seq(length(x))) {
-      if (i == 1) {
-        op <- x[[i]]
-      } else {
-        op <- outer(op, x[[i]])
-      }
-    }
-    z <- op * pij
-    z <- z / sum(z)
-    z[is.nan(z)] <- 0
-    z
-  })
   Reduce("+", wcp) / length(wcp)
 }
 
@@ -228,62 +184,6 @@ ComputeVar <- function(cond_prob, est) {
   var_cov <- solve(inform)
   sd <- matrix(sqrt(diag(var_cov)), dim(cond_prob[[1]]))
   list(var_cov = var_cov, sd = sd, inform = inform)
-}
-
-EM2 <- function(reports, cohorts, cand_strs, starting_pij = NULL,
-                params, map,
-                max_iter = 1e03, epsilon = 1e-06) {
-  
-  # State space is the product of lengths.
-  state_space <- sapply(cand_strs, "length")
-  pij <- array()
-  if(is.null(starting_pij)) {
-    pij <- array(1 / prod(state_space), state_space)
-  } else {
-    pij <- starting_pij
-  }
-
-  if (nrow(pij) > 0) {
-    # Run EM
-    for (i in 1:max_iter) {
-      pij_new <- UpdatePij2(pij, reports, cohorts, cand_strs,
-                        params, map)
-      diff <- max(abs(pij_new - pij))
-      pij <- pij_new
-      if (diff < epsilon) {
-        break
-      }
-    }
-  }
-  list(hist = pij)
-}
-
-EM3 <- function(cond_prob, starting_pij = NULL, estimate_var = FALSE,
-                max_iter = 1e03, epsilon = 1e-06, verbose = FALSE) {
-  pij <- list()
-  
-  # Compute dimensions of conditional distributions.
-  state_space <- sapply(cond_prob[[1]], length)
-  if (is.null(starting_pij)) {
-    pij <- array(1 / prod(state_space), state_space)
-  } else {
-    pij <- starting_pij
-  }
-  if (nrow(pij) > 0) {
-    # Run EM
-    for (i in 1:max_iter) {
-      if (i == 1) {
-        ptm_iter <- proc.time()
-      }
-      pij_new <- UpdatePij3(pij, cond_prob)
-      diff <- max(abs(pij_new - pij))
-      pij <- pij_new
-      if (diff < epsilon) {
-        break
-      }
-    }
-  }
-  list(est = pij, hist = pij, sd = 0)
 }
 
 EM <- function(cond_prob, starting_pij = NULL, estimate_var = FALSE,

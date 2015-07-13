@@ -286,7 +286,7 @@ FitDistribution2 <- function(estimates_stds, map, fit) {
   Y <- as.vector(t(estimates_stds$estimates))
   m <- dim(X)[1]
   n <- dim(X)[2]
-  wt <- 1000  # weight to marginal constraints
+  wt <- 10000  # weight to marginal constraints
   
   G <- rbind2(Diagonal(n), rep(-1, n))
   H <- c(rep(0, n), -1)
