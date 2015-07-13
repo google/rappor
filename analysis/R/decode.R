@@ -218,42 +218,27 @@ ComputePrivacyGuarantees <- function(params, alpha, N) {
 }
 
 FitDistribution <- function(estimates_stds, map, quiet = FALSE) {
-  # Find a distribution over rows of map that approximates estimates_stds best
-  #
-  # Input:
-  #   estimates_stds: a list of two m x k matrices, one for estimates, another
-  #                   for standard errors
-  #   map           : an (m * k) x S boolean matrix
-  #
-  # Output:
-  #   a float vector of length S, so that a distribution over map's rows sampled
-  #   according to this vector approximates estimates
+	# Find a distribution over rows of map that approximates estimates_stds best
+	#
+	# Input:
+	#   estimates_stds: a list of two m x k matrices, one for estimates, another
+	#                   for standard errors
+	#   map           : an (m * k) x S boolean matrix
+	#
+	# Output:
+	#   a float vector of length S, so that a distribution over map's rows sampled
+	#   according to this vector approximates estimates
 
-  S <- ncol(map)  # total number of candidates
+	S <- ncol(map)  # total number of candidates
 
-  support_coefs <- 1:S
+	lasso <- FitLasso(map, as.vector(t(estimates_stds$estimates)))
 
-  if (S > length(estimates_stds$estimates) * .8) {
-    # the system is close to being underdetermined
-    lasso <- FitLasso(map, as.vector(t(estimates_stds$estimates)))
+	if(!quiet)
+		cat("LASSO selected ", sum(lasso > 0), " non-zero coefficients.\n")
 
-    # Select non-zero coefficients.
-    support_coefs <- which(lasso > 0)
+	names(lasso) <- colnames(map)
 
-    if(!quiet)
-      cat("LASSO selected ", length(support_coefs), " non-zero coefficients.\n")
-  }
-
-  coefs <- setNames(rep(0, S), colnames(map))
-
-  if(length(support_coefs) > 0) {  # LASSO may return an empty list
-    constrained_coefs <- ConstrainedLinModel(map[, support_coefs, drop = FALSE],
-                                             estimates_stds)
-
-    coefs[support_coefs] <- constrained_coefs
-  }
-
-  coefs
+	lasso
 }
 
 Resample <- function(e) {
