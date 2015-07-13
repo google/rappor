@@ -16,7 +16,7 @@
 
 library(RUnit)
 
-source('tests/compare_dist.R')
+source('tests/analyze.R')
 
 TestProcessAll <- function() {
   ctx <- new.env()

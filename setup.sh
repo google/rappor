@@ -18,10 +18,9 @@ native-packages() {
   # - build-essential for gcc compilers, invoked while installing R packages.
   # - gfortran Fortran compiler needed for glmnet.
   # - libblas-dev needed for limSolve.
-  # - python-dev is for building the fastrand extension
   #
   # NOTE: we get R 3.0.2 on Trusty.
-  sudo apt-get install build-essential gfortran libblas-dev r-base python-dev
+  sudo apt-get install build-essential gfortran libblas-dev r-base
 }
 
 r-packages() {
