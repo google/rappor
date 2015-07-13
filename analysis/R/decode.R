@@ -16,7 +16,6 @@
 # This library implements the RAPPOR marginal decoding algorithms using LASSO.
 
 library(glmnet)
-library(limSolve)
 
 EstimateBloomCounts <- function(params, obs_counts) {
   # Estimates the number of times each bit in each cohort was set in original
@@ -111,9 +110,9 @@ FitLasso <- function(X, Y, intercept = TRUE) {
   coefs <- coefs[-1, , drop = FALSE]  # drop the intercept
   l1cap <- sum(colSums(coefs) <= 1.0)  # find all columns with L1 norm <= 1
   if(l1cap > 0)
-   	distr <- coefs[, l1cap]  # return the last set of coefficients with L1 <= 1
+    distr <- coefs[, l1cap]  # return the last set of coefficients with L1 <= 1
   else
-   	distr <- setNames(rep(0, ncol(X)), colnames(X))
+    distr <- setNames(rep(0, ncol(X)), colnames(X))
   distr
 }
 
@@ -245,7 +244,7 @@ Resample <- function(e) {
   list(estimates = estimates, stds = stds)
 }
 
-Decode <- function(counts, map, params, quick = FALSE, alpha = 0.05,
+Decode <- function(counts, map, params, alpha = 0.05,
                    correction = c("Bonferroni"), quiet = FALSE, ...) {
   k <- params$k
   p <- params$p
@@ -328,10 +327,8 @@ Decode <- function(counts, map, params, quick = FALSE, alpha = 0.05,
   # 1.96 standard deviations gives 95% confidence interval.
   fit$prop_low_95 <- fit$proportion - 1.96 * fit$prop_std_error
   fit$prop_high_95 <- fit$proportion + 1.96 * fit$prop_std_error
-
   fit <- fit[, c("string", "estimate", "std_error", "proportion",
                  "prop_std_error", "prop_low_95", "prop_high_95")]
-
   allocated_mass <- sum(fit$proportion)
   num_detected <- nrow(fit)
 
