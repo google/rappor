@@ -37,7 +37,7 @@ def SumBits(params, stdin, stdout):
 
   for i, row in enumerate(csv_in):
     try:
-      (user_id, cohort, irr) = row
+      (user_id, cohort, unused_bloom, unused_prr, irr) = row
     except ValueError:
       raise RuntimeError('Error parsing row %r' % row)
 
