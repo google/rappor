@@ -51,6 +51,8 @@ source("analysis/R/read_input.R")
 source("analysis/R/decode.R")
 source("analysis/R/util.R")
 
+source("analysis/R/alternative.R")  # temporary
+
 LoadContext <- function(prefix_case) {
   # Creates the context, filling it with privacy parameters
   # Arg:

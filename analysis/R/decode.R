@@ -88,8 +88,7 @@ FitLasso <- function(X, Y, intercept = TRUE) {
   #
   # Input:
   #    X: a design matrix of size km by M (the number of candidate strings).
-  #    Y: a vector of size km with estimated counts from EstimateBloomCounts(),
-  #       representing constraints
+  #    Y: a vector of size km with estimated counts from EstimateBloomCounts().
   #    intercept: whether to fit with intercept or not.
   #
   # Output:
@@ -232,15 +231,30 @@ FitDistribution <- function(estimates_stds, map, quiet = FALSE) {
 
   S <- ncol(map)  # total number of candidates
 
-  lasso <- FitLasso(map, as.vector(t(estimates_stds$estimates)))
+  support_coefs <- 1:S
 
-  if(!quiet)
-    cat("LASSO selected ", sum(lasso > 0), " non-zero coefficients.\n")
+  if (S > length(estimates_stds$estimates) * .8) {
+    # the system is close to being underdetermined
+    lasso <- FitLasso(map, as.vector(t(estimates_stds$estimates)))
 
-  names(lasso) <- colnames(map)
+    # Select non-zero coefficients.
+    support_coefs <- which(lasso > 0)
 
-  lasso
- }
+    if(!quiet)
+      cat("LASSO selected ", length(support_coefs), " non-zero coefficients.\n")
+  }
+
+  coefs <- setNames(rep(0, S), colnames(map))
+
+  if(length(support_coefs) > 0) {  # LASSO may return an empty list
+    constrained_coefs <- ConstrainedLinModel(map[, support_coefs, drop = FALSE],
+                                             estimates_stds)
+
+    coefs[support_coefs] <- constrained_coefs
+  }
+
+  coefs
+}
 
 Resample <- function(e) {
   # Simulate resampling of the Bloom filter estimates by adding Gaussian noise
@@ -298,7 +312,7 @@ Decode <- function(counts, map, params, alpha = 0.05,
 
   # Only select coefficients more than two standard deviations from 0. May
   # inflate empirical SD of the estimates.
-  reported <- which(coefs_ave > 1E-6 + 2 * coefs_ssd)
+  reported <- which(coefs_ave > 1E-6 + 1 * coefs_ssd)
 
   mod <- list(coefs = coefs_ave[reported], stds = coefs_ssd[reported])
 
