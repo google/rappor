@@ -376,12 +376,12 @@ ComputeDistributionEM <- function(reports, report_cohorts,
 
   ptm <- proc.time()
   # Run expectation maximization to find joint distribution
-  em <- EM(joint_conditional, epsilon = 10 ^ -5, verbose = FALSE,
+  em <- EM(joint_conditional, epsilon = 10 ^ -6, verbose = FALSE,
            estimate_var = estimate_var)
   print("TIME IN EM")
   print(proc.time() - ptm)
   dimnames(em$est) <- found_strings
 
   # Return results in a usable format
-  list(orig = list(fit = em$est, sd = em$sd, em = em))
+  list(fit = em$est, sd = em$sd, em = em)
 }

@@ -35,6 +35,7 @@ if(!interactive()) {
   opts <- parse_args(OptionParser(option_list = option_list))
 }
 
+source("analysis/R/decode2way.R")
 source("analysis/R/encode.R")
 source("analysis/R/decode.R")
 source("analysis/R/simulation.R")
@@ -384,7 +385,7 @@ ExternalCounts <- function(inp, new_decode = FALSE) {
   pruned <- lapply(1:2, function(i)
     lapply(map[[i]]$map, function(z) z[,found_strings[[i]], drop = FALSE]))
   crmap <- CombineMaps(pruned[[1]], pruned[[2]])$crmap
-  marginal <- Decode2Way(counts[[1]], crmap, params2, new_decode = new_decode, fit = fit)$fit
+  marginal <- Decode2Way(counts[[1]], crmap, params2, fit = fit)$fit
   td <- read.csv(file = inp$truefile, header = FALSE)
   td <- table(td[,2:3])
   td <- td / sum(td)
@@ -481,7 +482,7 @@ ExternalReportsEM <- function(inp) {
                                       quick = TRUE,
                                       params, marginals = NULL,
                                       estimate_var = FALSE)
-  em <- joint_dist$orig$fit
+  em <- joint_dist$fit
   td <- read.csv(file = inp$truefile, header = FALSE)
   td <- table(td[,2:3])
   td <- td / sum(td)

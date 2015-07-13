@@ -18,62 +18,6 @@
 library(glmnet)
 library(limSolve)
 
-Estimate2WayBloomCounts <- function(params, obs_counts) {
-  p <- params$p
-  q <- params$q
-  f <- params$f
-  m <- params$m
-  k <- params$k
-
-  stopifnot(m == nrow(obs_counts), params$k + 1 == ncol(obs_counts))
-
-  p11 <- q * (1 - f/2) + p * f / 2  # probability of a true 1 reported as 1
-  p01 <- p * (1 - f/2) + q * f / 2  # probability of a true 0 reported as 1
-  p10 <- 1 - p11  # probability of a true 1 reported as 0
-  p00 <- 1 - p01  # probability of a true 0 reported as 0
-
-  NoiseMatrix <- matrix(rep(0, 16), 4)
-  NoiseMatrix[1,] <- c(p11**2, p11*p10, p10*p11, p10**2)
-  NoiseMatrix[2,] <- c(p11*p01, p11*p00, p10*p01, p10*p00)
-  NoiseMatrix[3,] <- c(p01*p11, p01*p10, p00*p11, p00*p01)
-  NoiseMatrix[4,] <- c(p01**2, p00*p01, p01*p00, p00**2)
-
-  ests <- apply(obs_counts, 1, function(x) {
-    N <- x[1]
-    inds <- seq(0, (k/4)-1)
-    v <- x[-1]
-    sapply(inds, function(i){
-      as.vector(t(Solve(NoiseMatrix)) %*% v[(i*4 + 1):((i+1)*4)])
-    })
-  })
-
-  if(FALSE) {
-    # TODO(pseudorandom): Compute variances
-    variances <- apply(obs_counts, 1, function(x) {
-      N <- x[1]
-      v <- x[-1]
-      p_hats <- (v - p01 * N) / (N * p2)  # expectation of a true 1
-      p_hats <- pmax(0, pmin(1, p_hats))  # clamp to [0,1]
-      r <- p_hats * p11 + (1 - p_hats) * p01  # expectation of a reported 1
-      N * r * (1 - r) / p2^2  # variance of the binomial
-    })
-  }
-
-  # Transform counts from absolute values to fractional, removing bias due to
-  #      variability of reporting between cohorts.
-  ests <- apply(ests, 1, function(x) x / obs_counts[,1])
-  # stds <- apply(variances^.5, 1, function(x) x / obs_counts[,1])
-
-  # Some estimates may be set to infinity, e.g. if f=1. We want to
-  #     account for this possibility, and set the corresponding counts
-  #     to 0.
-  ests[abs(ests) == Inf] <- 0
-
-  list(estimates = ests,
-       stds = matrix(rep(100, length(ests[,1]) * length(ests[1,])),
-                     length(ests[,1])))
-}
-
 EstimateBloomCounts <- function(params, obs_counts) {
   # Estimates the number of times each bit in each cohort was set in original
   # Bloom filters.
@@ -268,69 +212,6 @@ ComputePrivacyGuarantees <- function(params, alpha, N) {
   privacy
 }
 
-# Implements lsei
-# FitDistribution <- function(estimates_stds, map, quiet = FALSE) {
-#   X <- map
-#   Y <- as.vector(t(estimates_stds$estimates))
-#   m <- dim(X)[1]
-#   n <- dim(X)[2]
-#   
-#   G <- rbind2(Diagonal(n), rep(-1, n))
-#   H <- c(rep(0, n), -1)
-#   lsei(A = X, B = Y, G = G, H = H, type = 2)$X
-# }
-
-FitDistribution2 <- function(estimates_stds, map, fit) {
-
-  X <- as.matrix(map)
-  Y <- as.vector(t(estimates_stds$estimates))
-  m <- dim(X)[1]
-  n <- dim(X)[2]
-  wt <- 10000  # weight to marginal constraints
-  
-  G <- rbind2(Diagonal(n), rep(-1, n))
-  H <- c(rep(0, n), -1)
-  
-  # Adding marginals constraints to X and Y
-  fstrs <- lapply(fit, function(x) x[,"string"])  # found strings
-  
-  Y <- c(Y, wt * t(fit[[1]]["proportion"]), wt * t(fit[[2]]["proportion"]))
-  
-  for (strs in fstrs[[1]]) {
-    indices <- which(colnames(map) %in% outer(strs,
-                                              fstrs[[2]],
-                                              function(x, y) paste(x, y, sep = "x")))
-    vec <- rep(0, n)
-    vec[indices] <- wt
-    X <- rbind2(X, vec)
-  }
-  for (strs in fstrs[[2]]) {
-    indices <- which(colnames(map) %in% outer(fstrs[[1]],
-                                              strs,
-                                              function(x, y) paste(x, y, sep = "x")))
-    vec <- rep(0, n)
-    vec[indices] <- wt
-    X <- rbind2(X, vec)
-  }
-  
-  lsei(A = X, B = Y, G = G, H = H, type = 2)$X
-  
-  # Random projection params
-#   size <- 10 * n
-#   density <- 0.05
-#   rproj <- matrix(0, size, m)
-#   rproj[sample(length(rproj), size = density * length(rproj))] <- rnorm(density * length(rproj))
-#   # rproj <- matrix(rnorm(10*n*m), 10*n, m)
-#   Xproj <- rproj %*% X
-#   Yproj <- as.vector(rproj %*% Y)
-#   mproj <- dim(Xproj)[1]
-#   nproj <- dim(Xproj)[2]
-#   
-#   G <- rbind2(Diagonal(nproj), rep(-1, nproj))
-#   H <- c(rep(0, nproj), -1)
-#   lsei(A = Xproj, B = Yproj, G = G, H = H, type = 2)$X
-}
-
 FitDistribution <- function(estimates_stds, map, quiet = FALSE) {
   # Find a distribution over rows of map that approximates estimates_stds best
   #
@@ -362,40 +243,6 @@ Resample <- function(e) {
   stds <- e$stds * 2^.5
 
   list(estimates = estimates, stds = stds)
-}
-
-Decode2Way <- function(counts, map, params, new_decode = FALSE, fit = NULL) {
-  k <- params$k
-  p <- params$p
-  q <- params$q
-  f <- params$f
-  h <- params$h
-  m <- params$m
-
-  S <- ncol(map)  # total number of candidates
-
-  N <- sum(counts[, 1])
-
-  filter_cohorts <- which(counts[, 1] != 0)  # exclude cohorts with zero reports
-
-  # stretch cohorts to bits
-  filter_bits <- as.vector(
-    t(matrix(1:nrow(map), nrow = m, byrow = TRUE)[filter_cohorts,]))
-
-  es <- Estimate2WayBloomCounts(params, counts)
-  e <- list(estimates = es$estimates[filter_cohorts, , drop = FALSE],
-            stds = es$stds[filter_cohorts, , drop = FALSE])
-  if (new_decode == TRUE) {
-    coefs <- FitDistribution2(e, map[filter_bits, , drop = FALSE], fit)
-  } else {
-    coefs <- FitDistribution(e, map[filter_bits, , drop = FALSE])
-  }
-  fit <- data.frame(String = colnames(map[filter_bits, , drop = FALSE]),
-                    Estimate = matrix(coefs, ncol = 1),
-                    SD = matrix(coefs, ncol = 1),
-                    stringsAsFactors = FALSE)
-  rownames(fit) <- fit[,"String"]
-  list(fit = fit)
 }
 
 Decode <- function(counts, map, params, quick = FALSE, alpha = 0.05,
