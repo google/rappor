@@ -17,6 +17,8 @@
 
 library(glmnet)
 
+source('analysis/R/alternative.R')
+
 EstimateBloomCounts <- function(params, obs_counts) {
   # Estimates the number of times each bit in each cohort was set in original
   # Bloom filters.
@@ -88,32 +90,29 @@ FitLasso <- function(X, Y, intercept = TRUE) {
   #
   # Input:
   #    X: a design matrix of size km by M (the number of candidate strings).
-  #    Y: a vector of size km with estimated counts from EstimateBloomCounts(),
-  #       representing constraints
+  #    Y: a vector of size km with estimated counts from EstimateBloomCounts().
   #    intercept: whether to fit with intercept or not.
   #
   # Output:
   #    a vector of size ncol(X) of coefficients.
 
   # TODO(mironov): Test cv.glmnet instead of glmnet
+  mod <- try(glmnet(X, Y, standardize = FALSE, intercept = intercept,
+                    lower.limits = 0,  # outputs are non-negative
+                    # Cap the number of non-zero coefficients to 500 or
+                    # 80% of the length of Y, whichever is less. The 500 cap
+                    # is for performance reasons, 80% is to avoid overfitting.
+                    pmax = min(500, length(Y) * .8)),
+             silent = TRUE)
 
-  # Cap the number of non-zero coefficients to 500 or 80% of the number of
-  # constraints, whichever is less. The 500 cap is for performance reasons, 80%
-  # is to avoid overfitting.
-  cap <- min(500, nrow(X) * .8, ncol(X))
-
-  mod <- glmnet(X, Y, standardize = FALSE, intercept = intercept,
-                lower.limits = 0,  # outputs are non-negative
-                pmax = cap)
-
-  coefs <- coef(mod)
-  coefs <- coefs[-1, , drop = FALSE]  # drop the intercept
-  l1cap <- sum(colSums(coefs) <= 1.0)  # find all columns with L1 norm <= 1
-  if(l1cap > 0)
-   	distr <- coefs[, l1cap]  # return the last set of coefficients with L1 <= 1
-  else
-   	distr <- setNames(rep(0, ncol(X)), colnames(X))
-  distr
+  # If fitting fails, return an empty data.frame.
+  if (class(mod)[1] == "try-error") {
+    coefs <- setNames(rep(0, ncol(X)), colnames(X))
+  } else {
+    coefs <- coef(mod)
+    coefs <- coefs[-1, ncol(coefs), drop = FALSE]  # coefs[1] is the intercept
+  }
+  coefs
 }
 
 PerformInference <- function(X, Y, N, mod, params, alpha, correction) {
@@ -225,15 +224,30 @@ FitDistribution <- function(estimates_stds, map, quiet = FALSE) {
 
   S <- ncol(map)  # total number of candidates
 
-  lasso <- FitLasso(map, as.vector(t(estimates_stds$estimates)))
+  support_coefs <- 1:S
 
-  if(!quiet)
-    cat("LASSO selected ", sum(lasso > 0), " non-zero coefficients.\n")
+  if (S > length(estimates_stds$estimates) * .8) {
+    # the system is close to being underdetermined
+    lasso <- FitLasso(map, as.vector(t(estimates_stds$estimates)))
 
-  names(lasso) <- colnames(map)
+    # Select non-zero coefficients.
+    support_coefs <- which(lasso > 0)
 
-  lasso
- }
+    if(!quiet)
+      cat("LASSO selected ", length(support_coefs), " non-zero coefficients.\n")
+  }
+
+  coefs <- setNames(rep(0, S), colnames(map))
+
+  if(length(support_coefs) > 0) {  # LASSO may return an empty list
+    constrained_coefs <- ConstrainedLinModel(map[, support_coefs, drop = FALSE],
+                                             estimates_stds)
+
+    coefs[support_coefs] <- constrained_coefs
+  }
+
+  coefs
+}
 
 Resample <- function(e) {
   # Simulate resampling of the Bloom filter estimates by adding Gaussian noise
@@ -275,7 +289,7 @@ Decode <- function(counts, map, params, alpha = 0.05,
 
   # Run the fitting procedure several times (5 seems to be sufficient and not
   # too many) to estimate standard deviation of the output.
-  for(r in 1:10) {
+  for(r in 1:5) {
     if(r > 1)
       e <- Resample(estimates_stds_filtered)
     else
