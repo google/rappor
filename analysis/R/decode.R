@@ -102,6 +102,8 @@ FitLasso <- function(X, Y, intercept = TRUE) {
   # is to avoid overfitting.
   cap <- min(500, nrow(X) * .8, ncol(X))
 
+  # TODO: take care of corner case when ncol(X) == 1
+  # currently glmnet() fails
   mod <- glmnet(X, Y, standardize = FALSE, intercept = intercept,
                 lower.limits = 0,  # outputs are non-negative
                 pmax = cap)
@@ -244,7 +246,7 @@ Resample <- function(e) {
   list(estimates = estimates, stds = stds)
 }
 
-Decode <- function(counts, map, params, alpha = 0.05,
+Decode <- function(counts, map, params, alpha = 0.05, quick = FALSE,
                    correction = c("Bonferroni"), quiet = FALSE, ...) {
   k <- params$k
   p <- params$p
