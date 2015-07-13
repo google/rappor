@@ -54,22 +54,23 @@ def SumBits(params, stdin, f_2way, f_1, f_2):
     # TODO: Extend checking for both reports
     if not len(irr_1) == params.num_bloombits:
       raise RuntimeError(
-          "Expected %d bits, got %r" % (params.num_bloombits, len(irr_1)))
+        "Expected %d bits in report 1, got %r" % 
+        (params.num_bloombits, len(irr_1)))
+    if not len(irr_2) == params.num_bloombits:
+      raise RuntimeError(
+        "Expected %d bits in report 2, got %r" % 
+        (params.num_bloombits, len(irr_2)))
     # "Unrolled" joint encoding of both reports
+    index_array = [[3, 1], [2, 0]]
     for i, c in enumerate(irr_1):
       for j, d in enumerate(irr_2):
         index = 4 * ((num_bloombits - i - 1) * params.num_bloombits +
                      num_bloombits - j - 1)
-        if (c == '1' and d == '1'):
-          sums[cohort][index] += 1
-        elif (c == '0' and d == '1'):
-          sums[cohort][index + 1] += 1
-        elif (c == '1' and d == '0'):
-          sums[cohort][index + 2] += 1
-        elif (c == '0' and d == '0'):
-          sums[cohort][index + 3] += 1
-        else:
-          raise RuntimeError('Invalid IRRs -- digits should be 0 or 1')
+        try: 
+          diff = index_array[int(c)][int(d)]
+        except IndexError:
+          raise RuntimeError('Invalid IRRs; digits should be 0/1')
+        sums[cohort][index + diff] += 1
 
     for i, c in enumerate(irr_1):
       bit_num = num_bloombits - i - 1  # e.g. char 0 = bit 15, char 15 = bit 0
@@ -77,7 +78,7 @@ def SumBits(params, stdin, f_2way, f_1, f_2):
         sums_1[cohort][bit_num] += 1
       else:
         if c != '0':
-          raise RuntimeError('Invalid IRR -- digits should be 0 or 1')
+          raise RuntimeError('Invalid IRRs; digits should be 0/1')
 
     for i, c in enumerate(irr_2):
       bit_num = num_bloombits - i - 1  # e.g. char 0 = bit 15, char 15 = bit 0
@@ -85,7 +86,7 @@ def SumBits(params, stdin, f_2way, f_1, f_2):
         sums_2[cohort][bit_num] += 1
       else:
         if c != '0':
-          raise RuntimeError('Invalid IRR -- digits should be 0 or 1')
+          raise RuntimeError('Invalid IRRs; digits should be 0/1')
 
   for cohort in xrange(num_cohorts):
     # First column is the total number of reports in the cohort.
