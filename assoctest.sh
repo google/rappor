@@ -16,15 +16,14 @@
 #    run-all [<num>]             - run all tests, in parallel, each <num> times
 #
 # Examples:
-# $ ./regtest.sh run-seq tiny-8x16-  # Sequential run, matches 2 cases
-# $ ./regtest.sh run-seq tiny-8x16- 3  # Sequential, each test is run three
+# $ ./assoctest.sh run-seq tiny-8x16-     # Sequential run, matches 2 cases
+# $ ./assoctest.sh run-seq tiny-8x16- 3   # Sequential, each test is run three
 #                                           times
-# $ ./regtest.sh run-all     # Run all tests once
+# $ ./assoctest.sh run-all                # Run all tests once
 #
 # The <pattern> argument is a regex in 'grep -E' format. (Detail: Don't
 # use $ in the pattern, since it matches the whole spec line and not just the
-# test case name.) The number of processors used in a parallel run is one less
-# than the number of CPUs on the machine.
+# test case name.) The number of processors used in a parallel run is 5.
 #
 # fast_counts param inherited from regtest.sh, but currently not used
 
