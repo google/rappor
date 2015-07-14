@@ -21,7 +21,7 @@
 #include "encoder.h"
 #include "libc_rand_impl.h"
 #include "unix_kernel_rand_impl.h"
-#include "openssl_impl.h"
+#include "openssl_hash_impl.h"
 
 // Like atoi, but with basic (not exhaustive) error checking.
 bool StringToInt(const char* s, int* result) {

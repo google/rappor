@@ -1,6 +1,6 @@
 #include <stdio.h>
 
-#include "openssl_impl.h"
+#include "openssl_hash_impl.h"
 
 // NOTE: See run.sh to compare HMAC and MD5 values with Python.
 
