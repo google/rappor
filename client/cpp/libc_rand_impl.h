@@ -31,6 +31,8 @@ class LibcRand : public IrrRandInterface {
   virtual bool QMask(Bits* mask_out) const;
 
  private:
+  Bits CreateMask(int rand_threshold) const;
+
   int p_rand_threshold_;  // [0, RAND_MAX) probability threshold
   int q_rand_threshold_;  // [0, RAND_MAX) probability threshold 
 };

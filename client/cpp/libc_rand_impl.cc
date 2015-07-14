@@ -30,20 +30,20 @@ void LibcRandGlobalInit() {
   gInitialized = true;
 }
 
+//
+// LibcRand
+//
+
 // Similar to client/python/fastrand.c
-Bits randbits(int rand_threshold, int num_bits) {
+Bits LibcRand::CreateMask(int rand_threshold) const {
   Bits result = 0;
   int i;
-  for (i = 0; i < num_bits; ++i) {
+  for (i = 0; i < num_bits_; ++i) {
     Bits bit = (rand() < rand_threshold);
     result |= (bit << i);
   }
   return result;
 }
-
-//
-// LibcRand
-//
 
 LibcRand::LibcRand(int num_bits, float p, float q)
     : IrrRandInterface(num_bits, p, q) {
@@ -52,12 +52,12 @@ LibcRand::LibcRand(int num_bits, float p, float q)
 }
 
 bool LibcRand::PMask(Bits* mask_out) const {
-  *mask_out = randbits(p_rand_threshold_, num_bits_);
+  *mask_out = CreateMask(p_rand_threshold_);
   return true;
 }
 
 bool LibcRand::QMask(Bits* mask_out) const {
-  *mask_out = randbits(q_rand_threshold_, num_bits_);
+  *mask_out = CreateMask(q_rand_threshold_);
   return true;
 }
 
