@@ -64,7 +64,8 @@ class ProtobufEncoder {
 // values.AddInteger(Field, int i);
 //
 // Report report;  // protobuf of stuff
-// protobuf_encoder.Encode(values, &report);  // 
+// // FAIL if params don't match schema declared to constructor.
+// bool ok = protobuf_encoder.Encode(values, &report);
 // report.SerializeAsString();
 
   // Given a string, appends to the given the report list
