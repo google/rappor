@@ -30,6 +30,24 @@ class Report {
   // AddInteger?
 };
 
+// Chrome example:
+//
+// https://code.google.com/p/chromium/codesearch#chromium/src/components/rappor/rappor_service.h
+//
+// example:
+// scoped_ptr<Sample> sample = rappor_service->CreateSample(MY_METRIC_TYPE);
+// e.g. COARSE_RAPPOR_TYPE
+//
+// sample->SetStringField("Field1", "some string");
+// sample->SetFlagsValue("Field2", SOME|FLAGS);
+// rappor_service->RecordSample("MyMetric", sample.Pass());
+//
+// This will result in a report setting two metrics "MyMetric.Field1" and
+// "MyMetric.Field2", and they will both be generated from the same sample,
+// to allow for correllations to be computed.
+// void RecordSampleObj(const std::string& metric_name,
+//                      scoped_ptr<Sample> sample);
+
 class ProtobufEncoder {
  public:
   ProtobufEncoder(const char* metric_name, const Encoder& encoder);
