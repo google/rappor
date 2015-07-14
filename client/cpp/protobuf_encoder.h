@@ -52,6 +52,21 @@ class ProtobufEncoder {
  public:
   ProtobufEncoder(const char* metric_name, const Encoder& encoder);
 
+// Shouldn't take encoder, because we need to access the params?
+// It can construct internal encoders.
+
+// metric_name, {Field TYPE Params}, const Deps& deps;
+
+// metric_name, {Field1 Type1 Params1, Field2 Type2 Params2}, const Deps& deps;
+//
+// ClientValues values;
+// values.AddString(Field, const string& str);
+// values.AddInteger(Field, int i);
+//
+// Report report;  // protobuf of stuff
+// protobuf_encoder.Encode(values, &report);  // 
+// report.SerializeAsString();
+
   // Given a string, appends to the given the report list
   bool Encode(const Report& report, ReportList* report_list);
  private:
