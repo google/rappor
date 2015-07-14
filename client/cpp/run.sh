@@ -52,9 +52,9 @@ empty-input() {
 
 # This outputs an HMAC and MD5 value.  Compare with Python/shell below.
 
-openssl-impl-test() {
-  make _tmp/openssl_impl_test
-  _tmp/openssl_impl_test "$@"
+openssl-hash-impl-test() {
+  make _tmp/openssl_hash_impl_test
+  _tmp/openssl_hash_impl_test "$@"
 }
 
 test-hmac-sha256() {

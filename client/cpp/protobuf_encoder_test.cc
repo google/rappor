@@ -21,7 +21,7 @@
 #include "encoder.h"
 #include "rappor.pb.h"
 #include "libc_rand_impl.h"
-#include "openssl_impl.h"
+#include "openssl_hash_impl.h"
 
 // Like atoi, but with basic (not exhaustive) error checking.
 bool StringToInt(const char* s, int* result) {
@@ -202,7 +202,7 @@ int main(int argc, char** argv) {
     rappor::Bits bloom;
     rappor::Bits prr;
     rappor::Bits irr;
-    bool ok = e.Encode(value, &bloom, &prr, &irr);
+    bool ok = e._EncodeInternal(value, &bloom, &prr, &irr);
 
     // NOTE: Are there really encoding errors?
     if (!ok) {

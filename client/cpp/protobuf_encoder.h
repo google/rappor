@@ -18,7 +18,7 @@
 #include <string>
 #include <stdint.h>  // uint64_t
 
-#include "rappor.h"
+#include "encoder.h"
 #include "rappor_deps.h"  // for dependency injection
 
 namespace rappor {

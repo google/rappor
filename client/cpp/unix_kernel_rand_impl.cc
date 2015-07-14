@@ -25,7 +25,7 @@ const int kMaxBitWidth = 32;
 bool UnixKernelRand::CreateMask(uint8_t threshold256, Bits* mask_out) const {
   uint8_t rand_buf[kMaxBitWidth];
   size_t num_elems = fread(&rand_buf, sizeof(uint8_t), num_bits_, fp_);
-  if (num_elems != static_cast<size_t>(num_bits_)) {  // error on fread error
+  if (num_elems != static_cast<size_t>(num_bits_)) {  // fread error
     return false;
   }
 

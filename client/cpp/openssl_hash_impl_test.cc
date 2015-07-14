@@ -24,7 +24,7 @@ int main() {
   bool ok = rappor::Md5(value, md5);
   printf("ok: %d\n", ok);
 
-  for (int i = 0; i < sizeof(md5); ++i) {
+  for (size_t i = 0; i < sizeof(md5); ++i) {
     printf("%02x", md5[i]);
   }
   printf("\n");
@@ -49,6 +49,6 @@ int main() {
   //std::string value2("0");
 
   for (int i = 0; i < 1000000; ++i) {
-    bool ok = rappor::Hmac(key2, value2, sha256);
+    rappor::Hmac(key2, value2, sha256);
   }
 }
