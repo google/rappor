@@ -37,8 +37,7 @@ void LibcRandGlobalInit() {
 // Similar to client/python/fastrand.c
 Bits LibcRand::CreateMask(int rand_threshold) const {
   Bits result = 0;
-  int i;
-  for (i = 0; i < num_bits_; ++i) {
+  for (int i = 0; i < num_bits_; ++i) {
     Bits bit = (rand() < rand_threshold);
     result |= (bit << i);
   }

@@ -63,8 +63,11 @@ class Encoder {
   // Check this immediately after instantiating.  We are not using exceptions.
   bool IsValid() const;
 
-  bool Encode(const std::string& value, Bits* bloom_out, Bits* prr_out, Bits*
-      irr_out) const;
+  // For simulation use only.
+  bool _EncodeInternal(const std::string& value, Bits* bloom_out,
+                       Bits* prr_out, Bits* irr_out) const;
+
+  bool Encode(const std::string& value, Bits* irr_out) const;
 
  private:
   Bits MakeBloomFilter(const std::string& value) const;

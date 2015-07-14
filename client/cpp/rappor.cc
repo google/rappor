@@ -169,8 +169,8 @@ void Encoder::GetPrrMasks(const std::string& value, Bits* uniform_out,
   *f_mask_out = f_mask;
 }
 
-bool Encoder::Encode(const std::string& value, Bits* bloom_out, Bits* prr_out,
-    Bits* irr_out) const {
+bool Encoder::_EncodeInternal(const std::string& value, Bits* bloom_out,
+    Bits* prr_out, Bits* irr_out) const {
   rappor::log("Encode '%s' cohort %d", value.c_str(), cohort_);
 
   Bits bloom = MakeBloomFilter(value);
@@ -200,6 +200,12 @@ bool Encoder::Encode(const std::string& value, Bits* bloom_out, Bits* prr_out,
   *irr_out = irr;
 
   return true;
+}
+
+bool Encoder::Encode(const std::string& value, Bits* irr_out) const {
+  Bits unused_bloom;
+  Bits unused_prr;
+  return _EncodeInternal(value, &unused_bloom, &unused_prr, irr_out);
 }
 
 }  // namespace rappor
