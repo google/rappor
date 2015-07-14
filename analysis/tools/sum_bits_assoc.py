@@ -1,6 +1,6 @@
 #!/usr/bin/python
 #
-# Copyright 2014 Google Inc. All rights reserved.
+# Copyright 2015 Google Inc. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -15,8 +15,12 @@
 # limitations under the License.
 
 """
-Read the RAPPOR'd values on stdin, and sum the bits to produce a Counting Bloom
-filter by cohort.  This can then be analyzed by R.
+Read RAPPOR values of 2 variables from stdin.
+Read parameters from parameter file and a prefix.
+
+Output counts of bloom filter bits set for each variable (1-way totals)
+and counts of pairwise bits set (2-way totals) into files with suffixes
+_marg1.csv, _marg2.csv, _2way.csv respectively.
 """
 
 import csv

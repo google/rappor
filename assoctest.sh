@@ -11,9 +11,7 @@
 #    run [[<pattern> [<num>]] - run tests matching <pattern> in
 #                               parallel, each <num> times.
 #
-#    ## run-seq currently not supported!
 #    run-seq [<pattern> [<num>]] - ditto, except that tests are run sequentially
-#    ## --
 #
 #    run-all [<num>]             - run all tests, in parallel, each <num> times
 #
@@ -27,6 +25,8 @@
 # use $ in the pattern, since it matches the whole spec line and not just the
 # test case name.) The number of processors used in a parallel run is one less
 # than the number of CPUs on the machine.
+#
+# fast_counts param inherited from regtest.sh, but currently not used
 
 
 set -o nounset
@@ -276,6 +276,8 @@ _run-tests() {
     func=_run-one-instance-logged
     processors=$(grep -c ^processor /proc/cpuinfo || echo 4)  # POSIX-specific
     if test $processors -gt 6; then  # leave few CPUs for the OS
+      # Association tests take up a lot of memory; so restricted to a few
+      # processes at a time
       processors=5
     else
       processors=1
@@ -284,7 +286,7 @@ _run-tests() {
   fi
 
   local cases_list=$ASSOCTEST_DIR/test-cases.txt
-  tests/regtest_spec.py | grep -E $spec_regex > $cases_list
+  tests/assoctest_spec.py | grep -E $spec_regex > $cases_list
 
   # Generate parameters for all test cases.
   cat $cases_list \
@@ -305,22 +307,12 @@ _run-tests() {
 }
 
 # Run tests sequentially
-#run-seq() {
-#  local spec_regex=${1:-'^r-'}  # grep -E format on the spec
-#  local instances=${2:-1}
-#  local fast_counts=${3:-T}
-#
-#  _run-tests $spec_regex $instances F $fast_counts
-#}
+run-seq() {
+  local spec_regex=${1:-'^a-'}  # grep -E format on the spec
+  local instances=${2:-1}
 
-# Run tests in parallel
-#run() {
-#  local spec_regex=${1:-'^r-'}  # grep -E format on the spec
-#  local instances=${2:-1}
-#  local fast_counts=${3:-T}
-#
-#  _run-tests $spec_regex $instances T $fast_counts
-#}
+  _run-tests $spec_regex $instances F T
+}
 
 # Run tests in parallel
 run-all() {

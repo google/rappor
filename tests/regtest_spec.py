@@ -41,49 +41,6 @@ DISTRIBUTION_PARAMS = (
     ('large', 10000, 100000000, 1),
 )
 
-DISTRIBUTION_PARAMS_ASSOC = {
-    # name, num unique values 1,
-    # num unique values 2, num clients
-    'tiny': (100, 2, int(1e03)),   # test for insufficient data
-    'small': (100, 10, int(1e04)),
-#    'fizz-tiny': (100, 20, int(1e03)),
-#    'fizz-tiny-bool': (100, 2, int(1e03)),
-#    'fizz-small': (100, 20, int(1e04)),
-#    'fizz-small-bool': (100, 2, int(1e04)),
-#    'fizz': (100, 20, int(1e05)),
-#    'fizz-large': (100, 50, int(1e05)),
-#    'fizz-2large': (100, 50, int(5e05)),
-#    'fizz-bool': (100, 2, int(1e05)),
-    'medium': (1000, 10, int(1e05)),
-    'medium2': (1000, 2, int(1e05)),
-    'large': (10000, 10, int(1e06)),
-    'large2': (10000, 2, int(1e06)),
-    'largesquared': (int(1e04), 100, int(1e06)),
-
-    # new test names for 2-way marginals
-    # includes testing for extras
-    'fizz-tiny': (100, 20, int(1e03), int(1e04)),
-    'fizz-tiny-bool': (100, 2, int(1e03), int(1e04)),
-    'fizz-small': (100, 20, int(1e04), int(1e04)),
-    'fizz-small-bool': (100, 2, int(1e04), int(1e04)),
-    'fizz': (100, 20, int(1e05), int(1e04)),
-    'fizz-bool': (100, 2, int(1e05), int(1e04)),
-
-    'toy': (5, 2, 1e04, 20),  # for testing purposes only
-    'compact-noextra-small': (40, 5, 1e04, 0),
-    'loose-noextra-small': (100, 20, 1e04, 0),
-    'compact-noextra-large': (40, 5, 1e06, 0),
-    'loose-noextra-large': (100, 20, 1e06, 0),
-    'compact-extra-small': (40, 5, int(1e04), int(1e04)),
-    'loose-extra-small': (100, 20, int(1e04), int(1e04)),
-    'compact-extra-large': (40, 5, int(1e06), int(1e04)),
-    'loose-extra-large': (100, 20, int(1e06), int(1e04)),
-    'compact-excess-small': (40, 5, int(1e04), int(1e05)),
-    'loose-excess-small': (100, 20, int(1e04), int(1e05)),
-    'compact-excess-large': (40, 5, int(1e06), int(1e05)),
-    'loose-excess-large': (100, 20, int(1e06), int(1e05)),
-}
-
 # 'k, h, m' as in params file.
 BLOOMFILTER_PARAMS = {
     '8x16': (8, 2, 16),  # 16 cohorts, 8 bits each, 2 bits set in each
@@ -121,40 +78,6 @@ TEST_CONFIGS = [
     ('over_x10', '8x128', 'eps_1_1', 10.0, '10%'),  # overshoot by x10
 ]
 
-# assoc test configuration ->
-#   (distribution params set, bloomfilter params set,
-#    privacy params set)
-# The test config runs a test suite that is the cross product of all the above
-# sets
-ASSOC_TEST_CONFIG = {
-  'distr': (
-#            'fizz-tiny',
-#            'fizz-tiny-bool',
-#            'fizz-small',
-#            'fizz-small-bool',
-#            'fizz',
-#            'fizz-bool',),
-            'toy',),
-#            'compact-noextra-small',
-#            'loose-noextra-small',
-#            'compact-extra-small',
-#            'loose-extra-small',
-#            'compact-excess-small',
-#            'loose-excess-small',),
-#            'compact-noextra-large',
-#            'loose-noextra-large',
-#            'compact-extra-large',
-#            'loose-extra-large',
-#            'compact-excess-large',
-#            'loose-excess-large'),
-  'blooms': (
-             '8x32',
-             '16x32',),
-  'privacy': (
-              'eps_small',
-              'eps_chrome',)
-}
-
 #
 # END TEST CONFIGURATION
 #
@@ -183,19 +106,6 @@ def main(argv):
 
   for params in DEMO:
     rows.append(params)
-
-  # Association tests
-  for distr in ASSOC_TEST_CONFIG['distr']:
-    for blooms in ASSOC_TEST_CONFIG['blooms']:
-      for privacy in ASSOC_TEST_CONFIG['privacy']:
-        print distr, blooms, privacy
-        test_name = 'a-{}-{}-{}'.format(distr, blooms, privacy)
-        params = (BLOOMFILTER_PARAMS[blooms] +
-                  PRIVACY_PARAMS[privacy])
-        test_case = (test_name,) + DISTRIBUTION_PARAMS_ASSOC[distr] + params
-        row_str = [str(element) for element in test_case]
-        rows.append(row_str)
-  # End of association tests
 
   for row in rows:
     print ' '.join(row)
