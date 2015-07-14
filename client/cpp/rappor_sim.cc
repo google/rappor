@@ -18,7 +18,7 @@
 #include <stdio.h>
 #include <vector>
 
-#include "rappor.h"
+#include "encoder.h"
 #include "libc_rand_impl.h"
 #include "unix_kernel_rand_impl.h"
 #include "openssl_impl.h"

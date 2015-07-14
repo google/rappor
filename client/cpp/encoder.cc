@@ -16,7 +16,7 @@
 #include <stdio.h>
 #include <stdarg.h>  // va_list, etc.
 
-#include "rappor.h"
+#include "encoder.h"
 
 namespace rappor {
 
