@@ -24,13 +24,13 @@ void LibcRandGlobalInit();
 
 class LibcRand : public IrrRandInterface {
  public:
-  // TODO: rename these
   LibcRand(int num_bits, float p, float q)
       : IrrRandInterface(num_bits, p, q) {
   }
   virtual ~LibcRand() {}
-  virtual unsigned int p_bits() const;
-  virtual unsigned int q_bits() const;
+
+  virtual bool PMask(Bits* mask_out) const;
+  virtual bool QMask(Bits* mask_out) const;
 };
 
 }  // namespace rappor

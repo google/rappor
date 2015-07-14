@@ -38,16 +38,11 @@ bool UnixKernelRand::CreateMask(uint8_t threshold256, Bits* mask_out) const {
   return true;
 }
 
-// TODO: change interface to handle errors!!!
-unsigned int UnixKernelRand::p_bits() const {
-  Bits m;
-  Bits* mask_out = &m;
+bool UnixKernelRand::PMask(Bits* mask_out) const {
   return CreateMask(p_threshold_256_, mask_out);
 }
 
-unsigned int UnixKernelRand::q_bits() const {
-  Bits m;
-  Bits* mask_out = &m;
+bool UnixKernelRand::QMask(Bits* mask_out) const {
   return CreateMask(q_threshold_256_, mask_out);
 }
 

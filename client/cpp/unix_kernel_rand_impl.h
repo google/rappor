@@ -34,8 +34,9 @@ class UnixKernelRand : public IrrRandInterface {
     q_threshold_256_ = static_cast<uint8_t>(q * 256);
   }
   virtual ~UnixKernelRand() {}
-  virtual unsigned int p_bits() const;
-  virtual unsigned int q_bits() const;
+
+  virtual bool PMask(Bits* mask_out) const;
+  virtual bool QMask(Bits* mask_out) const;
 
  private:
   bool CreateMask(uint8_t threshold256, Bits* mask_out) const;

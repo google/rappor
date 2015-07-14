@@ -20,9 +20,13 @@
 #include <stdlib.h>  // srand
 #include <time.h>  // time
 
-// Copied from client/python/fastrand.c
-uint64_t randbits(float p1, int num_bits) {
-  uint64_t result = 0;
+static bool gInitialized = false;
+
+namespace rappor {
+
+// Similar to client/python/fastrand.c
+Bits randbits(float p1, int num_bits) {
+  Bits result = 0;
   int threshold = (int)(p1 * RAND_MAX);
   int i;
   for (i = 0; i < num_bits; ++i) {
@@ -31,10 +35,6 @@ uint64_t randbits(float p1, int num_bits) {
   }
   return result;
 }
-
-static bool gInitialized = false;
-
-namespace rappor {
 
 void LibcRandGlobalInit() {
   int seed = time(NULL);
@@ -46,14 +46,14 @@ void LibcRandGlobalInit() {
 // LibcRand
 //
 
-unsigned int LibcRand::p_bits() const {
-  assert(gInitialized);
-  return randbits(p_, num_bits_);
+bool LibcRand::PMask(Bits* mask_out) const {
+  *mask_out = randbits(p_, num_bits_);
+  return true;
 }
 
-unsigned int LibcRand::q_bits() const {
-  assert(gInitialized);
-  return randbits(q_, num_bits_);
+bool LibcRand::QMask(Bits* mask_out) const {
+  *mask_out = randbits(q_, num_bits_);
+  return true;
 }
 
 }  // namespace rappor

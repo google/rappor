@@ -50,14 +50,10 @@ typedef bool HmacFunc(const std::string& key, const std::string& value,
 // based on their platform and requirements.
 class IrrRandInterface {
  public:
-  // TODO: - Implement these
-
-  //virtual bool PMask(Bits* mask_out) const = 0;
-  //virtual bool QMask(Bits* mask_out) const = 0;
-
-  virtual unsigned int p_bits() const = 0;
-  virtual unsigned int q_bits() const = 0;
   virtual ~IrrRandInterface() {}
+
+  virtual bool PMask(Bits* mask_out) const = 0;
+  virtual bool QMask(Bits* mask_out) const = 0;
 
  protected:
   IrrRandInterface(int num_bits, float p, float q)

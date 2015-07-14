@@ -185,11 +185,16 @@ bool Encoder::Encode(const std::string& value, Bits* bloom_out, Bits* prr_out,
   *prr_out = prr;
 
   // Compute Instantaneous Randomized Response (IRR).
-  //
-  // TODO: These can fail if /dev/urandom read fails!
 
-  Bits p_bits = irr_rand_.p_bits();
-  Bits q_bits = irr_rand_.q_bits();
+  // NOTE: These can fail if say a read() from /dev/urandom fails.
+  Bits p_bits;
+  Bits q_bits;
+  if (!irr_rand_.PMask(&p_bits)) {
+    return false;
+  }
+  if (!irr_rand_.QMask(&q_bits)) {
+    return false;
+  }
 
   Bits irr = (p_bits & ~prr) | (q_bits & prr);
   *irr_out = irr;
