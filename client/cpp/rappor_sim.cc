@@ -72,7 +72,8 @@ void PrintBitString(const std::string& s) {
 
 int main(int argc, char** argv) {
   if (argc != 7) {
-    rappor::log("Usage: rappor_encode <num bits> <num hashes> <num cohorts> p q f");
+    rappor::log(
+        "Usage: rappor_encode <num bits> <num hashes> <num cohorts> p q f");
     exit(1);
   }
 
@@ -111,9 +112,11 @@ int main(int argc, char** argv) {
     exit(1);
   }
 
-  rappor::log("bits %d / hashes %d / cohorts %d", params.num_bits, params.num_hashes,
-      params.num_cohorts);
-  rappor::log("p %f / q %f / f %f", params.prob_p, params.prob_q, params.prob_f);
+  rappor::log("bits %d / hashes %d / cohorts %d", params.num_bits,
+      params.num_hashes, params.num_cohorts);
+
+  rappor::log("p %f / q %f / f %f", params.prob_p, params.prob_q,
+      params.prob_f);
 
   int num_bytes = params.num_bits / 8;
 
@@ -123,7 +126,7 @@ int main(int argc, char** argv) {
   // - -c openssl / nacl crpto
 
   rappor::IrrRandInterface* irr_rand;
-  if (true) {
+  if (false) {
     FILE* fp = fopen("/dev/urandom", "r");
     irr_rand = new rappor::UnixKernelRand(
         fp, params.num_bits, params.prob_p, params.prob_q);

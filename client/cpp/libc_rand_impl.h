@@ -24,13 +24,15 @@ void LibcRandGlobalInit();
 
 class LibcRand : public IrrRandInterface {
  public:
-  LibcRand(int num_bits, float p, float q)
-      : IrrRandInterface(num_bits, p, q) {
-  }
+  LibcRand(int num_bits, float p, float q);
   virtual ~LibcRand() {}
 
   virtual bool PMask(Bits* mask_out) const;
   virtual bool QMask(Bits* mask_out) const;
+
+ private:
+  int p_rand_threshold_;  // [0, RAND_MAX) probability threshold
+  int q_rand_threshold_;  // [0, RAND_MAX) probability threshold 
 };
 
 }  // namespace rappor
