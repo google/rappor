@@ -218,27 +218,27 @@ ComputePrivacyGuarantees <- function(params, alpha, N) {
 }
 
 FitDistribution <- function(estimates_stds, map, quiet = FALSE) {
-	# Find a distribution over rows of map that approximates estimates_stds best
-	#
-	# Input:
-	#   estimates_stds: a list of two m x k matrices, one for estimates, another
-	#                   for standard errors
-	#   map           : an (m * k) x S boolean matrix
-	#
-	# Output:
-	#   a float vector of length S, so that a distribution over map's rows sampled
-	#   according to this vector approximates estimates
+  # Find a distribution over rows of map that approximates estimates_stds best
+  #
+  # Input:
+  #   estimates_stds: a list of two m x k matrices, one for estimates, another
+  #                   for standard errors
+  #   map           : an (m * k) x S boolean matrix
+  #
+  # Output:
+  #   a float vector of length S, so that a distribution over map's rows sampled
+  #   according to this vector approximates estimates
 
-	S <- ncol(map)  # total number of candidates
+  S <- ncol(map)  # total number of candidates
 
-	lasso <- FitLasso(map, as.vector(t(estimates_stds$estimates)))
+  lasso <- FitLasso(map, as.vector(t(estimates_stds$estimates)))
 
-	if(!quiet)
-		cat("LASSO selected ", sum(lasso > 0), " non-zero coefficients.\n")
+  if (!quiet)
+    cat("LASSO selected ", sum(lasso > 0), " non-zero coefficients.\n")
 
-	names(lasso) <- colnames(map)
+  names(lasso) <- colnames(map)
 
-	lasso
+  lasso
 }
 
 Resample <- function(e) {
@@ -279,10 +279,10 @@ Decode <- function(counts, map, params, alpha = 0.05,
 
   coefs_all <- vector()
 
-  # Run the fitting procedure several times (5 seems to be sufficient and not
-  # too many) to estimate standard deviation of the output.
+  # Run the fitting procedure several times (5 seems to be the minimum that
+  # makes sense) to estimate standard deviation of the output.
   for(r in 1:10) {
-    if(r > 1)
+    if (r > 1)
       e <- Resample(estimates_stds_filtered)
     else
       e <- estimates_stds_filtered
@@ -295,7 +295,7 @@ Decode <- function(counts, map, params, alpha = 0.05,
   coefs_ssd <- N * apply(coefs_all, 2, sd)  # compute sample standard deviations
   coefs_ave <- N * apply(coefs_all, 2, mean)
 
-  # Only select coefficients more than two standard deviations from 0. May
+  # Only select coefficients more than one standard deviation from 0. May
   # inflate empirical SD of the estimates.
   reported <- which(coefs_ave > 1E-6 + 1 * coefs_ssd)
 
