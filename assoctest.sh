@@ -176,7 +176,7 @@ _run-one-instance() {
     inp['num'] = $num_clients; \
     inp['extras'] = $num_extras; \
     inp['varcandidates'] = [$num_unique_values, $num_unique_values2]; \
-    inp['verbose'] = 'false'; \
+    inp['verbose'] = 'true'; \
     inp['counts'] = ['$instance_dir/case_2way.csv',\
                      '$instance_dir/case_marg1.csv',\
                      '$instance_dir/case_marg2.csv']; \

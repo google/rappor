@@ -433,7 +433,7 @@ ExternalCounts <- function(inp, verbose = FALSE, metrics_filename = "metrics.csv
 ## Outputs:
 ##
 #####################################################################
-ExternalReportsEM <- function(inp, verbose = FALSE) {
+ExternalReportsEM <- function(inp, verbose = FALSE, metrics_filename = "metrics.csv") {
   ptm <- proc.time()
   params <- ReadParameterFile(inp$params)
   # Ensure sufficient maps as required by number of vars
@@ -501,8 +501,8 @@ ExternalReportsEM <- function(inp, verbose = FALSE) {
     dim2 = dim(em)[[2]]
   )
   
-  # Write metrics to metrics.csv
-  filename <- file.path(inp$outdir, 'metrics_2.csv')
+  # Write metrics to metrics_filename (default: metrics.csv)
+  filename <- file.path(inp$outdir, metrics_filename)
   write.csv(metrics, file = filename, row.names = FALSE)
 }
 
@@ -531,9 +531,9 @@ main <- function(opts) {
     PrintIfVerbose("Running Experiment Ext Reports", verbose_flag)
     if (("direct" %in% inp$expt)||("external-counts" %in% inp$expt)) {
       # external-reports-em expt is run to compare results
-      ExternalCounts(inp, verbose = verbose_flag, metrics_filename = "metrics_2.csv")
+      ExternalReportsEM(inp, verbose = verbose_flag, metrics_filename = "metrics_2.csv")
     } else {
-      ExternalCounts(inp, verbose = verbose_flag)
+      ExternalReportsEM(inp, verbose = verbose_flag)
     }
   }
 }
