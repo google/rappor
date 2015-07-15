@@ -101,6 +101,23 @@ ReadMapFile <- function(map_file, params = NULL, quote = "") {
   list(map = map, strs = strs, map_pos = map_pos)
 }
 
+# This function processes the maps loaded using ReadMapFile
+# Association analysis requires a map object with a map
+# field that has the map split into cohorts and an rmap field
+# that has all the cohorts combined
+# Arguments:
+#       map = map object with cohorts as sparse matrix in
+#             object map$map
+#             This is the expected object from ReadMapFile
+#       params = data field with parameters
+ProcessMap <- function(map, params) {
+  map$rmap <- map$map
+  map$map <- lapply(1:params$m, function(i)
+    map$rmap[seq(from = ((i - 1) * params$k + 1),
+                 length.out = params$k),])
+  map
+}
+
 LoadMapFile <- function(map_file, params = NULL, quote = "") {
   # Reads the map file and creates an R binary .rda. If the .rda file already
   # exists, just loads that file. NOTE: It assumes the map file is

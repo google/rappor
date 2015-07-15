@@ -43,22 +43,11 @@ source("analysis/R/read_input.R")
 source("analysis/R/association.R")
 source("tests/gen_counts.R")
 
-# This function processes the maps loaded using ReadMapFile
-# Association analysis requires a map object with a map
-# field that has the map split into cohorts and an rmap field
-# that has all the cohorts combined
-# Arguments:
-#       map = map object with cohorts as sparse matrix in
-#             object map$map
-#             This is the expected object from ReadMapFile
-#       params = data field with parameters
-# TODO(pseudorandom): move this functionality to ReadMapFile
-ProcessMap <- function(map, params) {
-  map$rmap <- map$map
-  map$map <- lapply(1:params$m, function(i)
-                          map$rmap[seq(from = ((i - 1) * params$k + 1),
-                                   length.out = params$k),])
-  map
+# Wrapper function to print strings only if verbose flag is passed in
+PrintIfVerbose <- function(string, flag = FALSE) {
+  if(flag == TRUE) {
+    print(string)
+  }
 }
 
 # TV distance = L1 distance / 2 = 1 - sum(min(df1|x, df2|x)) where
@@ -89,7 +78,6 @@ CombineReports <- function(reports1, reports2) {
   lapply(creports,
          function(x) as.vector(sapply(x, function(z) two_bits[[z+1]])))
 }
-
 
 # Given 2 lists of maps, maps1 and maps2, the function
 # combines the maps by cohort and outputs both
@@ -203,19 +191,25 @@ GenerateNoiseMatrix <- function(params) {
   NoiseMatrix
 }
 
-# ------------------------------------------------------------------------
+#####################################################################
 ##
-## Direct simulation of reports without simulated variance
+## Direct simulation of reports WITHOUT simulated variance
 ## 
-## Inputs:
+## Inputs: inp object (from parsing JSON) with
+##         num - # of reports
+##         params - file containing RAPPOR params
+##         varcandidates - list containing # of candidates for each var
+##         numvars - # of vars (>=2 for association)
+##         extra - # of extra candidates for var 1 
+##         
 ##
-## Outputs:
-#
-# ------------------------------------------------------------------------
-DirectSimulationOfReports <- function(inp) {
-  params <- ReadParameterFile(inp$params)
-  # TWO WAY ASSOCIATIONS; INPUTS SIMULATED DIRECTLY
-  
+## Outputs: Runs simulation of two-way association analysis by directly
+##          simulating the counts of one way and two way marginals
+##
+#####################################################################
+DirectSimulationOfReports <- function(inp, verbose = FALSE) {
+  ptm <- proc.time()
+  params <- ReadParameterFile(inp$params)  
   strconstant <- c("string", "option")
   N <- inp$num
   n1 <- inp$varcandidates[[1]]
@@ -268,13 +262,13 @@ DirectSimulationOfReports <- function(inp) {
   found_strings <- lapply(1:2, function(i)
     Decode(ow_counts[[i]],
            map[[i]]$rmap,
-           params, quick = TRUE)$fit$strings)
+           params, quick = TRUE)$fit[,"string"])
   # --------------
   
   rownames(td) <- uvals[[1]][1:n1]  # Don't take into account extras
   colnames(td) <- uvals[[2]]
-  print("TRUE DISTRIBUTION")
-  print(signif(td, 4))
+  PrintIfVerbose("TRUE DISTRIBUTION", verbose)
+  PrintIfVerbose(signif(td, 4), verbose)
   cohorts <- as.matrix(
     apply(as.data.frame(final_part), 1,
           function(count) RandomPartition(count, rep(1, params$m))))
@@ -313,11 +307,11 @@ DirectSimulationOfReports <- function(inp) {
   ed[is.na(ed)] <- 0
   time_taken <- proc.time() - ptm
   
-  print("2 WAY RESULTS")
-  print(signif(ed, 4))
-  print(TVDistance(td, ed, "TV DISTANCE 2 WAY ALGORITHM"))
-  print("PROC.TIME")
-  print(time_taken)
+  PrintIfVerbose("2 WAY RESULTS", verbose)
+  PrintIfVerbose(signif(ed, 4), verbose)
+  PrintIfVerbose(TVDistance(td, ed, "TV DISTANCE 2 WAY ALGORITHM"), verbose)
+  PrintIfVerbose("PROC.TIME", verbose)
+  PrintIfVerbose(time_taken, verbose)
   chisq_td <- chisq.test(td)[1][[1]][[1]]
   chisq_ed <- chisq.test(ed)[1][[1]][[1]]
   if(is.nan(chisq_ed)) {
@@ -339,19 +333,21 @@ DirectSimulationOfReports <- function(inp) {
   write.csv(metrics, file = filename, row.names = FALSE)
 }
 
-# ------------------------------------------------------------------------
+#####################################################################
 ##
 ## Externally provided counts (gen_assoc_counts.R and sum_assoc_reports.py)
-## 2 WAY ASSOCIATION ONLY
+## new_decode flag allows you to switch between two decode algorithm choices
+## Note: Only for two way associations
 ## 
-## Inputs:
+## Inputs: inp object (from parsing JSON) with
 ##    count files (2 way counts, individual marginal counts)
 ##    map files (2 variables)
+##    params file with RAPPOR params
 ##
-## Outputs:
-#
-# ------------------------------------------------------------------------
-ExternalCounts <- function(inp, new_decode = FALSE) {
+## Outputs: Runs simulation of two-way association analysis reading inputs
+##          from counts, maps, and params file.
+#####################################################################
+ExternalCounts <- function(inp, verbose = FALSE, metrics_filename = "metrics.csv") {
   ptm <- proc.time()
   params <- ReadParameterFile(inp$params)
   # Ensure sufficient maps as required by number of vars
@@ -375,8 +371,8 @@ ExternalCounts <- function(inp, new_decode = FALSE) {
   found_strings = list(fit[[1]][,"string"], fit[[2]][,"string"])
 
   if (length(found_strings[[1]]) == 0 || length(found_strings[[2]]) == 0) {
-    print("FOUND_STRINGS")
-    print(found_strings)
+    PrintIfVerbose("FOUND_STRINGS", verbose)
+    PrintIfVerbose(found_strings, verbose)
     stop("No strings found in 1-way marginal.")
   }
   
@@ -400,9 +396,9 @@ ExternalCounts <- function(inp, new_decode = FALSE) {
   
   time_taken <- proc.time() - ptm
   
-  print(TVDistance(td, ed, "TV DISTANCE 2 WAY"))
-  print("PROC.TIME")
-  print(time_taken)
+  PrintIfVerbose(TVDistance(td, ed, "TV DISTANCE 2 WAY"), verbose)
+  PrintIfVerbose("PROC.TIME", verbose)
+  PrintIfVerbose(time_taken, verbose)
   chisq_td <- chisq.test(td)[1][[1]][[1]]
   chisq_ed <- chisq.test(ed)[1][[1]][[1]]
   if(is.nan(chisq_td)) {
@@ -421,16 +417,12 @@ ExternalCounts <- function(inp, new_decode = FALSE) {
     dim2 = length(found_strings[[2]])
   )
   
-  # Write metrics to metrics.csv
-  if (new_decode == TRUE) {
-    filename <- file.path(inp$outdir, 'metrics_2.csv')
-  } else {
-    filename <- file.path(inp$outdir, 'metrics.csv')
-  }
+  # Write metrics to metrics_filename (default: metrics.csv)
+  filename <- file.path(inp$outdir, metrics_filename)
   write.csv(metrics, file = filename, row.names = FALSE)
 }
 
-# ------------------------------------------------------------------------
+#####################################################################
 ##
 ## Externally provided reports
 ## EM ALGORITHM
@@ -439,9 +431,9 @@ ExternalCounts <- function(inp, new_decode = FALSE) {
 ## Inputs:
 ##    
 ## Outputs:
-#
-# ------------------------------------------------------------------------
-ExternalReportsEM <- function(inp) {
+##
+#####################################################################
+ExternalReportsEM <- function(inp, verbose = FALSE) {
   ptm <- proc.time()
   params <- ReadParameterFile(inp$params)
   # Ensure sufficient maps as required by number of vars
@@ -488,9 +480,9 @@ ExternalReportsEM <- function(inp) {
   td <- td / sum(td)
   time_taken <- proc.time() - ptm
   
-  print(TVDistance(td, em, "TV DISTANCE EM"))
-  print("PROC.TIME")
-  print(time_taken)
+  PrintIfVerbose(TVDistance(td, em, "TV DISTANCE EM"), verbose)
+  PrintIfVerbose("PROC.TIME", verbose)
+  PrintIfVerbose(time_taken, verbose)
   chisq_td <- chisq.test(td)[1][[1]][[1]]
   chisq_ed <- chisq.test(em)[1][[1]][[1]]
   if(is.nan(chisq_td)) {
@@ -516,27 +508,33 @@ ExternalReportsEM <- function(inp) {
 
 main <- function(opts) {
   inp <- fromJSON(opts$inp)
-  
+  verbose_flag <- inp$verbose
   # Choose from a set of experiments to run
   # direct -> direct simulation of reports (without variances)
   # external-counts -> externally supplied counts for 2 way and marginals
   # external-reports -> externally supplied reports 
 
   if("direct" %in% inp$expt) {
-    print("---------- RUNNING EXPERIMENT DIRECT ----------")
-    DirectSimulationOfReports(inp)
+    PrintIfVerbose("Running Experiment Direct", verbose_flag)
+    DirectSimulationOfReports(inp, verbose = verbose_flag)
   } 
   if ("external-counts" %in% inp$expt) {
-    print("---------- RUNNING EXPERIMENT EXT COUNTS ----------")
-    ExternalCounts(inp)  
-  }
-  if ("external-counts-new" %in% inp$expt) {
-    print("---------- RUNNING EXPERIMENT EXT COUNTS ----------")
-    ExternalCounts(inp, new_decode = TRUE)  
+    PrintIfVerbose("Running Experiment Ext Counts", verbose_flag)
+    if ("direct" %in% inp$expt) {
+      # external-counts expt is run to compare results
+      ExternalCounts(inp, verbose = verbose_flag, metrics_filename = "metrics_2.csv")
+    } else {
+      ExternalCounts(inp, verbose = verbose_flag)
+    }
   }
   if ("external-reports-em" %in% inp$expt) {
-    print("---------- RUNNING EXPERIMENT EXT REPORTS ----------")
-    ExternalReportsEM(inp)
+    PrintIfVerbose("Running Experiment Ext Reports", verbose_flag)
+    if (("direct" %in% inp$expt)||("external-counts" %in% inp$expt)) {
+      # external-reports-em expt is run to compare results
+      ExternalCounts(inp, verbose = verbose_flag, metrics_filename = "metrics_2.csv")
+    } else {
+      ExternalCounts(inp, verbose = verbose_flag)
+    }
   }
 }
 
