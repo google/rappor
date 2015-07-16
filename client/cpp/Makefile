@@ -1,4 +1,12 @@
-default: _tmp/rappor_sim _tmp/protobuf_encoder_test _tmp/openssl_hash_impl_test
+# Build RAPPOR C++ code.
+
+default: \
+	_tmp/rappor_sim \
+	_tmp/protobuf_encoder_test \
+	_tmp/openssl_hash_impl_test
+
+clean:
+	rm -f --verbose _tmp/*
 
 # Generate .d Makefile fragments, so we can use #include statements in source
 # for dependency info.  Adapted from the GNU make manual:
@@ -26,9 +34,6 @@ _tmp/rappor.pb.d : _tmp/rappor.pb.cc
   rm --verbose -f $@ && \
 	$(CXX) -I _tmp/ -MM $(CPPFLAGS) $< > $$tmpfile && \
 	sed 's,\($*\)\.o[ :]*,\1.o $@ : ,g' < $$tmpfile > $@
-
-clean:
-	rm -f --verbose _tmp/*
 
 SOURCES = \
 	encoder.cc \
