@@ -5,45 +5,6 @@ default: _tmp/rappor_sim _tmp/protobuf_encoder_test _tmp/openssl_hash_impl_test
 _tmp/rappor.pb.cc: ../proto/rappor.proto
 	protoc --cpp_out _tmp --proto_path=../proto ../proto/rappor.proto
 
-# NOTES:
-# -lcrypto from openssl
-# -g for debug info
-
-## TODO: Instead of listing header files here, use gcc -M and Make features.
-#_tmp/rappor_sim: encoder.cc encoder.h rappor_deps.h \
-#	libc_rand_impl.cc libc_rand_impl.h \
-#	unix_kernel_rand_impl.cc unix_kernel_rand_impl.h \
-#	openssl_hash_impl.cc \
-#	rappor_sim.cc 
-#	$(CXX) \
-#    -Wall \
-#    -o _tmp/rappor_sim \
-#    encoder.cc \
-#		libc_rand_impl.cc unix_kernel_rand_impl.cc openssl_hash_impl.cc \
-#		rappor_sim.cc \
-#    -lcrypto \
-#		-g
-
-_tmp/protobuf_encoder_test: encoder.cc encoder.h rappor_deps.h \
-	libc_rand_impl.cc libc_rand_impl.h \
-	unix_kernel_rand_impl.cc unix_kernel_rand_impl.h \
-	openssl_hash_impl.cc \
-	rappor_sim.cc \
- 	_tmp/rappor.pb.h \
-	protobuf_encoder.cc protobuf_encoder.h
-	$(CXX) \
-    -Wall \
-    -o _tmp/protobuf_encoder_test \
-		-I _tmp \
-    encoder.cc \
-		libc_rand_impl.cc unix_kernel_rand_impl.cc openssl_hash_impl.cc \
-		_tmp/rappor.pb.cc \
-		protobuf_encoder.cc \
-		protobuf_encoder_test.cc \
-    -lprotobuf \
-    -lcrypto \
-		-g
-
 # c++0x for std::array
 		#-std=c++0x 
 _tmp/openssl_hash_impl_test: openssl_hash_impl_test.cc openssl_hash_impl.cc
@@ -109,10 +70,14 @@ _tmp/%.o : %.cc
 # $@: target to build
 # $< first prerequisited
 # -c: compile only
-	$(CXX) -Wall -c -o $@ $<
+	$(CXX) -Wall -I _tmp/ -c -o $@ $<
 
 _tmp/rappor.pb.o : _tmp/rappor.pb.cc
-	$(CXX) -Wall -c -o $@ $<
+	$(CXX) -Wall -I _tmp/ -c -o $@ $<
+
+# NOTES:
+# -lcrypto from openssl
+# -g for debug info
 
 # $^ : all prerequisites
 _tmp/rappor_sim: \
@@ -127,3 +92,18 @@ _tmp/rappor_sim: \
     -lcrypto \
 		-g
 
+_tmp/protobuf_encoder_test: \
+	_tmp/encoder.o _tmp/libc_rand_impl.o \
+	_tmp/unix_kernel_rand_impl.o \
+	_tmp/openssl_hash_impl.o \
+	_tmp/protobuf_encoder.o \
+	_tmp/protobuf_encoder_test.o \
+	_tmp/rappor.pb.o
+	$(CXX) \
+    -Wall \
+    -o _tmp/protobuf_encoder_test \
+		-I _tmp \
+		$^ \
+    -lprotobuf \
+    -lcrypto \
+		-g
