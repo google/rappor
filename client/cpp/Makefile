@@ -19,19 +19,19 @@ _tmp/rappor.pb.cc: ../proto/rappor.proto
 #
 # http://www.gnu.org/software/make/manual/html_node/Automatic-Prerequisites.html#Automatic-PrerequisitesR
 #
-# The sed line adds _tmp/rappor_sim.d
-#
 # $*: the part that matched the wildcard, e.g. 'rappor_sim' for '%.cc' matching
 # 'rappor_sim.cc'
 
 # -MM: exclude system headers
 # $$$$: PID escaped
 # -I _tmp: So that protobuf files found
+#
+# TODO: The whole thing could be in bash.
 
 _tmp/%.d : %.cc
 	tmpfile=$@.$$$$ && \
 	basename=$* && \
-  rm --verbose -f $@ && \
+	rm --verbose -f $@ && \
 	$(CXX) -I _tmp/ -MM $(CPPFLAGS) $^ > $$tmpfile && \
 	./dotd.sh $$basename $$tmpfile $@
 
@@ -39,7 +39,7 @@ _tmp/%.d : %.cc
 _tmp/rappor.pb.d : _tmp/rappor.pb.cc
 	tmpfile=$@.$$$$ && \
 	basename=rappor.pb && \
-  rm --verbose -f $@ && \
+	rm --verbose -f $@ && \
 	$(CXX) -I _tmp/ -MM $(CPPFLAGS) $^ > $$tmpfile && \
 	./dotd.sh $$basename $$tmpfile $@
 
@@ -50,7 +50,7 @@ SOURCES = \
 	openssl_hash_impl_test.cc \
 	protobuf_encoder.cc \
 	protobuf_encoder_test.cc \
- 	rappor_sim.cc \
+	rappor_sim.cc \
 	unix_kernel_rand_impl.cc
 
 # Don't need this now.  If there is more than one, we can generalize it.
@@ -86,10 +86,10 @@ _tmp/rappor_sim: \
 	_tmp/openssl_hash_impl.o \
 	_tmp/rappor_sim.o
 	$(CXX) \
-    $(CXXFLAGS) \
-    -o $@ \
-    $^ \
-    -lcrypto \
+		$(CXXFLAGS) \
+		-o $@ \
+		$^ \
+		-lcrypto \
 		-g
 
 # -I _tmp for protobuf headers
@@ -102,23 +102,23 @@ _tmp/protobuf_encoder_test: \
 	_tmp/protobuf_encoder_test.o \
 	_tmp/rappor.pb.o
 	$(CXX) \
-    $(CXXFLAGS) \
+		$(CXXFLAGS) \
 		-I _tmp \
-    -o $@ \
+		-o $@ \
 		$^ \
-    -lprotobuf \
-    -lcrypto \
+		-lprotobuf \
+		-lcrypto \
 		-g
 
 # for std::array:
-# -std=c++0x 
+# -std=c++0x
 
 _tmp/openssl_hash_impl_test: \
  	_tmp/openssl_hash_impl.o \
 	_tmp/openssl_hash_impl_test.o
 	$(CXX) \
-    $(CXXFLAGS) \
-    -o $@ \
+		$(CXXFLAGS) \
+		-o $@ \
 		$^ \
-	  -lcrypto \
-  	-g
+		-lcrypto \
+		-g
