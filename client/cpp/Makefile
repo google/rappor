@@ -1,19 +1,4 @@
-
 default: _tmp/rappor_sim _tmp/protobuf_encoder_test _tmp/openssl_hash_impl_test
-
-# Use protobuf compiler.
-_tmp/rappor.pb.cc: ../proto/rappor.proto
-	protoc --cpp_out _tmp --proto_path=../proto ../proto/rappor.proto
-
-# c++0x for std::array
-		#-std=c++0x 
-_tmp/openssl_hash_impl_test: openssl_hash_impl_test.cc openssl_hash_impl.cc
-	$(CXX) \
-    -Wall \
-    -o _tmp/openssl_hash_impl_test \
-    openssl_hash_impl_test.cc openssl_hash_impl.cc \
-	  -lcrypto
-# OpenSSL provides libssl or libcrypto
 
 # Generate .d Makefile fragments, so we can use #include statements in source
 # for dependency info.  Adapted from the GNU make manual:
@@ -75,13 +60,21 @@ _tmp/%.o : %.cc
 _tmp/rappor.pb.o : _tmp/rappor.pb.cc
 	$(CXX) -Wall -I _tmp/ -c -o $@ $<
 
+
+# Use protobuf compiler to generate .cc and .h files.  The .o and the .d depend
+# on .cc, so that is the target here.
+_tmp/rappor.pb.cc: ../proto/rappor.proto
+	protoc --cpp_out _tmp --proto_path=../proto ../proto/rappor.proto
+
+
 # NOTES:
 # -lcrypto from openssl
 # -g for debug info
 
 # $^ : all prerequisites
 _tmp/rappor_sim: \
-	_tmp/encoder.o _tmp/libc_rand_impl.o \
+	_tmp/encoder.o \
+	_tmp/libc_rand_impl.o \
 	_tmp/unix_kernel_rand_impl.o \
 	_tmp/openssl_hash_impl.o \
 	_tmp/rappor_sim.o
@@ -93,7 +86,8 @@ _tmp/rappor_sim: \
 		-g
 
 _tmp/protobuf_encoder_test: \
-	_tmp/encoder.o _tmp/libc_rand_impl.o \
+	_tmp/encoder.o \
+	_tmp/libc_rand_impl.o \
 	_tmp/unix_kernel_rand_impl.o \
 	_tmp/openssl_hash_impl.o \
 	_tmp/protobuf_encoder.o \
@@ -107,3 +101,16 @@ _tmp/protobuf_encoder_test: \
     -lprotobuf \
     -lcrypto \
 		-g
+
+# for std::array:
+# -std=c++0x 
+
+_tmp/openssl_hash_impl_test: \
+ 	_tmp/openssl_hash_impl.o \
+	_tmp/openssl_hash_impl_test.o
+	$(CXX) \
+    -Wall \
+    -o _tmp/openssl_hash_impl_test \
+		$^ \
+	  -lcrypto \
+  	-g

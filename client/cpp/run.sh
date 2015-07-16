@@ -75,12 +75,6 @@ test-md5() {
   echo -n value | md5sum
 }
 
-build-all() {
-  make _tmp/rappor_sim
-  make _tmp/protobuf_encoder_test
-  make _tmp/openssl_hash_impl_test
-}
-
 # -M: all headers
 # -MM: exclude system headers
 
