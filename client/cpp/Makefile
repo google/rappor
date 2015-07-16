@@ -52,5 +52,31 @@ _tmp/openssl_hash_impl_test: openssl_hash_impl_test.cc openssl_hash_impl.cc
 	  -lcrypto
 # OpenSSL provides libssl or libcrypto
 
+_tmp/%.o : %.cc
+# $@: target to build
+# $< first prerequisited
+# -c: compile only
+	$(CXX) -Wall -c -o $@ $<
+
+
+# Adapted from the GNU make manual:
+#
+# http://www.gnu.org/software/make/manual/html_node/Automatic-Prerequisites.html#Automatic-PrerequisitesR
+#
+# The sed line adds _tmp/rappor_sim.d
+#
+# $*: the part that matched the wildcard, e.g. 'rappor_sim' for '%.cc' matching
+# 'rappor_sim.cc'
+
+# -MM: exclude system headers
+# $$$$: PID escaped
+
+_tmp/%.d: %.cc
+	tmpfile=$@.$$$$ && \
+  rm --verbose -f $@ && \
+	$(CXX) -MM $(CPPFLAGS) $< > $$tmpfile && \
+	sed 's,\($*\)\.o[ :]*,\1.o $@ : ,g' < $$tmpfile > $@
+
 clean:
 	rm _tmp/* || true
+

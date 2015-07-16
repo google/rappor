@@ -75,4 +75,31 @@ test-md5() {
   echo -n value | md5sum
 }
 
+build-all() {
+  make _tmp/rappor_sim
+  make _tmp/protobuf_encoder_test
+  make _tmp/openssl_hash_impl_test
+}
+
+# -M: all headers
+# -MM: exclude system headers
+
+# -MF: file to write the dependencies to
+
+# -MD: like -M -MF
+# -MMD: -MD, but only system headers
+
+# -MP: workaround
+
+deps() {
+  gcc -I _tmp -MM protobuf_encoder_test.cc unix_kernel_rand_impl.cc
+  #gcc -I _tmp -MMD -MP protobuf_encoder_test.cc unix_kernel_rand_impl.cc
+}
+
+obj() {
+  # -c: compile only
+  gcc -c -o _tmp/rappor_sim.o rappor_sim.cc 
+  ls *.o
+}
+
 "$@"
