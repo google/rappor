@@ -1,6 +1,8 @@
 
+default: _tmp/rappor_sim _tmp/protobuf_encoder_test _tmp/openssl_hash_impl_test
+
 # Use protobuf compiler.
-_tmp/rappor.pb.h: ../proto/rappor.proto
+_tmp/rappor.pb.cc: ../proto/rappor.proto
 	protoc --cpp_out _tmp --proto_path=../proto ../proto/rappor.proto
 
 # NOTES:
@@ -74,7 +76,14 @@ _tmp/%.o : %.cc
 # $$$$: PID escaped
 # -I _tmp: So that protobuf files found
 
-_tmp/%.d: %.cc
+_tmp/%.d : %.cc
+	tmpfile=$@.$$$$ && \
+  rm --verbose -f $@ && \
+	$(CXX) -I _tmp/ -MM $(CPPFLAGS) $< > $$tmpfile && \
+	sed 's,\($*\)\.o[ :]*,\1.o $@ : ,g' < $$tmpfile > $@
+
+# Special case for .d file of generated source.
+_tmp/rappor.pb.d : _tmp/rappor.pb.cc
 	tmpfile=$@.$$$$ && \
   rm --verbose -f $@ && \
 	$(CXX) -I _tmp/ -MM $(CPPFLAGS) $< > $$tmpfile && \
@@ -93,9 +102,14 @@ SOURCES = \
  	rappor_sim.cc \
 	unix_kernel_rand_impl.cc
 
+# Don't need this now.  If there is more than one, we can generalize it.
+# GENERATED_SOURCES = \
+#	_tmp/rappor.pb.cc
+
 # include all the Makefile fragments.
-# -include doens't display a message if they don't exist.
+# -include doesn't display a message if they don't exist.
 
 -include $(patsubst %.cc,_tmp/%.d,$(SOURCES))
 
+-include _tmp/rappor.pb.d
 
