@@ -64,13 +64,15 @@ SOURCES = \
 
 -include _tmp/rappor.pb.d
 
+CXXFLAGS = -Wall
+
 # -c: compile only
 
 _tmp/%.o : %.cc
-	$(CXX) -Wall -I _tmp/ -c -o $@ $^
+	$(CXX) $(CXXFLAGS) -I _tmp/ -c -o $@ $^
 
 _tmp/rappor.pb.o : _tmp/rappor.pb.cc
-	$(CXX) -Wall -I _tmp/ -c -o $@ $^
+	$(CXX) $(CXXFLAGS) -I _tmp/ -c -o $@ $^
 
 # NOTES:
 # -lcrypto from openssl
@@ -84,12 +86,13 @@ _tmp/rappor_sim: \
 	_tmp/openssl_hash_impl.o \
 	_tmp/rappor_sim.o
 	$(CXX) \
-    -Wall \
+    $(CXXFLAGS) \
     -o $@ \
     $^ \
     -lcrypto \
 		-g
 
+# -I _tmp for protobuf headers
 _tmp/protobuf_encoder_test: \
 	_tmp/encoder.o \
 	_tmp/libc_rand_impl.o \
@@ -99,7 +102,7 @@ _tmp/protobuf_encoder_test: \
 	_tmp/protobuf_encoder_test.o \
 	_tmp/rappor.pb.o
 	$(CXX) \
-    -Wall \
+    $(CXXFLAGS) \
 		-I _tmp \
     -o $@ \
 		$^ \
@@ -114,7 +117,7 @@ _tmp/openssl_hash_impl_test: \
  	_tmp/openssl_hash_impl.o \
 	_tmp/openssl_hash_impl_test.o
 	$(CXX) \
-    -Wall \
+    $(CXXFLAGS) \
     -o $@ \
 		$^ \
 	  -lcrypto \
