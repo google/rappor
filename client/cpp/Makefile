@@ -9,20 +9,20 @@ _tmp/rappor.pb.cc: ../proto/rappor.proto
 # -lcrypto from openssl
 # -g for debug info
 
-# TODO: Instead of listing header files here, use gcc -M and Make features.
-_tmp/rappor_sim: encoder.cc encoder.h rappor_deps.h \
-	libc_rand_impl.cc libc_rand_impl.h \
-	unix_kernel_rand_impl.cc unix_kernel_rand_impl.h \
-	openssl_hash_impl.cc \
-	rappor_sim.cc 
-	$(CXX) \
-    -Wall \
-    -o _tmp/rappor_sim \
-    encoder.cc \
-		libc_rand_impl.cc unix_kernel_rand_impl.cc openssl_hash_impl.cc \
-		rappor_sim.cc \
-    -lcrypto \
-		-g
+## TODO: Instead of listing header files here, use gcc -M and Make features.
+#_tmp/rappor_sim: encoder.cc encoder.h rappor_deps.h \
+#	libc_rand_impl.cc libc_rand_impl.h \
+#	unix_kernel_rand_impl.cc unix_kernel_rand_impl.h \
+#	openssl_hash_impl.cc \
+#	rappor_sim.cc 
+#	$(CXX) \
+#    -Wall \
+#    -o _tmp/rappor_sim \
+#    encoder.cc \
+#		libc_rand_impl.cc unix_kernel_rand_impl.cc openssl_hash_impl.cc \
+#		rappor_sim.cc \
+#    -lcrypto \
+#		-g
 
 _tmp/protobuf_encoder_test: encoder.cc encoder.h rappor_deps.h \
 	libc_rand_impl.cc libc_rand_impl.h \
@@ -53,14 +53,6 @@ _tmp/openssl_hash_impl_test: openssl_hash_impl_test.cc openssl_hash_impl.cc
     openssl_hash_impl_test.cc openssl_hash_impl.cc \
 	  -lcrypto
 # OpenSSL provides libssl or libcrypto
-
-_tmp/%.o : %.cc
-# $@: target to build
-# $< first prerequisited
-# -c: compile only
-	$(CXX) -Wall -c -o $@ $<
-
-
 
 # Generate .d Makefile fragments, so we can use #include statements in source
 # for dependency info.  Adapted from the GNU make manual:
@@ -112,4 +104,26 @@ SOURCES = \
 -include $(patsubst %.cc,_tmp/%.d,$(SOURCES))
 
 -include _tmp/rappor.pb.d
+
+_tmp/%.o : %.cc
+# $@: target to build
+# $< first prerequisited
+# -c: compile only
+	$(CXX) -Wall -c -o $@ $<
+
+_tmp/rappor.pb.o : _tmp/rappor.pb.cc
+	$(CXX) -Wall -c -o $@ $<
+
+# $^ : all prerequisites
+_tmp/rappor_sim: \
+	_tmp/encoder.o _tmp/libc_rand_impl.o \
+	_tmp/unix_kernel_rand_impl.o \
+	_tmp/openssl_hash_impl.o \
+	_tmp/rappor_sim.o
+	$(CXX) \
+    -Wall \
+    -o _tmp/rappor_sim \
+    $^ \
+    -lcrypto \
+		-g
 
