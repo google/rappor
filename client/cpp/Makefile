@@ -65,15 +65,19 @@ CXXFLAGS = -Wall
 
 # -c: compile only
 
+# NOTE: More prerequisites to _tmp/%.o (header files) are added by the .d
+# files, so we need $<.
 _tmp/%.o : %.cc
 	$(CXX) $(CXXFLAGS) -I _tmp/ -c -o $@ $<
 
 _tmp/rappor.pb.o : _tmp/rappor.pb.cc
 	$(CXX) $(CXXFLAGS) -I _tmp/ -c -o $@ $<
 
-# NOTES:
+# CXX flag notes:
 # -lcrypto from openssl
 # -g for debug info
+#
+# You can add -std=c++0x for std::array, etc.
 
 # $^ : all prerequisites
 _tmp/rappor_sim: \
@@ -106,9 +110,6 @@ _tmp/protobuf_encoder_test: \
 		-lprotobuf \
 		-lcrypto \
 		-g
-
-# for std::array:
-# -std=c++0x
 
 _tmp/openssl_hash_impl_test: \
  	_tmp/openssl_hash_impl.o \
