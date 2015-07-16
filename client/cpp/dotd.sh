@@ -18,7 +18,10 @@ main() {
   local basename=$1
   local in=$2
   local out=$3
-  sed "s,\($basename\)\.o[ :]*,\1.o $out : ,g" < $in > $out
+
+  sed "s/\($basename\)\.o[ :]*/\1.o $out : /g" \
+    < $in \
+    > $out
 }
 
 main "$@"
