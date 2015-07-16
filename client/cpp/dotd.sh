@@ -20,11 +20,12 @@ main() {
   local dotd=$2  # .d output name
   shift 2  # rest of args are gcc invocation
 
-  local tmp="${dotd}.$$"
-
   rm --verbose -f $dotd
 
-  # The make file passes some gcc -MM invocation that we will transform.
+  local tmp="${dotd}.$$"
+
+  # Execute the gcc -MM invocation.  NOTE: We could remove the temp file, but
+  # it's nice for debugging.
   "$@" > $tmp
 
   # Change
