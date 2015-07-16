@@ -35,18 +35,12 @@ GenerateTrueValues <- function(distr, distr_range, num_clients,
   # Sums to 1.0, e.g. [0.2 0.2 0.2 0.2 0.2] for uniform distribution of 5.
   pdf <- ComputePdf(distr, distr_range)
 
-  #print('Distribution:')
-  #print(pdf)
-
   num_reports <- num_clients * reports_per_client
 
   # Computes the number of clients reporting each value, where the numbers are
   # sampled according to pdf.  (sums to num_reports)
   partition <- RandomPartition(num_reports, pdf)
   
-  #print('Partition:')
-  #print(partition)
-
   value_ints <- rep(1:distr_range, partition)  # expand partition
 
   stopifnot(length(value_ints) == num_reports)
@@ -58,13 +52,10 @@ GenerateTrueValues <- function(distr, distr_range, num_clients,
   # shuffling.
   values <- sprintf("v%d", value_ints)
 
-  #print('Values:')
-  #print(values)
-
   # e.g. [1 1 2 2 3 3] if num_clients is 3 and reports_per_client is 2
   client_ints <- rep(1:num_clients, each = reports_per_client)
 
-  # Cohorts are assigned to clients.
+  # Cohorts are assigned to clients. Cohorts are 0-based.
   cohorts <- client_ints %% num_cohorts  # %% is integer modulus
 
   clients <- sprintf("c%d", client_ints)
