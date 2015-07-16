@@ -59,7 +59,9 @@ _tmp/%.o : %.cc
 	$(CXX) -Wall -c -o $@ $<
 
 
-# Adapted from the GNU make manual:
+
+# Generate .d Makefile fragments, so we can use #include statements in source
+# for dependency info.  Adapted from the GNU make manual:
 #
 # http://www.gnu.org/software/make/manual/html_node/Automatic-Prerequisites.html#Automatic-PrerequisitesR
 #
@@ -70,13 +72,30 @@ _tmp/%.o : %.cc
 
 # -MM: exclude system headers
 # $$$$: PID escaped
+# -I _tmp: So that protobuf files found
 
 _tmp/%.d: %.cc
 	tmpfile=$@.$$$$ && \
   rm --verbose -f $@ && \
-	$(CXX) -MM $(CPPFLAGS) $< > $$tmpfile && \
+	$(CXX) -I _tmp/ -MM $(CPPFLAGS) $< > $$tmpfile && \
 	sed 's,\($*\)\.o[ :]*,\1.o $@ : ,g' < $$tmpfile > $@
 
 clean:
-	rm _tmp/* || true
+	rm -f --verbose _tmp/*
+
+SOURCES = \
+	encoder.cc \
+	libc_rand_impl.cc \
+	openssl_hash_impl.cc \
+	openssl_hash_impl_test.cc \
+	protobuf_encoder.cc \
+	protobuf_encoder_test.cc \
+ 	rappor_sim.cc \
+	unix_kernel_rand_impl.cc
+
+# include all the Makefile fragments.
+# -include doens't display a message if they don't exist.
+
+-include $(patsubst %.cc,_tmp/%.d,$(SOURCES))
+
 
