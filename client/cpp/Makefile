@@ -18,29 +18,26 @@ _tmp/rappor.pb.cc: ../proto/rappor.proto
 # for dependency info.  Adapted from the GNU make manual:
 #
 # http://www.gnu.org/software/make/manual/html_node/Automatic-Prerequisites.html#Automatic-PrerequisitesR
-#
-# $*: the part that matched the wildcard, e.g. 'rappor_sim' for '%.cc' matching
-# 'rappor_sim.cc'
 
-# -MM: exclude system headers
-# $$$$: PID escaped
-# -I _tmp: So that protobuf files found
+# CXX flags:
+#   -MM: exclude system headers
+#   -I _tmp: So that protobuf files found
 #
-# TODO: The whole thing could be in bash.
-# 
-# We use $< (first prereq) to generate .d and and .o files from .cc, because it
-# only needs the .cc file.
-# $^ (all prereqs) is used to pass all the .o files to the link step.
+# Makefile stuff:
+#   $*: the part that matched the wildcard, e.g. 'rappor_sim' for '%.cc'
+#   matching 'rappor_sim.cc'
+#
+#   We use $< (first prereq) to generate .d and and .o files from .cc, because
+#   it only needs the .cc file.  We used $^ (all prereqs) to pass ALL the .o
+#   files to the link step.
 
 _tmp/%.d : %.cc
-	basename=$* && \
-	./dotd.sh $$basename $@ \
+	./dotd.sh $* $@ \
 		$(CXX) -I _tmp/ -MM $(CPPFLAGS) $<
 
 # Special case for .d file of generated source.
 _tmp/rappor.pb.d : _tmp/rappor.pb.cc
-	basename=rappor.pb && \
-	./dotd.sh $$basename $@ \
+	./dotd.sh rappor.pb $@ \
 		$(CXX) -I _tmp/ -MM $(CPPFLAGS) $<
 
 SOURCES = \

@@ -20,20 +20,19 @@ main() {
 
   local tmp="${dotd}.$$"
 
-  set -x
-
   rm --verbose -f $dotd
 
+  # The make file passes some gcc -MM invocation that we will transform.
   "$@" > $tmp
 
   # Change
   #   rappor_sim.o: rappor.sim.cc
   # to
-  #   _tmp/rappor_sim.o _tmp/rappor_sim.d: rappor.sim.cc
+  #   _tmp/rappor_sim.o _tmp/rappor_sim.d : rappor.sim.cc
 
   # Can't use / in sed because $basename or $out might have a /
 
-  sed "s|\($basename\)\.o[ :]*|_tmp/\1.o $dotd : |g" \
+  sed "s|\($basename\).o|_tmp/\1.o _tmp/\1.d |" \
     < $tmp \
     > $dotd
 }
