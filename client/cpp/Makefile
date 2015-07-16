@@ -24,16 +24,18 @@ clean:
 
 _tmp/%.d : %.cc
 	tmpfile=$@.$$$$ && \
+	basename=$* && \
   rm --verbose -f $@ && \
 	$(CXX) -I _tmp/ -MM $(CPPFLAGS) $^ > $$tmpfile && \
-	sed 's,\($*\)\.o[ :]*,\1.o $@ : ,g' < $$tmpfile > $@
+	./dotd.sh $$basename $$tmpfile $@
 
 # Special case for .d file of generated source.
 _tmp/rappor.pb.d : _tmp/rappor.pb.cc
 	tmpfile=$@.$$$$ && \
+	basename=rappor.pb && \
   rm --verbose -f $@ && \
 	$(CXX) -I _tmp/ -MM $(CPPFLAGS) $^ > $$tmpfile && \
-	sed 's,\($*\)\.o[ :]*,\1.o $@ : ,g' < $$tmpfile > $@
+	./dotd.sh $$basename $$tmpfile $@
 
 SOURCES = \
 	encoder.cc \
