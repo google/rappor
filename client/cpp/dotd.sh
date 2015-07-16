@@ -1,7 +1,6 @@
 #!/bin/bash
 #
-# Usage:
-#   ./dotd.sh <function name>
+# Munge gcc -MM output into .d files.
 
 set -o nounset
 set -o pipefail
@@ -19,7 +18,8 @@ main() {
   local in=$2
   local out=$3
 
-  sed "s/\($basename\)\.o[ :]*/\1.o $out : /g" \
+  # Can't use / in sed because $basename or $out might have a /
+  sed "s|\($basename\)\.o[ :]*|\1.o $out : |g" \
     < $in \
     > $out
 }
