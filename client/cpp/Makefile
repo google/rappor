@@ -16,7 +16,7 @@ _tmp/rappor.pb.cc: ../proto/rappor.proto
 
 #
 # Generate .d Makefile fragments.
-# #
+#
 
 # CXX flags:
 #   -MM: exclude system headers
