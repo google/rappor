@@ -1,18 +1,20 @@
 #!/bin/bash
 #
-# Munge gcc -MM output into .d files.
+# dotd.sh
+#
+# Generate .d Makefile fragments, so we can use #include statements in source
+# for dependency info.  Adapted from the GNU make manual:
+#
+# http://www.gnu.org/software/make/manual/html_node/Automatic-Prerequisites.html
+#
+# We are putting this in shell, so we just have 'sed in bash'.  Not an unholy
+# mix of 'sed in bash in Make'.
 
 set -o nounset
 set -o pipefail
 set -o errexit
 
-# From:
-#
-# http://www.gnu.org/software/make/manual/html_node/Automatic-Prerequisites.html#Automatic-PrerequisitesR
-#
-# We are putting this in shell, so we just have 'sed in bash'.  Not an unholy
-# mix of 'sed in bash in Make'.
-
+# Munge gcc -MM output into .d files.
 main() {
   local basename=$1
   local dotd=$2  # .d output name
@@ -29,8 +31,6 @@ main() {
   #   rappor_sim.o: rappor.sim.cc
   # to
   #   _tmp/rappor_sim.o _tmp/rappor_sim.d : rappor.sim.cc
-
-  # Can't use / in sed because $basename or $out might have a /
 
   sed "s|\($basename\).o|_tmp/\1.o _tmp/\1.d |" \
     < $tmp \

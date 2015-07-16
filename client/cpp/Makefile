@@ -9,15 +9,14 @@ clean:
 	rm -f --verbose _tmp/*
 
 # Use protobuf compiler to generate .cc and .h files.  The .o and the .d depend
-# on .cc, so that is the target here.
+# on .cc, so that is the target of this rule.
 
 _tmp/rappor.pb.cc: ../proto/rappor.proto
 	protoc --cpp_out _tmp --proto_path=../proto ../proto/rappor.proto
 
-# Generate .d Makefile fragments, so we can use #include statements in source
-# for dependency info.  Adapted from the GNU make manual:
 #
-# http://www.gnu.org/software/make/manual/html_node/Automatic-Prerequisites.html#Automatic-PrerequisitesR
+# Generate .d Makefile fragments.
+# #
 
 # CXX flags:
 #   -MM: exclude system headers
@@ -54,8 +53,11 @@ SOURCES = \
 # GENERATED_SOURCES = \
 #	_tmp/rappor.pb.cc
 
-# include all the Makefile fragments.
-# -include doesn't display a message if they don't exist.
+#
+# Include the Makefile fragments we generated, so that changes to headers will
+# rebuild both .d files and .o files.  ('-include' suppresses the error if they
+# don't exist.)
+#
 
 -include $(patsubst %.cc,_tmp/%.d,$(SOURCES))
 
@@ -63,7 +65,9 @@ SOURCES = \
 
 CXXFLAGS = -Wall
 
-# -c: compile only
+#
+# Build object files (-c: compile only)
+#
 
 # NOTE: More prerequisites to _tmp/%.o (header files) are added by the .d
 # files, so we need $<.
@@ -72,6 +76,10 @@ _tmp/%.o : %.cc
 
 _tmp/rappor.pb.o : _tmp/rappor.pb.cc
 	$(CXX) $(CXXFLAGS) -I _tmp/ -c -o $@ $<
+
+#
+# Build executables
+#
 
 # CXX flag notes:
 # -lcrypto from openssl
