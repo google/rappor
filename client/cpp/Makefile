@@ -27,17 +27,21 @@ _tmp/rappor.pb.cc: ../proto/rappor.proto
 # -I _tmp: So that protobuf files found
 #
 # TODO: The whole thing could be in bash.
+# 
+# We use $< (first prereq) to generate .d and and .o files from .cc, because it
+# only needs the .cc file.
+# $^ (all prereqs) is used to pass all the .o files to the link step.
 
 _tmp/%.d : %.cc
 	basename=$* && \
 	./dotd.sh $$basename $@ \
-		$(CXX) -I _tmp/ -MM $(CPPFLAGS) $^
+		$(CXX) -I _tmp/ -MM $(CPPFLAGS) $<
 
 # Special case for .d file of generated source.
 _tmp/rappor.pb.d : _tmp/rappor.pb.cc
 	basename=rappor.pb && \
 	./dotd.sh $$basename $@ \
-		$(CXX) -I _tmp/ -MM $(CPPFLAGS) $^
+		$(CXX) -I _tmp/ -MM $(CPPFLAGS) $<
 
 SOURCES = \
 	encoder.cc \
@@ -65,10 +69,10 @@ CXXFLAGS = -Wall
 # -c: compile only
 
 _tmp/%.o : %.cc
-	$(CXX) $(CXXFLAGS) -I _tmp/ -c -o $@ $^
+	$(CXX) $(CXXFLAGS) -I _tmp/ -c -o $@ $<
 
 _tmp/rappor.pb.o : _tmp/rappor.pb.cc
-	$(CXX) $(CXXFLAGS) -I _tmp/ -c -o $@ $^
+	$(CXX) $(CXXFLAGS) -I _tmp/ -c -o $@ $<
 
 # NOTES:
 # -lcrypto from openssl

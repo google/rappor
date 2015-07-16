@@ -26,8 +26,14 @@ main() {
 
   "$@" > $tmp
 
+  # Change
+  #   rappor_sim.o: rappor.sim.cc
+  # to
+  #   _tmp/rappor_sim.o _tmp/rappor_sim.d: rappor.sim.cc
+
   # Can't use / in sed because $basename or $out might have a /
-  sed "s|\($basename\)\.o[ :]*|\1.o $dotd : |g" \
+
+  sed "s|\($basename\)\.o[ :]*|_tmp/\1.o $dotd : |g" \
     < $tmp \
     > $dotd
 }
