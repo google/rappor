@@ -29,19 +29,15 @@ _tmp/rappor.pb.cc: ../proto/rappor.proto
 # TODO: The whole thing could be in bash.
 
 _tmp/%.d : %.cc
-	tmpfile=$@.$$$$ && \
 	basename=$* && \
-	rm --verbose -f $@ && \
-	$(CXX) -I _tmp/ -MM $(CPPFLAGS) $^ > $$tmpfile && \
-	./dotd.sh $$basename $$tmpfile $@
+	./dotd.sh $$basename $@ \
+		$(CXX) -I _tmp/ -MM $(CPPFLAGS) $^
 
 # Special case for .d file of generated source.
 _tmp/rappor.pb.d : _tmp/rappor.pb.cc
-	tmpfile=$@.$$$$ && \
 	basename=rappor.pb && \
-	rm --verbose -f $@ && \
-	$(CXX) -I _tmp/ -MM $(CPPFLAGS) $^ > $$tmpfile && \
-	./dotd.sh $$basename $$tmpfile $@
+	./dotd.sh $$basename $@ \
+		$(CXX) -I _tmp/ -MM $(CPPFLAGS) $^
 
 SOURCES = \
 	encoder.cc \

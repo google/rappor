@@ -15,13 +15,21 @@ set -o errexit
 
 main() {
   local basename=$1
-  local in=$2
-  local out=$3
+  local dotd=$2  # .d output name
+  shift 2  # rest of args are gcc invocation
+
+  local tmp="${dotd}.$$"
+
+  set -x
+
+  rm --verbose -f $dotd
+
+  "$@" > $tmp
 
   # Can't use / in sed because $basename or $out might have a /
-  sed "s|\($basename\)\.o[ :]*|\1.o $out : |g" \
-    < $in \
-    > $out
+  sed "s|\($basename\)\.o[ :]*|\1.o $dotd : |g" \
+    < $tmp \
+    > $dotd
 }
 
 main "$@"
