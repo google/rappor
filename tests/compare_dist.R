@@ -102,10 +102,25 @@ RunRappor <- function(prefix_case, prefix_instance, ctx) {
 }
 
 LoadActual <- function(prefix_instance) {
-  # Load ground truth into context
+  hist_path <- paste0(prefix_instance, '_hist.csv')  # case.csv
 
-  h <- paste0(prefix_instance, '_hist.csv')
-  read.csv(h)
+  # gen_counts.R (fast_counts mode) outputs this, since we never have true
+  # client values.
+  if (file.exists(hist_path)) {
+    return(read.csv(hist_path))
+  }
+
+  # Load ground truth into context
+  input_path <- paste0(prefix_instance, '_true_values.csv')  # case.csv
+  client_values <- read.csv(input_path)
+
+  # Create a histogram, or R "table".  Column 2 is the true value.
+  t <- table(client_values$value)
+
+  d <- as.data.frame(t)  # convert it to a data frame with 'string' and 'count' columns
+  colnames(d) <- c('string', 'count')
+
+  d  # return this data frame
 }
 
 CompareRapporVsActual <- function(ctx) {

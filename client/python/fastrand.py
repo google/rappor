@@ -14,21 +14,22 @@
 
 """fastrand.py - Python wrapper for _fastrand."""
 
+# NOTE: We could retire this module in favor of the C++ client?  One reason to
+# keep it is if it supports a wider range of params (e.g. more than 32 or 64
+# bits.)
+
 import random
 
 import _fastrand
 
 
-class FastRandFuncs(object):
+class FastIrrRand(object):
+  """Fast version of rappor.SimpleIrrRand."""
 
   def __init__(self, params):
-    # NOTE: no rand attribute, so no seeding or getstate/setstate.
-    # Also duplicating some of rappor._RandFuncs.
-    self.cohort_rand_fn = random.randint
-
-    randbits = _fastrand.randbits
+    randbits = _fastrand.randbits  # accelerated function
     num_bits = params.num_bloombits
-    self.f_gen = lambda: randbits(params.prob_f, num_bits)
+
+    # IRR probabilities
     self.p_gen = lambda: randbits(params.prob_p, num_bits)
     self.q_gen = lambda: randbits(params.prob_q, num_bits)
-    self.uniform_gen = lambda: randbits(0.5, num_bits)

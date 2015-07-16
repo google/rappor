@@ -21,12 +21,21 @@ Note that we use SHA1 for the Bloom filter hash function.
 """
 import csv
 import hashlib
+import hmac
 import json
 import random
+import struct
+import sys
 
 
 class Error(Exception):
   pass
+
+
+def log(msg, *args):
+  if args:
+    msg = msg % args
+  print >>sys.stderr, msg
 
 
 class Params(object):
@@ -41,8 +50,6 @@ class Params(object):
     self.prob_p = 0.50           # Probability p
     self.prob_q = 0.75           # Probability q
     self.prob_f = 0.50           # Probability f
-
-    self.flag_oneprr = False     # One PRR for each user/word pair
 
   # For testing
   def __eq__(self, other):
@@ -112,17 +119,17 @@ class Params(object):
     return p
 
 
-class SimpleRandom(object):
-  """Returns N 32-bit words where each bit has probability p of being 1."""
+class _SimpleRandom(object):
+  """Returns an integer where each bit has probability p of being 1."""
 
-  def __init__(self, prob_one, num_bits, rand=None):
+  def __init__(self, prob_one, num_bits, _rand=None):
     self.prob_one = prob_one
     self.num_bits = num_bits
-    self.rand = rand or random.Random()
+    self._rand = _rand or random.Random()
 
   def __call__(self):
     p = self.prob_one
-    rand_fn = self.rand.random  # cache it for speed
+    rand_fn = self._rand.random  # cache it for speed
 
     r = 0
     for i in xrange(self.num_bits):
@@ -131,131 +138,176 @@ class SimpleRandom(object):
     return r
 
 
-class _RandFuncs(object):
-  """Base class for randomness."""
+class SimpleIrrRand(object):
+  """Pure Python randomness."""
 
-  def __init__(self, params, rand=None):
+  def __init__(self, params, _rand=None):
     """
     Args:
-      params: RAPPOR parameters
-      rand: optional object satisfying the random.Random() interface.
+      params: rappor.Params
+      _rand: Python Random object, for testing ONLY
     """
-    self.rand = rand or random.Random()
-    self.num_bits = params.num_bloombits
-    self.cohort_rand_fn = self.rand.randint
+    num_bits = params.num_bloombits
+    # IRR probabilities
+
+    self.p_gen = _SimpleRandom(params.prob_p, num_bits, _rand=_rand)
+    self.q_gen = _SimpleRandom(params.prob_q, num_bits, _rand=_rand)
 
 
-class SimpleRandFuncs(_RandFuncs):
-
-  def __init__(self, params, rand=None):
-    _RandFuncs.__init__(self, params, rand=rand)
-
-    self.f_gen = SimpleRandom(params.prob_f, self.num_bits, rand=rand)
-    self.p_gen = SimpleRandom(params.prob_p, self.num_bits, rand=rand)
-    self.q_gen = SimpleRandom(params.prob_q, self.num_bits, rand=rand)
-    self.uniform_gen = SimpleRandom(0.5, self.num_bits, rand=rand)
+def cohort_to_bytes(cohort):
+  # https://docs.python.org/2/library/struct.html
+  # - Big Endian (>) for consistent network byte order.
+  # - L means 4 bytes when using >
+  return struct.pack('>L', cohort)
 
 
-def get_rappor_masks(user_id, word, params, rand_funcs):
-  """Call 3 random functions.  Seed deterministically beforehand if oneprr.
+def get_bloom_bits(word, cohort, num_hashes, num_bloombits):
+  """Return an array of bits to set in the bloom filter.
 
-  TODO:
-  - inline this function
-  - Rewrite this to be clearer.  We can use a completely different Random()
-    instance in the case of oneprr.
-  - Expose it in the simulation.  It doesn't appear to be exercised now.
-
-  Returns:
-    assigned_cohort: integer cohort
-    uniform: bits set with probability 1/2
-    f_mask: bits set with probability f
+  In the real report, we bitwise-OR them together.  In hash candidates, we put
+  them in separate entries in the "map" matrix.
   """
-  if params.flag_oneprr:
-    stored_state = rand_funcs.rand.getstate()  # Store state
-    rand_funcs.rand.seed(user_id + word)  # Consistently seeded
+  value = cohort_to_bytes(cohort) + word  # Cohort is 4 byte prefix.
+  md5 = hashlib.md5(value)
 
-  assigned_cohort = rand_funcs.cohort_rand_fn(0, params.num_cohorts - 1)
-  uniform = rand_funcs.uniform_gen()
-  # fastrand generate numbers up to 64 bits, and returns None if more are
-  # requested.
-  if uniform is None:
-    raise AssertionError('Too many bits (k = %d)' % params.num_bloombits)
-  f_mask = rand_funcs.f_gen()
+  digest = md5.digest()
 
-  if params.flag_oneprr:                    # Restore state
-    rand_funcs.rand.setstate(stored_state)
+  # Each has is a byte, which means we could have up to 256 bit Bloom filters.
+  # There are 16 bytes in an MD5, in which case we can have up to 16 hash
+  # functions per Bloom filter.
+  if num_hashes > len(digest):
+    raise RuntimeError("Can't have more than %d hashes" % md5)
 
-  return assigned_cohort, uniform, f_mask
+  #log('hash_input %r', value)
+  #log('Cohort %d', cohort)
+  #log('MD5 %s', md5.hexdigest())
+
+  return [ord(digest[i]) % num_bloombits for i in xrange(num_hashes)]
 
 
-def get_bf_bit(input_word, cohort, hash_no, num_bloombits):
-  """Returns the bit to set in the Bloom filter."""
-  h = '%s%s%s' % (cohort, hash_no, input_word)
-  sha1 = hashlib.sha1(h).digest()
-  # Use last two bytes as the hash.  We to allow want more than 2^8 = 256 bits,
-  # but 2^16 = 65536 is more than enough.  Default is 16 bits.
-  a, b = sha1[0], sha1[1]
-  return (ord(a) + ord(b) * 256) % num_bloombits
+def get_prr_masks(secret, word, prob_f, num_bits):
+  h = hmac.new(secret, word, digestmod=hashlib.sha256)
+  #log('word %s, secret %s, HMAC-SHA256 %s', word, secret, h.hexdigest())
+
+  # Now go through each byte
+  digest_bytes = h.digest()
+  assert len(digest_bytes) == 32
+
+  # Use 32 bits.  If we want 64 bits, it may be fine to generate another 32
+  # bytes by repeated HMAC.  For arbitrary numbers of bytes it's probably
+  # better to use the HMAC-DRBG algorithm.
+  if num_bits > len(digest_bytes):
+    raise RuntimeError('%d bits is more than the max of %d', num_bits, len(d))
+
+  threshold128 = prob_f * 128
+
+  uniform = 0
+  f_mask = 0
+
+  for i in xrange(num_bits):
+    ch = digest_bytes[i]
+    byte = ord(ch)
+
+    u_bit = byte & 0x01  # 1 bit of entropy
+    uniform |= (u_bit << i)  # maybe set bit in mask
+
+    rand128 = byte >> 1  # 7 bits of entropy
+    noise_bit = (rand128 < threshold128)
+    f_mask |= (noise_bit << i)  # maybe set bit in mask
+
+  return uniform, f_mask
+
+
+def bit_string(irr, num_bloombits):
+  """Like bin(), but uses leading zeroes, and no '0b'."""
+  s = ''
+  bits = []
+  for bit_num in xrange(num_bloombits):
+    if irr & (1 << bit_num):
+      bits.append('1')
+    else:
+      bits.append('0')
+  return ''.join(reversed(bits))
 
 
 class Encoder(object):
   """Obfuscates values for a given user using the RAPPOR privacy algorithm."""
 
-  def __init__(self, params, user_id, rand_funcs=None):
+  def __init__(self, params, cohort, secret, irr_rand):
     """
     Args:
       params: RAPPOR Params() controlling privacy
-      user_id: user ID, for generating cohort.  (In the simulator, each user
-        gets its own Encoder instance.)
-      rand_funcs: randomness, can be deterministic for testing.
+      cohort: integer cohort, for Bloom hashing.
+      secret: secret string, for the PRR to be a deterministic function of the
+        reported value.
+      irr_rand: IRR randomness interface.
     """
-    self.params = params  # RAPPOR params
-    self.user_id = user_id
+    # RAPPOR params.  NOTE: num_cohorts isn't used.  p and q are used by
+    # irr_rand.
+    self.params = params
+    self.cohort = cohort  # associated: MD5
+    self.secret = secret  # associated: HMAC-SHA256
+    self.irr_rand = irr_rand  # p and q used
 
-    self.rand_funcs = rand_funcs or SimpleRandFuncs(params)
-    self.p_gen = self.rand_funcs.p_gen
-    self.q_gen = self.rand_funcs.q_gen
+  def _internal_encode(self, word):
+    """Helper function for simulation / testing.
 
-  def encode(self, word):
-    """Compute rappor (Instantaneous Randomized Response)."""
-    params = self.params
+    Returns:
+      The PRR and the IRR.  The PRR should never be sent over the network.
+    """
+    num_bits = self.params.num_bloombits
+    bloom_bits = get_bloom_bits(word, self.cohort, self.params.num_hashes,
+                                num_bits)
 
-    cohort, uniform, f_mask = get_rappor_masks(self.user_id, word,
-                                               params,
-                                               self.rand_funcs)
+    bloom = 0
+    for bit_to_set in bloom_bits:
+      bloom |= (1 << bit_to_set)
 
-    bloom_bits_array = 0
-    # Compute Bloom Filter
-    for hash_no in xrange(params.num_hashes):
-      bit_to_set = get_bf_bit(word, cohort, hash_no, params.num_bloombits)
-      bloom_bits_array |= (1 << bit_to_set)
+    # Compute Permanent Randomized Response (PRR).
+    uniform, f_mask = get_prr_masks(
+        self.secret, word, self.params.prob_f, num_bits)
 
-    # Both bit manipulations below use the following fact:
-    # To set c = a if m = 0 or b if m = 1
-    # c = (a & not m) | (b & m)
-
-    # Call bit i of the Bloom Filter B_i.  Then bit i of the PRR is defined as:
+    # Suppose bit i of the Bloom filter is B_i.  Then bit i of the PRR is
+    # defined as:
     #
     # 1   with prob f/2
     # 0   with prob f/2
     # B_i with prob 1-f
 
-    # uniform bits are 1 with probability 1/2, and f_mask bits are 1 with
+    # Uniform bits are 1 with probability 1/2, and f_mask bits are 1 with
     # probability f.  So in the expression below:
     #
     # - Bits in (uniform & f_mask) are 1 with probability f/2.
-    # - (bloom_bits_array & ~f_mask) clears a bloom filter bit with probability
+    # - (bloom_bits & ~f_mask) clears a bloom filter bit with probability
     # f, so we get B_i with probability 1-f.
     # - The remaining bits are 0, with remaining probability f/2.
 
-    prr = (uniform & f_mask) | (bloom_bits_array & ~f_mask)
+    prr = (bloom & ~f_mask) | (uniform & f_mask)
 
-    # Compute instantaneous randomized response:
-    # If PRR bit is set, output 1 with probability q
-    # If PRR bit is not set, output 1 with probability p
-    p_bits = self.p_gen()
-    q_bits = self.q_gen()
+    #log('U %s / F %s', bit_string(uniform, num_bits),
+    #    bit_string(f_mask, num_bits))
+
+    #log('B %s / PRR %s', bit_string(bloom_bits, num_bits),
+    #    bit_string(prr, num_bits))
+
+    # Compute Instantaneous Randomized Response (IRR).
+    # If PRR bit is 0, IRR bit is 1 with probability p.
+    # If PRR bit is 1, IRR bit is 1 with probability q.
+    p_bits = self.irr_rand.p_gen()
+    q_bits = self.irr_rand.q_gen()
 
     irr = (p_bits & ~prr) | (q_bits & prr)
 
-    return cohort, irr  # irr is the rappor
+    return bloom, prr, irr  # IRR is the rappor
+
+  def encode(self, word):
+    """Encode a string with RAPPOR.
+
+    Args:
+      word: the string that should be privately transmitted.
+
+    Returns:
+      A number that is the IRR (Instantaneous Randomized Response).
+    """
+    _, _, irr = self._internal_encode(word)
+    return irr
