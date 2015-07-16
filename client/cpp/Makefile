@@ -25,14 +25,14 @@ clean:
 _tmp/%.d : %.cc
 	tmpfile=$@.$$$$ && \
   rm --verbose -f $@ && \
-	$(CXX) -I _tmp/ -MM $(CPPFLAGS) $< > $$tmpfile && \
+	$(CXX) -I _tmp/ -MM $(CPPFLAGS) $^ > $$tmpfile && \
 	sed 's,\($*\)\.o[ :]*,\1.o $@ : ,g' < $$tmpfile > $@
 
 # Special case for .d file of generated source.
 _tmp/rappor.pb.d : _tmp/rappor.pb.cc
 	tmpfile=$@.$$$$ && \
   rm --verbose -f $@ && \
-	$(CXX) -I _tmp/ -MM $(CPPFLAGS) $< > $$tmpfile && \
+	$(CXX) -I _tmp/ -MM $(CPPFLAGS) $^ > $$tmpfile && \
 	sed 's,\($*\)\.o[ :]*,\1.o $@ : ,g' < $$tmpfile > $@
 
 SOURCES = \
@@ -56,14 +56,13 @@ SOURCES = \
 
 -include _tmp/rappor.pb.d
 
-_tmp/%.o : %.cc
-# $@: target to build
-# $< first prerequisited
 # -c: compile only
-	$(CXX) -Wall -I _tmp/ -c -o $@ $<
+
+_tmp/%.o : %.cc
+	$(CXX) -Wall -I _tmp/ -c -o $@ $^
 
 _tmp/rappor.pb.o : _tmp/rappor.pb.cc
-	$(CXX) -Wall -I _tmp/ -c -o $@ $<
+	$(CXX) -Wall -I _tmp/ -c -o $@ $^
 
 
 # Use protobuf compiler to generate .cc and .h files.  The .o and the .d depend
@@ -85,7 +84,7 @@ _tmp/rappor_sim: \
 	_tmp/rappor_sim.o
 	$(CXX) \
     -Wall \
-    -o _tmp/rappor_sim \
+    -o $@ \
     $^ \
     -lcrypto \
 		-g
@@ -100,8 +99,8 @@ _tmp/protobuf_encoder_test: \
 	_tmp/rappor.pb.o
 	$(CXX) \
     -Wall \
-    -o _tmp/protobuf_encoder_test \
 		-I _tmp \
+    -o $@ \
 		$^ \
     -lprotobuf \
     -lcrypto \
@@ -115,7 +114,7 @@ _tmp/openssl_hash_impl_test: \
 	_tmp/openssl_hash_impl_test.o
 	$(CXX) \
     -Wall \
-    -o _tmp/openssl_hash_impl_test \
+    -o $@ \
 		$^ \
 	  -lcrypto \
   	-g
