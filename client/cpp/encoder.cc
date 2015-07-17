@@ -30,22 +30,15 @@ void log(const char* fmt, ...) {
 
 static int kMaxBits = sizeof(Bits) * 8;
 
-Encoder::Encoder(
-    const rappor::Params& params,
-    int cohort, Md5Func* md5_func,
-    const std::string& client_secret, HmacFunc* hmac_func,
-    const IrrRandInterface& irr_rand)
+Encoder::Encoder(const Params& params, const Deps& deps) 
     : num_bits_(params.num_bits),
       num_hashes_(params.num_hashes),
       prob_f_(params.prob_f),
-      cohort_(cohort),
-      md5_func_(md5_func),
-      client_secret_(client_secret),
-      hmac_func_(hmac_func),
-      irr_rand_(irr_rand),
-
-      num_bytes_(0),
-      is_valid_(true) {
+      cohort_(deps.cohort_),
+      md5_func_(deps.md5_func_),
+      client_secret_(deps.client_secret_),
+      hmac_func_(deps.hmac_func_),
+      irr_rand_(deps.irr_rand_) {
 
   // Validity constraints:
   //
@@ -66,27 +59,6 @@ Encoder::Encoder(
         num_bits_, kMaxBits);
     is_valid_ = false;
   }
-
-  //log("Mask: %016x", debug_mask_);
-
-  // number of bytes in bloom filter
-  if (num_bits_ % 8 == 0) {
-    num_bytes_ = num_bits_ / 8;
-    //log("num bytes: %d", num_bytes_);
-  } else {
-    is_valid_ = false;
-  }
-}
-
-Encoder::Encoder(const Params& params, const Deps& deps) 
-    : num_bits_(params.num_bits),
-      num_hashes_(params.num_hashes),
-      prob_f_(params.prob_f),
-      cohort_(deps.cohort_),
-      md5_func_(deps.md5_func_),
-      client_secret_(deps.client_secret_),
-      hmac_func_(deps.hmac_func_),
-      irr_rand_(deps.irr_rand_) {
 }
 
 bool Encoder::IsValid() const {

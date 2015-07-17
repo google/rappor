@@ -45,21 +45,6 @@ struct Params {
 
 class Encoder {
  public:
-  // TODO:
-  // - HmacFunc and Md5Func should be partially computed already
-  //   - pass in objects that you can call update() on
-  //   - NaCl uses hashblocks.  Can you do that?
-  //   - clone state?
-  // - Params -> ClientParams?
-  //   - this has cohorts, while AnalysisParams has num_cohorts
-
-  Encoder(
-      // num_bits, num_hashes, and prob_f are the ones being used
-      const Params& params,
-      int cohort, Md5Func* md5_func,  // bloom
-      const std::string& client_secret, HmacFunc* hmac_func, // PRR
-      const IrrRandInterface& irr_rand);  // IRR
-
   Encoder(const Params& params, const Deps& deps);
 
   // Check this immediately after instantiating.  We are not using exceptions.
@@ -88,9 +73,7 @@ class Encoder {
 
   const IrrRandInterface& irr_rand_;
 
-  int num_bytes_;
   bool is_valid_;
-  uint64_t debug_mask_;
 };
 
 // For debug logging
