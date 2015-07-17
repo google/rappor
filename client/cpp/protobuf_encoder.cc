@@ -18,6 +18,51 @@
 
 namespace rappor {
 
+//
+// Schema
+//
+
+Schema::Schema() {
+}
+
+void Schema::AddString(int id, const Params& params) {
+  Field f;
+  f.id = id;
+  f.params = params;  // make a copy
+  f.field_type = kString;
+
+  // also makes a copy?  This could be a linked list too.
+  fields_.push_back(f);
+}
+
+void Schema::AddOrdinal(int id, const Params& params) {
+  Field f;
+  f.id = id;
+  f.params = params;  // make a copy
+  f.field_type = kOrdinal;
+
+  // also makes a copy?  This could be a linked list too.
+  fields_.push_back(f);
+}
+
+void Schema::AddBoolean(int id, const Params& params) {
+  Field f;
+  f.id = id;
+  f.params = params;  // make a copy
+  f.field_type = kBoolean;
+
+  // also makes a copy?  This could be a linked list too.
+  fields_.push_back(f);
+}
+
+//
+// Record
+//
+
+//
+// ProtobufEncoder
+//
+
 ProtobufEncoder::ProtobufEncoder(const Schema& schema)
     : schema_(schema) {
 }

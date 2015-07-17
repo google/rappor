@@ -67,6 +67,7 @@ enum FieldType {
   kBoolean,
 };
 
+// TODO: Should be private?
 struct Field {
   int id;
   Params params;
@@ -84,6 +85,12 @@ class Schema {
   std::vector<Field> fields_;
 };
 
+// TODO: Should be private?
+struct Value {
+  FieldType field_type;
+  Bits report;  // encoded report
+};
+
 class Record {
  public:
   Record();
@@ -91,10 +98,12 @@ class Record {
   void AddOrdinal(int id, int v);
   void AddBoolean(int id, int b);
  private:
+  std::vector<Value> values_;
 };
 
 class ProtobufEncoder {
  public:
+  // TODO: needs rappor::Deps
   ProtobufEncoder(const Schema& schema);
 
 // Shouldn't take encoder, because we need to access the params?
@@ -143,17 +152,6 @@ class ProtobufEncoder {
 // ClientInfo, Params, Deps
 //
 // ClientInfo, { name, type, params }+ Deps
-
-class VarType {
-};
-
-// a variable reported across time
-struct RapporVar {
-  std::string var_name;  // sent with ReportList
-  VarType var_type;  // protobuf STRING, ENUM, etc.?  Or does it matter?
-                     // this can be out of band?
-  Params p;  // raw params, or protobuf?
-};
 
 }  // namespace rappor
 
