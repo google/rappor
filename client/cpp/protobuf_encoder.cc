@@ -31,30 +31,30 @@ RecordSchema::~RecordSchema() {
 void RecordSchema::AddString(int id, const Params& params) {
   Field f;
   f.id = id;
-  f.params = params;  // make a copy
   f.field_type = STRING;
 
   // also makes a copy?  This could be a linked list too.
+  params_list_.push_back(params);
   fields_.push_back(f);
 }
 
 void RecordSchema::AddOrdinal(int id, const Params& params) {
   Field f;
   f.id = id;
-  f.params = params;  // make a copy
   f.field_type = ORDINAL;
 
   // also makes a copy?  This could be a linked list too.
+  params_list_.push_back(params);
   fields_.push_back(f);
 }
 
 void RecordSchema::AddBoolean(int id, const Params& params) {
   Field f;
   f.id = id;
-  f.params = params;  // make a copy
   f.field_type = BOOLEAN;
 
   // also makes a copy?  This could be a linked list too.
+  params_list_.push_back(params);
   fields_.push_back(f);
 }
 
@@ -63,6 +63,9 @@ void RecordSchema::AddBoolean(int id, const Params& params) {
 //
 
 bool Record::AddString(int id, const std::string& s) {
+  field_types_.push_back(STRING);
+  ids_.push_back(id);
+  strings_.push_back(s);
   return true;
 }
 
@@ -79,7 +82,6 @@ ProtobufEncoder::ProtobufEncoder(const RecordSchema& schema, const Deps& deps)
   }
 }
 
-// TODO: destroy the encoders
 ProtobufEncoder::~ProtobufEncoder() {
   for (size_t i = 0; i < encoders_.size(); ++i) {
     delete encoders_[i];
@@ -100,7 +102,7 @@ bool ProtobufEncoder::Encode(const Record& record, RecordReport* report) {
       //  input_word.assign(record.ordinals_[i]);
       //  break;
       case BOOLEAN:
-        input_word.assign(record.booleans_[i] ? "\0x01" : "\0x00");
+        input_word.assign(record.booleans_[i] ? "\x01" : "\x00");
         break;
     }
     Bits irr;

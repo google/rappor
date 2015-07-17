@@ -18,7 +18,7 @@
 #include <stdio.h>
 #include <vector>
 
-#include "encoder.h"
+#include "protobuf_encoder.h"
 #include "rappor.pb.h"
 #include "libc_rand_impl.h"
 #include "openssl_hash_impl.h"
@@ -190,14 +190,12 @@ int main(int argc, char** argv) {
       return 1;
     }
 
+    rappor::Deps deps(cohort, rappor::Md5, client_str /*client_secret*/,
+                      rappor::Hmac, libc_rand);
+
     // For now, construct a new encoder every time.  We could construct one for
     // each client.
-    rappor::Encoder e(
-        params, cohort, rappor::Md5,
-        client_str /*client_secret*/, rappor::Hmac, libc_rand);
-
-    //rappor::log("CLIENT %s VALUE %s COHORT %d", client_str.c_str(),
-    //    value.c_str(), cohort);
+    rappor::Encoder e(params, deps);
 
     rappor::Bits bloom;
     rappor::Bits prr;
@@ -209,6 +207,14 @@ int main(int argc, char** argv) {
       rappor::log("Error encoding string %s", line.c_str());
       break;
     }
+
+    // Set up schema
+    rappor::RecordSchema s;
+    // Add two fields
+    s.AddString(0, params);
+    s.AddString(1, params);
+
+    rappor::ProtobufEncoder(s, deps);
 
     std::string bloom_str;
     BitsToString(bloom, &bloom_str, num_bytes);
