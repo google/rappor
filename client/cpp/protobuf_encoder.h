@@ -111,7 +111,6 @@ class Record {
 
 class ProtobufEncoder {
  public:
-  // TODO: needs rappor::Deps
   ProtobufEncoder(const RecordSchema& schema, const Deps& deps);
   ~ProtobufEncoder();
 
@@ -122,6 +121,21 @@ class ProtobufEncoder {
  private:
   const RecordSchema& schema_;
   std::vector<Encoder*> encoders_;
+};
+
+// Convenience classes for single variables.
+
+class StringEncoder {
+ public:
+  StringEncoder(int id, const Params& params, const Deps& deps);
+  ~StringEncoder();
+
+  bool EncodeString(const std::string& str, Report* report);
+
+ private:
+  int id_;
+  RecordSchema* schema_;
+  ProtobufEncoder* encoder_;
 };
 
 }  // namespace rappor

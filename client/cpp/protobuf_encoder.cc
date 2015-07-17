@@ -168,4 +168,26 @@ bool ProtobufEncoder::Encode(const Record& record, Report* report) {
   return true;
 }
 
+//
+// StringEncoder
+//
+
+StringEncoder::StringEncoder(int id, const Params& params, const Deps& deps) {
+  schema_ = new RecordSchema();  // we need to own it
+  schema_->AddString(id, params);
+  encoder_ = new ProtobufEncoder(*schema_, deps);
+}
+
+StringEncoder::~StringEncoder() {
+  delete schema_;
+  delete encoder_;
+}
+
+bool StringEncoder::EncodeString(const std::string& str, Report* report) {
+  Record record;
+  record.AddString(id_, str);
+
+  return encoder_->Encode(record, report);
+}
+
 }  // namespace rappor

@@ -263,6 +263,10 @@ int main(int argc, char** argv) {
       break;
     }
 
+    rappor::Report* report2 = report_list.add_report();
+    rappor::StringEncoder string_encoder(kNameField, params, deps);
+    string_encoder.EncodeString("STRING", report2);
+
     rappor::log("RecordReport [%s]", report->DebugString().c_str());
   }
 
