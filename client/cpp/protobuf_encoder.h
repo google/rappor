@@ -76,6 +76,8 @@ struct Field {
 };
 
 class Schema {
+  friend class ProtobufEncoder;  // needs to read its internal state
+
  public:
   Schema();
   ~Schema();
@@ -91,10 +93,10 @@ class Schema {
  private:
   // Another interface:
   // Array/LL of IDs
-  // Array/LL of encoders
   // Array/LL of field types?
 
   std::vector<Field> fields_;
+  std::vector<Params> params_list_;  // copy of params
 };
 
 // TODO: Should be private?
@@ -104,6 +106,8 @@ struct Value {
 };
 
 class Record {
+  friend class ProtobufEncoder;  // needs to read its internal state
+
  public:
   Record();
   // Returns success or failure.

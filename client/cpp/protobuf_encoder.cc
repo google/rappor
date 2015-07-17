@@ -75,6 +75,9 @@ bool Record::AddString(int id, const std::string& s) {
 ProtobufEncoder::ProtobufEncoder(const Schema& schema, const Deps& deps)
     : schema_(schema) {
   // TODO: instantiate an encoder for each field in the schema
+  for (size_t i = 0; i < schema.fields_.size(); ++i) {
+    //encoders_.push_back(new Encoder(schema.params_list_[i], deps));
+  }
 }
 
 // TODO: destroy the encoders
