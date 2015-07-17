@@ -72,7 +72,7 @@ bool Record::AddString(int id, const std::string& s) {
 // ProtobufEncoder
 //
 
-ProtobufEncoder::ProtobufEncoder(const Schema& schema)
+ProtobufEncoder::ProtobufEncoder(const Schema& schema, const Deps& deps)
     : schema_(schema) {
   // TODO: instantiate an encoder for each field in the schema
 }

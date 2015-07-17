@@ -64,6 +64,15 @@ class IrrRandInterface {
   float q_;
 };
 
+class Deps {
+ public:
+  int cohort;  // bloom
+  Md5Func* md5_func;  // bloom
+  const std::string& client_secret;  // PRR
+  HmacFunc* hmac_func;  // PRR
+  const IrrRandInterface& irr_rand;  // IRR
+};
+
 }  // namespace rappor
 
 #endif  // RAPPOR_DEPS_H_

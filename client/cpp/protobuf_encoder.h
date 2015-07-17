@@ -83,6 +83,11 @@ class Schema {
   void AddOrdinal(int id, const Params& params);
   void AddBoolean(int id, const Params& params);
 
+  // Print a user-friendly version.
+  //
+  // This includes the params.
+  bool Print();
+
  private:
   // Another interface:
   // Array/LL of IDs
@@ -113,7 +118,7 @@ class Record {
 class ProtobufEncoder {
  public:
   // TODO: needs rappor::Deps
-  ProtobufEncoder(const Schema& schema);
+  ProtobufEncoder(const Schema& schema, const Deps& deps);
   ~ProtobufEncoder();
 
 // Shouldn't take encoder, because we need to access the params?

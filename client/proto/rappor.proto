@@ -35,4 +35,31 @@ enum FieldType {
 message Report {
   // RAPPOR report.
   repeated uint64 report = 2;
+
+  // Schema ID?
+  // or field num, report?
+  //
+  // field num, param ID, report?
 }
+
+// Hierarchy:
+
+// Big list of various report types (like Chrome has).  To save space.
+// I guess that is ReportList.  They can be same or different.
+//
+// Cohort goes in here.
+
+
+// ReportSet.  Multiple reports that have to go message?
+// How do you identify them?
+// By the schema?
+
+// RecordReport - the thing that Encode() of message gives you
+
+// FieldReport - individual fields.  Just uint64?  Type is in schema.
+
+
+
+
+
+
