@@ -30,31 +30,28 @@ RecordSchema::~RecordSchema() {
 
 void RecordSchema::AddString(int id, const Params& params) {
   Field f;
-  f.id = id;
   f.field_type = STRING;
+  f.id = id;
+  f.params = params;  // copy?
 
-  // also makes a copy?  This could be a linked list too.
-  params_list_.push_back(params);
   fields_.push_back(f);
 }
 
 void RecordSchema::AddOrdinal(int id, const Params& params) {
   Field f;
-  f.id = id;
   f.field_type = ORDINAL;
+  f.id = id;
+  f.params = params;  // copy?
 
-  // also makes a copy?  This could be a linked list too.
-  params_list_.push_back(params);
   fields_.push_back(f);
 }
 
 void RecordSchema::AddBoolean(int id, const Params& params) {
   Field f;
-  f.id = id;
   f.field_type = BOOLEAN;
+  f.id = id;
+  f.params = params;  // copy?
 
-  // also makes a copy?  This could be a linked list too.
-  params_list_.push_back(params);
   fields_.push_back(f);
 }
 
@@ -78,7 +75,8 @@ ProtobufEncoder::ProtobufEncoder(const RecordSchema& schema, const Deps& deps)
     : schema_(schema) {
   // On construction, instantiate an encoder for each field in the schema.
   for (size_t i = 0; i < schema.fields_.size(); ++i) {
-    encoders_.push_back(new Encoder(schema.params_list_[i], deps));
+    const Params& params = schema.fields_[i].params;
+    encoders_.push_back(new Encoder(params, deps));
   }
 }
 

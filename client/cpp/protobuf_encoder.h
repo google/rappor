@@ -86,12 +86,7 @@ class RecordSchema {
   bool Print();
 
  private:
-  // Another interface:
-  // Array/LL of IDs
-  // Array/LL of field types?
-
   std::vector<Field> fields_;
-  std::vector<Params> params_list_;  // copy of params
 };
 
 union U {
