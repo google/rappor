@@ -267,7 +267,7 @@ int main(int argc, char** argv) {
 
     rappor::Report* report2 = report_list.add_report();
     rappor::StringEncoder string_encoder(kNameField, params, deps);
-    if (string_encoder.EncodeString("STRING", report2)) {
+    if (!string_encoder.EncodeString("STRING", report2)) {
       rappor::log("Error encoding string %s", line.c_str());
       break;
     }
