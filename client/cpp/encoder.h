@@ -48,9 +48,6 @@ class Encoder {
  public:
   Encoder(const Params& params, const Deps& deps);
 
-  // Check this immediately after instantiating.  We are not using exceptions.
-  bool IsValid() const;
-
   // For simulation use only.
   bool _EncodeInternal(const std::string& value, Bits* bloom_out,
                        Bits* prr_out, Bits* irr_out) const;
@@ -62,19 +59,8 @@ class Encoder {
   void GetPrrMasks(const std::string& value, Bits* uniform,
                    Bits* f_mask) const;
 
-  const int num_bits_;
-  const int num_hashes_;
-  const float prob_f_;
-
-  const int cohort_;
-  Md5Func* md5_func_;
-
-  const std::string& client_secret_;
-  HmacFunc* hmac_func_;
-
-  const IrrRandInterface& irr_rand_;
-
-  bool is_valid_;
+  const Params& params_;
+  const Deps& deps_;
 };
 
 }  // namespace rappor

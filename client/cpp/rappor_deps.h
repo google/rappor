@@ -67,7 +67,7 @@ class IrrRandInterface {
 class Deps {
  public:
   Deps(int cohort, Md5Func* md5_func, const std::string& client_secret,
-       HmacFunc* hmac_func, const IrrRandInterface& irr_rand) 
+       HmacFunc* hmac_func, const IrrRandInterface& irr_rand)
       : cohort_(cohort),
         md5_func_(md5_func),
         client_secret_(client_secret),

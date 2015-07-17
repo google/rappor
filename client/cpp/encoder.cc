@@ -53,14 +53,8 @@ static int kMaxBits = sizeof(Bits) * 8;
 //
 
 Encoder::Encoder(const Params& params, const Deps& deps) 
-    : num_bits_(params.num_bits),
-      num_hashes_(params.num_hashes),
-      prob_f_(params.prob_f),
-      cohort_(deps.cohort_),
-      md5_func_(deps.md5_func_),
-      client_secret_(deps.client_secret_),
-      hmac_func_(deps.hmac_func_),
-      irr_rand_(deps.irr_rand_) {
+    : params_(params),
+      deps_(deps) {
 
   // Validity constraints:
   //
@@ -71,23 +65,18 @@ Encoder::Encoder(const Params& params, const Deps& deps)
   // sha256 is long enough:
   //   256 > num_bits + (prob_f resolution * num_bits)
 
-  //num_bits_ = params.num_bits;
-  //num_hashes_ = params.num_hashes;
-  //prob_f_ = params.prob_f;
-
   //log("num_bits: %d", num_bits_);
-  if (num_bits_ > kMaxBits) {
+  if (params_.num_bits > kMaxBits) {
     log("num_bits (%d) can't be bigger than rappor::Bits type: (%d)",
-        num_bits_, kMaxBits);
-    is_valid_ = false;
+        params_.num_bits, kMaxBits);
+    assert(false);
   }
 }
 
-bool Encoder::IsValid() const {
-  return is_valid_;
-}
-
 Bits Encoder::MakeBloomFilter(const std::string& value) const {
+  const int num_bits = params_.num_bits;
+  const int num_hashes = params_.num_hashes;
+
   Bits bloom = 0;
 
   // First do hashing.
@@ -97,7 +86,7 @@ Bits Encoder::MakeBloomFilter(const std::string& value) const {
 
   // Assuming num_cohorts <= 256 , the big endian representation looks like
   // [0 0 0 <cohort>]
-  unsigned char c = cohort_ & 0xFF;
+  unsigned char c = deps_.cohort_ & 0xFF;
   hash_input[0] = '\0';
   hash_input[1] = '\0';
   hash_input[2] = '\0';
@@ -108,14 +97,14 @@ Bits Encoder::MakeBloomFilter(const std::string& value) const {
     hash_input[i + 4] = value[i];
   }
 
-  md5_func_(hash_input, md5);
+  deps_.md5_func_(hash_input, md5);
 
   log("MD5:");
   PrintMd5(md5);
 
   // To determine which bit to set in the bloom filter, use a byte of the MD5.
-  for (int i = 0; i < num_hashes_; ++i) {
-    int bit_to_set = md5[i] % num_bits_;
+  for (int i = 0; i < num_hashes; ++i) {
+    int bit_to_set = md5[i] % num_bits;
     bloom |= 1 << bit_to_set;
     //log("Hash %d, set bit %d", i, bit_to_set);
   }
@@ -128,20 +117,21 @@ void Encoder::GetPrrMasks(const std::string& value, Bits* uniform_out,
   // Create HMAC(secret, value), and use its bits to construct f and uniform
   // bits.
   Sha256Digest sha256;
-  hmac_func_(client_secret_, value, sha256);
+  deps_.hmac_func_(deps_.client_secret_, value, sha256);
 
-  log("secret: %s word: %s sha256:", client_secret_.c_str(), value.c_str());
+  log("secret: %s word: %s sha256:", deps_.client_secret_.c_str(),
+      value.c_str());
   PrintSha256(sha256);
 
   // We should have already checked this.
-  assert(num_bits_ <= 32);
+  assert(params_.num_bits <= 32);
 
-  uint8_t threshold128 = static_cast<uint8_t>(prob_f_ * 128);
+  uint8_t threshold128 = static_cast<uint8_t>(params_.prob_f * 128);
 
   Bits uniform = 0;
   Bits f_mask = 0;
 
-  for (int i = 0; i < num_bits_; ++i) {
+  for (int i = 0; i < params_.num_bits; ++i) {
     uint8_t byte = sha256[i];
 
     uint8_t u_bit = byte & 0x01;  // 1 bit of entropy
@@ -158,7 +148,7 @@ void Encoder::GetPrrMasks(const std::string& value, Bits* uniform_out,
 
 bool Encoder::_EncodeInternal(const std::string& value, Bits* bloom_out,
     Bits* prr_out, Bits* irr_out) const {
-  rappor::log("Encode '%s' cohort %d", value.c_str(), cohort_);
+  rappor::log("Encode '%s' cohort %d", value.c_str(), deps_.cohort_);
 
   Bits bloom = MakeBloomFilter(value);
   *bloom_out = bloom;
@@ -176,10 +166,10 @@ bool Encoder::_EncodeInternal(const std::string& value, Bits* bloom_out,
   // NOTE: These can fail if say a read() from /dev/urandom fails.
   Bits p_bits;
   Bits q_bits;
-  if (!irr_rand_.PMask(&p_bits)) {
+  if (!deps_.irr_rand_.PMask(&p_bits)) {
     return false;
   }
-  if (!irr_rand_.QMask(&q_bits)) {
+  if (!deps_.irr_rand_.QMask(&q_bits)) {
     return false;
   }
 
