@@ -20,22 +20,15 @@ main() {
   local dotd=$2  # .d output name
   shift 2  # rest of args are gcc invocation
 
-  rm --verbose -f $dotd
+  rm --verbose -f $dotd  # in case of failure?
 
-  local tmp="${dotd}.$$"
-
-  # Execute the gcc -MM invocation.  NOTE: We could remove the temp file, but
-  # it's nice for debugging.
-  "$@" > $tmp
-
+  # Execute the gcc -MM invocation.
+  #
   # Change
   #   rappor_sim.o: rappor.sim.cc
   # to
   #   _tmp/rappor_sim.o _tmp/rappor_sim.d : rappor.sim.cc
-
-  sed "s|\($basename\).o|_tmp/\1.o _tmp/\1.d |" \
-    < $tmp \
-    > $dotd
+  "$@" | sed "s|\($basename\).o|_tmp/\1.o _tmp/\1.d |" > $dotd
 }
 
 main "$@"
