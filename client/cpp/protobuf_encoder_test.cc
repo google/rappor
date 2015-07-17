@@ -253,7 +253,9 @@ int main(int argc, char** argv) {
     // list.
     rappor::Record record;
     record.AddString(kNameField, "foo");
+    //record.AddBoolean(kAddressField, false);
     record.AddString(kAddressField, "bar");
+    //record.AddBoolean(kAddressField, false);
 
     rappor::Report* report = report_list.add_report();
     if (!protobuf_encoder.Encode(record, report)) {

@@ -70,7 +70,7 @@ void Record::AddString(int id, const std::string& str) {
 
 void Record::AddOrdinal(int id, int ordinal) {
   Value v;
-  v.field_type = STRING;
+  v.field_type = ORDINAL;
   v.id = id;
   v.ordinal = ordinal;
 
@@ -79,7 +79,7 @@ void Record::AddOrdinal(int id, int ordinal) {
 
 void Record::AddBoolean(int id, bool boolean) {
   Value v;
-  v.field_type = STRING;
+  v.field_type = BOOLEAN;
   v.id = id;
   v.boolean = boolean;
 
@@ -113,7 +113,14 @@ bool ProtobufEncoder::Encode(const Record& record, Report* report) {
   // TODO: Check that the record matches the schema in number of fields and
   // field number.
 
-  for (size_t i = 0; i < record.values_.size(); ++i) {
+  size_t expected_num_values = schema_.fields_.size();
+  size_t num_values = record.values_.size();
+  if (expected_num_values != num_values) {
+    rappor::log("Expected %d values, got %d", expected_num_values, num_values);
+    return false;
+  }
+
+  for (size_t i = 0; i < num_values; ++i) {
     std::string input_word;  // input to RAPPOR algorithm
     const Value& v = record.values_[i];
 
@@ -122,6 +129,13 @@ bool ProtobufEncoder::Encode(const Record& record, Report* report) {
     int expected_field_id = schema_.fields_[i].id;
     if (v.id != expected_field_id) {
       rappor::log("Expected field ID %d, got %d", expected_field_id, v.id);
+      return false;
+    }
+
+    FieldType expected_field_type = schema_.fields_[i].field_type;
+    if (v.field_type != expected_field_type) {
+      rappor::log("Expected field type %d, got %d", expected_field_type,
+          v.field_type);
       return false;
     }
 
