@@ -167,9 +167,11 @@ bool Encoder::_EncodeInternal(const std::string& value, Bits* bloom_out,
   Bits p_bits;
   Bits q_bits;
   if (!deps_.irr_rand_.PMask(&p_bits)) {
+    rappor::log("PMask failed");
     return false;
   }
   if (!deps_.irr_rand_.QMask(&q_bits)) {
+    rappor::log("QMask failed");
     return false;
   }
 

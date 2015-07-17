@@ -155,14 +155,14 @@ bool ProtobufEncoder::Encode(const Record& record, Report* report) {
         assert(0);  // programming error
     }
     Bits irr;
-    bool ok = encoders_[i]->Encode(input_word, &irr);
-    report->add_field_id(v.id);
-    report->add_bits(irr);
 
-    if (!ok) {
+    if (!encoders_[i]->Encode(input_word, &irr)) {
       rappor::log("Failed to encode variable %d, aborting record", i);
       return false;
     }
+
+    report->add_field_id(v.id);
+    report->add_bits(irr);
   }
 
   return true;
@@ -172,7 +172,8 @@ bool ProtobufEncoder::Encode(const Record& record, Report* report) {
 // StringEncoder
 //
 
-StringEncoder::StringEncoder(int id, const Params& params, const Deps& deps) {
+StringEncoder::StringEncoder(int id, const Params& params, const Deps& deps) 
+    : id_(id) {
   schema_ = new RecordSchema();  // we need to own it
   schema_->AddString(id, params);
   encoder_ = new ProtobufEncoder(*schema_, deps);
