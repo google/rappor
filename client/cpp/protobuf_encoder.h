@@ -65,14 +65,9 @@ class ReportList;
 
 // TODO: Should be private?
 struct Field {
-  int id;
-
+  FieldType field_type;  // matches Value
+  int id;  // matches value
   Params params;
-
-  // Instantiated with rappor::Deps, params, etc.
-  Encoder* encoder;
-
-  FieldType field_type;
 };
 
 class RecordSchema {
@@ -99,10 +94,17 @@ class RecordSchema {
   std::vector<Params> params_list_;  // copy of params
 };
 
-// TODO: Should be private?
+union U {
+  std::string* str;
+  int ordinal;
+  bool boolean;
+};
+
+// Tagged union.  TODO: should be private?
 struct Value {
-  FieldType field_type;
-  Bits report;  // encoded report
+  FieldType field_type;  // matches Value
+  int id;  // matches value
+  U value;
 };
 
 class Record {
@@ -110,9 +112,9 @@ class Record {
 
  public:
   // Returns success or failure.
-  bool AddString(int id, const std::string& s);
-  bool AddOrdinal(int id, int v);
-  bool AddBoolean(int id, bool b);
+  bool AddString(int id, const std::string& str);
+  bool AddOrdinal(int id, int ordinal);
+  bool AddBoolean(int id, bool boolean);
 
  private:
   std::vector<int> ids_;  // field IDs
@@ -130,22 +132,6 @@ class ProtobufEncoder {
   ProtobufEncoder(const RecordSchema& schema, const Deps& deps);
   ~ProtobufEncoder();
 
-// Shouldn't take encoder, because we need to access the params?
-// It can construct internal encoders.
-
-// metric_name, {Field TYPE Params}, const Deps& deps;
-
-// metric_name, {Field1 Type1 Params1, Field2 Type2 Params2}, const Deps& deps;
-//
-// ClientValues values;
-// values.AddString(Field, const string& str);
-// values.AddInteger(Field, int i);
-//
-// Report report;  // protobuf of stuff
-// // FAIL if params don't match schema declared to constructor.
-// bool ok = protobuf_encoder.Encode(values, &report);
-// report.SerializeAsString();
-
   // Given a string, appends to the given the report list
   // Can raise if the Record is of the wrong type?
   bool Encode(const Record& record, Report* report);
@@ -154,29 +140,6 @@ class ProtobufEncoder {
   const RecordSchema& schema_;
   std::vector<Encoder*> encoders_;
 };
-
-// Encoder -> StringEncoder?
-
-// TODO: This should encompass association?
-//
-// ProtobufEncoder should take
-//
-// { var_name, type, params }+
-//
-// Shared params:
-//
-// cohort, md5_func, client_secret, hmac_func, irr_rand
-//
-// Then it will instantiate its own encoders internally.
-//
-// RapporDeps -- what does
-//
-// ClientInfo: cohort, client_secret
-// RapporDeps: md5_func, hmac_func, irr_rand
-//
-// ClientInfo, Params, Deps
-//
-// ClientInfo, { name, type, params }+ Deps
 
 }  // namespace rappor
 
