@@ -59,11 +59,31 @@ void RecordSchema::AddBoolean(int id, const Params& params) {
 // Record
 //
 
-bool Record::AddString(int id, const std::string& s) {
-  field_types_.push_back(STRING);
-  ids_.push_back(id);
-  strings_.push_back(s);
-  return true;
+void Record::AddString(int id, const std::string& str) {
+  Value v;
+  v.field_type = STRING;
+  v.id = id;
+  v.str = str;
+
+  values_.push_back(v);
+}
+
+void Record::AddOrdinal(int id, int ordinal) {
+  Value v;
+  v.field_type = STRING;
+  v.id = id;
+  v.ordinal = ordinal;
+
+  values_.push_back(v);
+}
+
+void Record::AddBoolean(int id, bool boolean) {
+  Value v;
+  v.field_type = STRING;
+  v.id = id;
+  v.boolean = boolean;
+
+  values_.push_back(v);
 }
 
 
@@ -93,17 +113,19 @@ bool ProtobufEncoder::Encode(const Record& record, Report* report) {
   // TODO: Check that the record matches the schema in number of fields and
   // field number.
 
-  for (size_t i = 0; i < record.ids_.size(); ++i) {
+  for (size_t i = 0; i < record.values_.size(); ++i) {
     std::string input_word;  // input to RAPPOR algorithm
-    switch (record.field_types_[i]) {
+    const Value& v = record.values_[i];
+    switch (v.field_type) {
       case STRING:
-        input_word.assign(record.strings_[i]);
+        input_word.assign(v.str);
         break;
-      //case ORDINAL:
-      //  input_word.assign(record.ordinals_[i]);
-      //  break;
+      case ORDINAL:
+        //input_word.assign(record.ordinals_[i]);
+        input_word.assign("TODO");
+        break;
       case BOOLEAN:
-        input_word.assign(record.booleans_[i] ? "\x01" : "\x00");
+        input_word.assign(v.boolean ? "\x01" : "\x00");
         break;
     }
     Bits irr;

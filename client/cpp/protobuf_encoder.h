@@ -89,36 +89,28 @@ class RecordSchema {
   std::vector<Field> fields_;
 };
 
-union U {
-  std::string* str;
-  int ordinal;
-  bool boolean;
-};
-
-// Tagged union.  TODO: should be private?
+// Like a tagged union, without really using a union.  TODO: should be private?
 struct Value {
   FieldType field_type;  // matches Value
   int id;  // matches value
-  U value;
+
+  // Not using union because of string constructor.  And also the lifetime of
+  // rappor::Value objects is very short-lived.
+  std::string str;
+  int ordinal;
+  bool boolean;
 };
 
 class Record {
   friend class ProtobufEncoder;  // needs to read our internal state
 
  public:
-  // Returns success or failure.
-  bool AddString(int id, const std::string& str);
-  bool AddOrdinal(int id, int ordinal);
-  bool AddBoolean(int id, bool boolean);
+  void AddString(int id, const std::string& str);
+  void AddOrdinal(int id, int ordinal);
+  void AddBoolean(int id, bool boolean);
 
  private:
-  std::vector<int> ids_;  // field IDs
-  std::vector<int> field_types_;  // field types
-
-  // NOTE: Use a tagged union?
-  std::vector<std::string> strings_;
-  std::vector<int> ordinals_;
-  std::vector<bool> booleans_;
+  std::vector<Value> values_;
 };
 
 class ProtobufEncoder {
