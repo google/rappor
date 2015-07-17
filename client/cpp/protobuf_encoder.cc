@@ -139,6 +139,7 @@ bool ProtobufEncoder::Encode(const Record& record, Report* report) {
     }
     Bits irr;
     bool ok = encoders_[i]->Encode(input_word, &irr);
+    report->add_field_id(v.id);
     report->add_bits(irr);
 
     if (!ok) {

@@ -1,3 +1,5 @@
+// Wire format for RAPPOR reports.
+
 package rappor;
 
 // These collection parameters must be known to the RAPPOR analysis code.
@@ -21,15 +23,11 @@ enum FieldType {
 // together.
 
 message Report {
+  // ID of field.
+  repeated int32 field_id = 1;
+
   // RAPPOR report.
   repeated uint64 bits = 2;
-
-  // Schema ID?
-  // or field num, report?
-  //
-  // field num, param ID, report?
-
-  // field ID?
 }
 
 message ReportList {
@@ -46,20 +44,3 @@ message ReportList {
   // RecordSchema could populate this directly?
   // Or you can put an application-specific integer ID, to save size.
 }
-
-// Hierarchy:
-
-// Big list of various report types (like Chrome has).  To save space.
-// I guess that is ReportList.  They can be same or different.
-//
-// Cohort goes in here.
-
-
-// ReportSet.  Multiple reports that have to go message?
-// How do you identify them?
-// By the schema?
-
-// RecordReport - the thing that Encode() of message gives you
-
-// FieldReport - individual fields.  Just uint64?  Type is in schema.
-
