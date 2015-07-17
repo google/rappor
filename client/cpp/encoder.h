@@ -16,12 +16,13 @@
 #define RAPPOR_H_
 
 #include <string>
-#include <stdint.h>  // uint64_t
 
-//#include "rappor.pb.h"
 #include "rappor_deps.h"  // for dependency injection
 
 namespace rappor {
+
+// For debug logging
+void log(const char* fmt, ...);
 
 // (NOTE: leveldb uses this raw-struct style for leveldb::Options)
 
@@ -75,9 +76,6 @@ class Encoder {
 
   bool is_valid_;
 };
-
-// For debug logging
-void log(const char* fmt, ...);
 
 }  // namespace rappor
 

@@ -28,7 +28,29 @@ void log(const char* fmt, ...) {
   fprintf(stderr, "\n");
 }
 
+void PrintMd5(Md5Digest md5) {
+  // GAH!  sizeof(md5) does NOT work.  Because that's a pointer.
+  for (size_t i = 0; i < sizeof(Md5Digest); ++i) {
+    //printf("[%d]\n", i);
+    fprintf(stderr, "%02x", md5[i]);
+  }
+  fprintf(stderr, "\n");
+}
+
+void PrintSha256(Sha256Digest h) {
+  // GAH!  sizeof(md5) does NOT work.  Because that's a pointer.
+  for (size_t i = 0; i < sizeof(Sha256Digest); ++i) {
+    //printf("[%d]\n", i);
+    fprintf(stderr, "%02x", h[i]);
+  }
+  fprintf(stderr, "\n");
+}
+
 static int kMaxBits = sizeof(Bits) * 8;
+
+//
+// Encoder
+//
 
 Encoder::Encoder(const Params& params, const Deps& deps) 
     : num_bits_(params.num_bits),
@@ -63,24 +85,6 @@ Encoder::Encoder(const Params& params, const Deps& deps)
 
 bool Encoder::IsValid() const {
   return is_valid_;
-}
-
-void PrintMd5(Md5Digest md5) {
-  // GAH!  sizeof(md5) does NOT work.  Because that's a pointer.
-  for (size_t i = 0; i < sizeof(Md5Digest); ++i) {
-    //printf("[%d]\n", i);
-    fprintf(stderr, "%02x", md5[i]);
-  }
-  fprintf(stderr, "\n");
-}
-
-void PrintSha256(Sha256Digest h) {
-  // GAH!  sizeof(md5) does NOT work.  Because that's a pointer.
-  for (size_t i = 0; i < sizeof(Sha256Digest); ++i) {
-    //printf("[%d]\n", i);
-    fprintf(stderr, "%02x", h[i]);
-  }
-  fprintf(stderr, "\n");
 }
 
 Bits Encoder::MakeBloomFilter(const std::string& value) const {
