@@ -19,16 +19,16 @@
 namespace rappor {
 
 //
-// Schema
+// RecordSchema
 //
 
-Schema::Schema() {
+RecordSchema::RecordSchema() {
 }
 
-Schema::~Schema() {
+RecordSchema::~RecordSchema() {
 }
 
-void Schema::AddString(int id, const Params& params) {
+void RecordSchema::AddString(int id, const Params& params) {
   Field f;
   f.id = id;
   f.params = params;  // make a copy
@@ -38,7 +38,7 @@ void Schema::AddString(int id, const Params& params) {
   fields_.push_back(f);
 }
 
-void Schema::AddOrdinal(int id, const Params& params) {
+void RecordSchema::AddOrdinal(int id, const Params& params) {
   Field f;
   f.id = id;
   f.params = params;  // make a copy
@@ -48,7 +48,7 @@ void Schema::AddOrdinal(int id, const Params& params) {
   fields_.push_back(f);
 }
 
-void Schema::AddBoolean(int id, const Params& params) {
+void RecordSchema::AddBoolean(int id, const Params& params) {
   Field f;
   f.id = id;
   f.params = params;  // make a copy
@@ -72,7 +72,7 @@ bool Record::AddString(int id, const std::string& s) {
 // ProtobufEncoder
 //
 
-ProtobufEncoder::ProtobufEncoder(const Schema& schema, const Deps& deps)
+ProtobufEncoder::ProtobufEncoder(const RecordSchema& schema, const Deps& deps)
     : schema_(schema) {
   // TODO: instantiate an encoder for each field in the schema
   for (size_t i = 0; i < schema.fields_.size(); ++i) {

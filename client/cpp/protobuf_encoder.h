@@ -46,7 +46,7 @@ class ReportList;
 //                      scoped_ptr<Sample> sample);
 
 // Assumptions:
-// - client doesn't want to change the protobuf for new metric!  Schema is
+// - client doesn't want to change the protobuf for new metric!  RecordSchema is
 // application-independent.
 
 // Flow;
@@ -75,12 +75,12 @@ struct Field {
   FieldType field_type;
 };
 
-class Schema {
-  friend class ProtobufEncoder;  // needs to read its internal state
+class RecordSchema {
+  friend class ProtobufEncoder;  // needs to read our internal state
 
  public:
-  Schema();
-  ~Schema();
+  RecordSchema();
+  ~RecordSchema();
   void AddString(int id, const Params& params);
   void AddOrdinal(int id, const Params& params);
   void AddBoolean(int id, const Params& params);
@@ -106,7 +106,7 @@ struct Value {
 };
 
 class Record {
-  friend class ProtobufEncoder;  // needs to read its internal state
+  friend class ProtobufEncoder;  // needs to read our internal state
 
  public:
   Record();
@@ -122,7 +122,7 @@ class Record {
 class ProtobufEncoder {
  public:
   // TODO: needs rappor::Deps
-  ProtobufEncoder(const Schema& schema, const Deps& deps);
+  ProtobufEncoder(const RecordSchema& schema, const Deps& deps);
   ~ProtobufEncoder();
 
 // Shouldn't take encoder, because we need to access the params?
@@ -146,7 +146,7 @@ class ProtobufEncoder {
   bool Encode(const Record& record, ReportList* report_list);
 
  private:
-  const Schema& schema_;
+  const RecordSchema& schema_;
   std::vector<Encoder*> encoders_;
 };
 
