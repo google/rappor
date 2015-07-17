@@ -142,7 +142,9 @@ bool ProtobufEncoder::Encode(const Record& record, Report* report) {
         input_word.assign(v.str);
         break;
       case ORDINAL:
-        //input_word.assign(record.ordinals_[i]);
+        // TODO: integer to string.  Big endian?
+        // Should we use uint32_t ?
+        //input_word.assign(v.ordinal);
         input_word.assign("TODO");
         break;
       case BOOLEAN:
@@ -185,6 +187,29 @@ StringEncoder::~StringEncoder() {
 bool StringEncoder::EncodeString(const std::string& str, Report* report) {
   Record record;
   record.AddString(id_, str);
+
+  return encoder_->Encode(record, report);
+}
+
+//
+// OrdinalEncoder
+//
+
+OrdinalEncoder::OrdinalEncoder(int id, const Params& params, const Deps& deps) 
+    : id_(id) {
+  schema_ = new RecordSchema();  // we need to own it
+  schema_->AddOrdinal(id, params);
+  encoder_ = new ProtobufEncoder(*schema_, deps);
+}
+
+OrdinalEncoder::~OrdinalEncoder() {
+  delete schema_;
+  delete encoder_;
+}
+
+bool OrdinalEncoder::EncodeOrdinal(int ordinal, Report* report) {
+  Record record;
+  record.AddOrdinal(id_, ordinal);
 
   return encoder_->Encode(record, report);
 }

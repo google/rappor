@@ -274,6 +274,15 @@ int main(int argc, char** argv) {
 
     rappor::log("----------");
 
+    rappor::Report* report3 = report_list.add_report();
+    rappor::OrdinalEncoder ordinal_encoder(kNameField, params, deps);
+    if (!ordinal_encoder.EncodeOrdinal(10, report3)) {
+      rappor::log("Error encoding ordinal %s", line.c_str());
+      break;
+    }
+
+    rappor::log("----------");
+
     rappor::log("RecordReport [%s]", report->DebugString().c_str());
   }
 

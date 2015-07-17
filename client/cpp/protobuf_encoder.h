@@ -138,6 +138,24 @@ class StringEncoder {
   ProtobufEncoder* encoder_;
 };
 
+// NOTE: Could be done with templates and specialization, but this is simpler.
+//
+// Encoder<std::string> foo;
+// Encoder.encode("foo");
+
+class OrdinalEncoder {
+ public:
+  OrdinalEncoder(int id, const Params& params, const Deps& deps);
+  ~OrdinalEncoder();
+
+  bool EncodeOrdinal(int ordinal, Report* report);
+
+ private:
+  int id_;
+  RecordSchema* schema_;
+  ProtobufEncoder* encoder_;
+};
+
 }  // namespace rappor
 
 #endif  // PROTOBUF_ENCODER_H_
