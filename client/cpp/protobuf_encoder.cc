@@ -107,11 +107,9 @@ ProtobufEncoder::~ProtobufEncoder() {
 }
 
 bool ProtobufEncoder::Encode(const Record& record, Report* report) {
-  // Go through all the values.  Convert them to strings to be encoded, and
-  // then push them through the correct encoder.
-  //
-  // TODO: Check that the record matches the schema in number of fields and
-  // field number.
+  // Go through all the values in the Record.  Convert them to strings to be
+  // encoded, push them through the correct encoder, and add the result to to
+  // the Report.
 
   size_t expected_num_values = schema_.fields_.size();
   size_t num_values = record.values_.size();
@@ -154,8 +152,8 @@ bool ProtobufEncoder::Encode(const Record& record, Report* report) {
         rappor::log("Unexpected field type %d", v.field_type);
         assert(0);  // programming error
     }
-    Bits irr;
 
+    Bits irr;
     if (!encoders_[i]->Encode(input_word, &irr)) {
       rappor::log("Failed to encode variable %d, aborting record", i);
       return false;
