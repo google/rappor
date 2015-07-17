@@ -150,6 +150,9 @@ bool ProtobufEncoder::Encode(const Record& record, Report* report) {
       case BOOLEAN:
         input_word.assign(v.boolean ? "\x01" : "\x00");
         break;
+      default:
+        rappor::log("Unexpected field type %d", v.field_type);
+        assert(0);  // programming error
     }
     Bits irr;
     bool ok = encoders_[i]->Encode(input_word, &irr);
