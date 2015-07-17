@@ -78,6 +78,17 @@ Encoder::Encoder(
   }
 }
 
+Encoder::Encoder(const Params& params, const Deps& deps) 
+    : num_bits_(params.num_bits),
+      num_hashes_(params.num_hashes),
+      prob_f_(params.prob_f),
+      cohort_(deps.cohort_),
+      md5_func_(deps.md5_func_),
+      client_secret_(deps.client_secret_),
+      hmac_func_(deps.hmac_func_),
+      irr_rand_(deps.irr_rand_) {
+}
+
 bool Encoder::IsValid() const {
   return is_valid_;
 }

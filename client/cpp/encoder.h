@@ -60,6 +60,8 @@ class Encoder {
       const std::string& client_secret, HmacFunc* hmac_func, // PRR
       const IrrRandInterface& irr_rand);  // IRR
 
+  Encoder(const Params& params, const Deps& deps);
+
   // Check this immediately after instantiating.  We are not using exceptions.
   bool IsValid() const;
 

@@ -197,6 +197,9 @@ int main(int argc, char** argv) {
       return 1;
     }
 
+    rappor::Deps deps(cohort, rappor::Md5, client_str, rappor::Hmac,
+        *irr_rand);
+
     // For now, construct a new encoder every time.  We could construct one for
     // each client.
     rappor::Encoder e(
