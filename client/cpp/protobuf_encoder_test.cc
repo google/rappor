@@ -156,7 +156,7 @@ int main(int argc, char** argv) {
 
   rappor::log("HI");
 
-  rappor::ReportList reports;
+  rappor::ReportList report_list;
 
   while (true) {
     std::getline(std::cin, line);  // no trailing newline
@@ -180,7 +180,9 @@ int main(int argc, char** argv) {
     // substr(pos, length) not pos, end
     std::string client_str = line.substr(0, comma1_pos);  // everything before comma
     // everything between first and second comma
-    std::string cohort_str = line.substr(comma1_pos + 1, comma2_pos - comma1_pos);
+    std::string cohort_str = line.substr(comma1_pos + 1,
+        comma2_pos - comma1_pos);
+
     std::string value = line.substr(comma2_pos + 1);  // everything after
 
     int cohort;
@@ -230,8 +232,6 @@ int main(int argc, char** argv) {
 
     std::cout << "\n";
 
-    reports.add_report(irr_str);
-
     //
     // Test out protobuf API
     //
@@ -248,23 +248,21 @@ int main(int argc, char** argv) {
     record.AddString(0, "foo");
     record.AddString(1, "bar");
 
-    rappor::RecordReport record_report;
+    rappor::Report* report = report_list.add_report();
 
-    if (!protobuf_encoder.Encode(record, &record_report)) {
+    if (!protobuf_encoder.Encode(record, report)) {
       rappor::log("Error encoding record %s", line.c_str());
       break;
     }
 
-    rappor::log("RecordReport [%s]", record_report.DebugString().c_str());
+    rappor::log("RecordReport [%s]", report->DebugString().c_str());
   }
 
-  rappor::ReportListHeader* header = reports.mutable_header();
-  // client params?
-  header->set_metric_name("metric-name");
-  header->set_cohort(99);  // TODO: Fix this
+  report_list.set_cohort(99);  // TODO: Fix this and assign.
+
   //header->mutable_params()->CopyFrom(params);
 
-  rappor::log("report list %s", reports.DebugString().c_str());
+  rappor::log("report list [%s]", report_list.DebugString().c_str());
 
   rappor::log("DONE");
 

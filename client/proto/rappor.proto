@@ -11,18 +11,6 @@ message EncodingParams {
 
   // TODO: Name of hash function?
 }
-
-message ReportListHeader {
-  optional string metric_name = 1;
-  optional int32 cohort = 2;
-  optional EncodingParams params = 3;
-}
-
-message ReportList {
-  optional ReportListHeader header = 1;
-  repeated bytes report = 2;
-}
-
 enum FieldType {
   STRING = 0;
   ORDINAL = 1;
@@ -32,7 +20,7 @@ enum FieldType {
 // A single observation, which may contain multiple variables encoded reported
 // together.
 
-message RecordReport {
+message Report {
   // RAPPOR report.
   repeated uint64 bits = 2;
 
@@ -40,6 +28,23 @@ message RecordReport {
   // or field num, report?
   //
   // field num, param ID, report?
+
+  // field ID?
+}
+
+message ReportList {
+  // NOTE: These could be of heterogeneous types.  So should each report
+  // contain a schema identifier?  That's probably the easiest.
+  repeated Report report = 1;
+
+  // Header fields
+  optional int32 cohort = 2;
+
+  // optional EncodingParams params = 2;
+  // Stuff about schema can be here, e.g. params
+
+  // RecordSchema could populate this directly?
+  // Or you can put an application-specific integer ID, to save size.
 }
 
 // Hierarchy:
@@ -57,9 +62,4 @@ message RecordReport {
 // RecordReport - the thing that Encode() of message gives you
 
 // FieldReport - individual fields.  Just uint64?  Type is in schema.
-
-
-
-
-
 

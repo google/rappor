@@ -88,9 +88,12 @@ ProtobufEncoder::~ProtobufEncoder() {
   }
 }
 
-bool ProtobufEncoder::Encode(const Record& record, RecordReport* report) {
+bool ProtobufEncoder::Encode(const Record& record, Report* report) {
   // Go through all the values.  Convert them to strings to be encoded, and
   // then push them through the correct encoder.
+  //
+  // TODO: Check that the record matches the schema in number of fields and
+  // field number.
 
   for (size_t i = 0; i < record.ids_.size(); ++i) {
     std::string input_word;  // input to RAPPOR algorithm
