@@ -63,7 +63,6 @@ void RecordSchema::AddBoolean(int id, const Params& params) {
 //
 
 bool Record::AddString(int id, const std::string& s) {
-  // TODO: need to encode them
   return true;
 }
 
@@ -88,7 +87,28 @@ ProtobufEncoder::~ProtobufEncoder() {
 }
 
 bool ProtobufEncoder::Encode(const Record& record, ReportList* report_list) {
-  // TODO: Go through all the values.
+  // Go through all the values.  Convert them to strings to be encoded.
+
+  for (size_t i = 0; i < record.ids_.size(); ++i) {
+    std::string input_word;  // input to RAPPOR algorithm
+    switch (record.field_types_[i]) {
+      case STRING:
+        input_word.assign(record.strings_[i]);
+        break;
+      //case ORDINAL:
+      //  input_word.assign(record.ordinals_[i]);
+      //  break;
+      case BOOLEAN:
+        input_word.assign(record.booleans_[i] ? "\0x01" : "\0x00");
+        break;
+    }
+    Bits irr;
+    bool ok = encoders_[i]->Encode(input_word, &irr);
+    if (!ok) {
+      rappor::log("Failed to encode variable %d, aborting record", i);
+      return false;
+    }
+  }
 
   return true;
 }

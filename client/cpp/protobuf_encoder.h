@@ -113,10 +113,16 @@ class Record {
   // Returns success or failure.
   bool AddString(int id, const std::string& s);
   bool AddOrdinal(int id, int v);
-  bool AddBoolean(int id, int b);
+  bool AddBoolean(int id, bool b);
 
  private:
-  std::vector<Value> values_;
+  std::vector<int> ids_;  // field IDs
+  std::vector<int> field_types_;  // field types
+
+  // NOTE: Use a tagged union?
+  std::vector<std::string> strings_;
+  std::vector<int> ordinals_;
+  std::vector<bool> booleans_;
 };
 
 class ProtobufEncoder {
