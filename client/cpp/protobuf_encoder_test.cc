@@ -157,6 +157,8 @@ int main(int argc, char** argv) {
   rappor::log("HI");
 
   rappor::ReportList report_list;
+  // TODO: ReportList for each client, and assign the correct cohort.
+  report_list.set_cohort(99);
 
   while (true) {
     std::getline(std::cin, line);  // no trailing newline
@@ -233,23 +235,27 @@ int main(int argc, char** argv) {
     std::cout << "\n";
 
     //
-    // Test out protobuf API
+    // Test out ProtobufEncoder
     //
 
-    // Set up schema
-    rappor::RecordSchema s;
-    // Add two fields
-    s.AddString(0, params);
-    s.AddString(1, params);
+    const int kNameField = 1;
+    const int kAddressField = 2;
 
+    // Set up schema with two fields.
+    rappor::RecordSchema s;
+    s.AddString(kNameField, params);
+    s.AddString(kAddressField, params);
+
+    // Instantiate encoder.
     rappor::ProtobufEncoder protobuf_encoder(s, deps);
 
+    // Construct a recorder, and then encode it into a new entry in the report
+    // list.
     rappor::Record record;
-    record.AddString(0, "foo");
-    record.AddString(1, "bar");
+    record.AddString(kNameField, "foo");
+    record.AddString(kAddressField, "bar");
 
     rappor::Report* report = report_list.add_report();
-
     if (!protobuf_encoder.Encode(record, report)) {
       rappor::log("Error encoding record %s", line.c_str());
       break;
@@ -258,13 +264,7 @@ int main(int argc, char** argv) {
     rappor::log("RecordReport [%s]", report->DebugString().c_str());
   }
 
-  report_list.set_cohort(99);  // TODO: Fix this and assign.
-
-  //header->mutable_params()->CopyFrom(params);
-
   rappor::log("report list [%s]", report_list.DebugString().c_str());
-
-  rappor::log("DONE");
 
   // Cleanup
   /*
