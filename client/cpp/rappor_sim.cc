@@ -197,14 +197,12 @@ int main(int argc, char** argv) {
       return 1;
     }
 
-    rappor::Deps deps(cohort, rappor::Md5, client_str, rappor::Hmac,
-        *irr_rand);
+    rappor::Deps deps(cohort, rappor::Md5, client_str /*client_secret*/,
+                      rappor::Hmac, *irr_rand);
 
     // For now, construct a new encoder every time.  We could construct one for
     // each client.
-    rappor::Encoder e(
-        params, cohort, rappor::Md5,
-        client_str /*client_secret*/, rappor::Hmac, *irr_rand);
+    rappor::Encoder e(params, deps);
 
     //rappor::log("CLIENT %s VALUE %s COHORT %d", client_str.c_str(),
     //    value.c_str(), cohort);

@@ -70,7 +70,7 @@ class Deps {
        HmacFunc* hmac_func, const IrrRandInterface& irr_rand) 
       : cohort_(cohort),
         md5_func_(md5_func),
-        client_secret_(client_secret_),
+        client_secret_(client_secret),
         hmac_func_(hmac_func),
         irr_rand_(irr_rand) {
   }

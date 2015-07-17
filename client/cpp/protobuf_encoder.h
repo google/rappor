@@ -149,7 +149,7 @@ class ProtobufEncoder {
 
   // Given a string, appends to the given the report list
   // Can raise if the Record is of the wrong type?
-  bool Encode(const Record& record, ReportList* report_list);
+  bool Encode(const Record& record, RecordReport* report);
 
  private:
   const RecordSchema& schema_;

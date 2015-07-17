@@ -73,9 +73,9 @@ bool Record::AddString(int id, const std::string& s) {
 
 ProtobufEncoder::ProtobufEncoder(const RecordSchema& schema, const Deps& deps)
     : schema_(schema) {
-  // TODO: instantiate an encoder for each field in the schema
+  // On construction, instantiate an encoder for each field in the schema.
   for (size_t i = 0; i < schema.fields_.size(); ++i) {
-    //encoders_.push_back(new Encoder(schema.params_list_[i], deps));
+    encoders_.push_back(new Encoder(schema.params_list_[i], deps));
   }
 }
 
@@ -86,8 +86,9 @@ ProtobufEncoder::~ProtobufEncoder() {
   }
 }
 
-bool ProtobufEncoder::Encode(const Record& record, ReportList* report_list) {
-  // Go through all the values.  Convert them to strings to be encoded.
+bool ProtobufEncoder::Encode(const Record& record, RecordReport* report) {
+  // Go through all the values.  Convert them to strings to be encoded, and
+  // then push them through the correct encoder.
 
   for (size_t i = 0; i < record.ids_.size(); ++i) {
     std::string input_word;  // input to RAPPOR algorithm
@@ -104,6 +105,8 @@ bool ProtobufEncoder::Encode(const Record& record, ReportList* report_list) {
     }
     Bits irr;
     bool ok = encoders_[i]->Encode(input_word, &irr);
+    report->add_bits(irr);
+
     if (!ok) {
       rappor::log("Failed to encode variable %d, aborting record", i);
       return false;

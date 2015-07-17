@@ -32,9 +32,9 @@ enum FieldType {
 // A single observation, which may contain multiple variables encoded reported
 // together.
 
-message Report {
+message RecordReport {
   // RAPPOR report.
-  repeated uint64 report = 2;
+  repeated uint64 bits = 2;
 
   // Schema ID?
   // or field num, report?
