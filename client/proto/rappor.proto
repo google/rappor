@@ -22,3 +22,17 @@ message ReportList {
   optional ReportListHeader header = 1;
   repeated bytes report = 2;
 }
+
+enum FieldType {
+  STRING = 0;
+  ORDINAL = 1;
+  BOOLEAN = 2;
+}
+
+// A single observation, which may contain multiple variables encoded reported
+// together.
+
+message Report {
+  // RAPPOR report.
+  repeated uint64 report = 2;
+}

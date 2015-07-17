@@ -21,15 +21,11 @@
 
 #include "encoder.h"  // for Params; maybe that should be in rappor_deps?
 #include "rappor_deps.h"  // for dependency injection
+#include "rappor.pb.h"
 
 namespace rappor {
 
 class ReportList;
-
-class Report {
-  // AddString
-  // AddInteger?
-};
 
 // Chrome example:
 //
@@ -61,27 +57,38 @@ class Report {
 
 // TODO: Dump the schema metadata at build time?
 
-enum FieldType {
-  kString = 0,
-  kOrdinal,
-  kBoolean,
-};
+//enum FieldType {
+//  kString = 0,
+//  kOrdinal,
+//  kBoolean
+//};
 
 // TODO: Should be private?
 struct Field {
   int id;
+
   Params params;
+
+  // Instantiated with rappor::Deps, params, etc.
+  Encoder* encoder;
+
   FieldType field_type;
 };
 
 class Schema {
  public:
   Schema();
+  ~Schema();
   void AddString(int id, const Params& params);
   void AddOrdinal(int id, const Params& params);
   void AddBoolean(int id, const Params& params);
 
  private:
+  // Another interface:
+  // Array/LL of IDs
+  // Array/LL of encoders
+  // Array/LL of field types?
+
   std::vector<Field> fields_;
 };
 
@@ -94,9 +101,11 @@ struct Value {
 class Record {
  public:
   Record();
-  void AddString(int id, const std::string& s);
-  void AddOrdinal(int id, int v);
-  void AddBoolean(int id, int b);
+  // Returns success or failure.
+  bool AddString(int id, const std::string& s);
+  bool AddOrdinal(int id, int v);
+  bool AddBoolean(int id, int b);
+
  private:
   std::vector<Value> values_;
 };
@@ -105,6 +114,7 @@ class ProtobufEncoder {
  public:
   // TODO: needs rappor::Deps
   ProtobufEncoder(const Schema& schema);
+  ~ProtobufEncoder();
 
 // Shouldn't take encoder, because we need to access the params?
 // It can construct internal encoders.
@@ -128,6 +138,7 @@ class ProtobufEncoder {
 
  private:
   const Schema& schema_;
+  std::vector<Encoder*> encoders_;
 };
 
 // Encoder -> StringEncoder?
