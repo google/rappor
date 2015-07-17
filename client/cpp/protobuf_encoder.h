@@ -17,8 +17,9 @@
 
 #include <string>
 #include <stdint.h>  // uint64_t
+#include <vector>
 
-#include "encoder.h"
+#include "encoder.h"  // for Params; maybe that should be in rappor_deps?
 #include "rappor_deps.h"  // for dependency injection
 
 namespace rappor {
@@ -48,9 +49,53 @@ class Report {
 // void RecordSampleObj(const std::string& metric_name,
 //                      scoped_ptr<Sample> sample);
 
+// Assumptions:
+// - client doesn't want to change the protobuf for new metric!  Schema is
+// application-independent.
+
+// Flow;
+//
+// Initialize ProtobufEncoder with a schema.
+//
+// Then send it records.
+
+// TODO: Dump the schema metadata at build time?
+
+enum FieldType {
+  kString = 0,
+  kOrdinal,
+  kBoolean,
+};
+
+struct Field {
+  int id;
+  Params params;
+  FieldType field_type;
+};
+
+class Schema {
+ public:
+  Schema();
+  void AddString(int id, const Params& params);
+  void AddOrdinal(int id, const Params& params);
+  void AddBoolean(int id, const Params& params);
+
+ private:
+  std::vector<Field> fields_;
+};
+
+class Record {
+ public:
+  Record();
+  void AddString(int id, const std::string& s);
+  void AddOrdinal(int id, int v);
+  void AddBoolean(int id, int b);
+ private:
+};
+
 class ProtobufEncoder {
  public:
-  ProtobufEncoder(const char* metric_name, const Encoder& encoder);
+  ProtobufEncoder(const Schema& schema);
 
 // Shouldn't take encoder, because we need to access the params?
 // It can construct internal encoders.
@@ -69,8 +114,11 @@ class ProtobufEncoder {
 // report.SerializeAsString();
 
   // Given a string, appends to the given the report list
-  bool Encode(const Report& report, ReportList* report_list);
+  // Can raise if the Record is of the wrong type?
+  bool Encode(const Record& record, ReportList* report_list);
+
  private:
+  const Schema& schema_;
 };
 
 // Encoder -> StringEncoder?

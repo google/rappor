@@ -18,11 +18,11 @@
 
 namespace rappor {
 
-ProtobufEncoder::ProtobufEncoder(const char* metric_name,
-                                 const Encoder& encoder) {
+ProtobufEncoder::ProtobufEncoder(const Schema& schema)
+    : schema_(schema) {
 }
 
-bool ProtobufEncoder::Encode(const Report& value, ReportList* report_list) {
+bool ProtobufEncoder::Encode(const Record& record, ReportList* report_list) {
   return true;
 }
 
