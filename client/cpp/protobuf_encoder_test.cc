@@ -207,15 +207,6 @@ int main(int argc, char** argv) {
       rappor::log("Error encoding string %s", line.c_str());
       break;
     }
-
-    // Set up schema
-    rappor::RecordSchema s;
-    // Add two fields
-    s.AddString(0, params);
-    s.AddString(1, params);
-
-    rappor::ProtobufEncoder(s, deps);
-
     std::string bloom_str;
     BitsToString(bloom, &bloom_str, num_bytes);
 
@@ -240,6 +231,31 @@ int main(int argc, char** argv) {
     std::cout << "\n";
 
     reports.add_report(irr_str);
+
+    //
+    // Test out protobuf API
+    //
+
+    // Set up schema
+    rappor::RecordSchema s;
+    // Add two fields
+    s.AddString(0, params);
+    s.AddString(1, params);
+
+    rappor::ProtobufEncoder protobuf_encoder(s, deps);
+
+    rappor::Record record;
+    record.AddString(0, "foo");
+    record.AddString(1, "bar");
+
+    rappor::RecordReport record_report;
+
+    if (!protobuf_encoder.Encode(record, &record_report)) {
+      rappor::log("Error encoding record %s", line.c_str());
+      break;
+    }
+
+    rappor::log("RecordReport [%s]", record_report.DebugString().c_str());
   }
 
   rappor::ReportListHeader* header = reports.mutable_header();

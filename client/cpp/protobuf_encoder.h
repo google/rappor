@@ -109,7 +109,6 @@ class Record {
   friend class ProtobufEncoder;  // needs to read our internal state
 
  public:
-  Record();
   // Returns success or failure.
   bool AddString(int id, const std::string& s);
   bool AddOrdinal(int id, int v);
