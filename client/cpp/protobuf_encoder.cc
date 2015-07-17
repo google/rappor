@@ -116,6 +116,15 @@ bool ProtobufEncoder::Encode(const Record& record, Report* report) {
   for (size_t i = 0; i < record.values_.size(); ++i) {
     std::string input_word;  // input to RAPPOR algorithm
     const Value& v = record.values_[i];
+
+    // Sanity check: fields should be added to the Record in the same order
+    // they were "declared" in the RecordSchema.
+    int expected_field_id = schema_.fields_[i].id;
+    if (v.id != expected_field_id) {
+      rappor::log("Expected field ID %d, got %d", expected_field_id, v.id);
+      return false;
+    }
+
     switch (v.field_type) {
       case STRING:
         input_word.assign(v.str);
