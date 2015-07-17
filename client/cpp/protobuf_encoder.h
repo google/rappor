@@ -16,7 +16,6 @@
 #define PROTOBUF_ENCODER_H_
 
 #include <string>
-#include <stdint.h>  // uint64_t
 #include <vector>
 
 #include "encoder.h"  // for Params; maybe that should be in rappor_deps?
@@ -24,8 +23,6 @@
 #include "rappor.pb.h"
 
 namespace rappor {
-
-class ReportList;
 
 // Chrome example:
 //
@@ -49,19 +46,18 @@ class ReportList;
 // - client doesn't want to change the protobuf for new metric!  RecordSchema is
 // application-independent.
 
-// Flow;
+// Flow:
 //
-// Initialize ProtobufEncoder with a schema.
+// Construct deps.
 //
-// Then send it records.
+// For each type of record:
+//   Construct a Schema.  Construcut ProtobufEncoder with schema and deps.
+//
+// For each value:
+//   Construct a Record.  Send it to the ProtobufEncoder to get a Report!
+//
+// Then add the Report protobuf to a ReportList.
 
-// TODO: Dump the schema metadata at build time?
-
-//enum FieldType {
-//  kString = 0,
-//  kOrdinal,
-//  kBoolean
-//};
 
 // TODO: Should be private?
 struct Field {
@@ -83,7 +79,7 @@ class RecordSchema {
   // Print a user-friendly version.
   //
   // This includes the params.
-  bool Print();
+  bool AsCsvRow();
 
  private:
   std::vector<Field> fields_;
