@@ -17,6 +17,8 @@
 
 library(glmnet)
 
+source('analysis/R/alternative.R')
+
 EstimateBloomCounts <- function(params, obs_counts) {
   # Estimates the number of times each bit in each cohort was set in original
   # Bloom filters.
@@ -88,8 +90,7 @@ FitLasso <- function(X, Y, intercept = TRUE) {
   #
   # Input:
   #    X: a design matrix of size km by M (the number of candidate strings).
-  #    Y: a vector of size km with estimated counts from EstimateBloomCounts(),
-  #       representing constraints
+  #    Y: a vector of size km with estimated counts from EstimateBloomCounts().
   #    intercept: whether to fit with intercept or not.
   #
   # Output:
@@ -226,14 +227,41 @@ FitDistribution <- function(estimates_stds, map, quiet = FALSE) {
   #   according to this vector approximates estimates
 
   S <- ncol(map)  # total number of candidates
+<<<<<<< HEAD
   lasso <- FitLasso(map, as.vector(t(estimates_stds$estimates)))
+=======
 
-  if(!quiet)
-    cat("LASSO selected ", sum(lasso > 0), " non-zero coefficients.\n")
+  support_coefs <- 1:S
 
+  if (S > length(estimates_stds$estimates) * .8) {
+    # the system is close to being underdetermined
+    lasso <- FitLasso(map, as.vector(t(estimates_stds$estimates)))
+>>>>>>> master
+
+    # Select non-zero coefficients.
+    support_coefs <- which(lasso > 0)
+
+<<<<<<< HEAD
   names(lasso) <- colnames(map)
   lasso
  }
+=======
+    if(!quiet)
+      cat("LASSO selected ", length(support_coefs), " non-zero coefficients.\n")
+  }
+
+  coefs <- setNames(rep(0, S), colnames(map))
+
+  if(length(support_coefs) > 0) {  # LASSO may return an empty list
+    constrained_coefs <- ConstrainedLinModel(map[, support_coefs, drop = FALSE],
+                                             estimates_stds)
+
+    coefs[support_coefs] <- constrained_coefs
+  }
+
+  coefs
+}
+>>>>>>> master
 
 Resample <- function(e) {
   # Simulate resampling of the Bloom filter estimates by adding Gaussian noise
@@ -274,9 +302,13 @@ Decode <- function(counts, map, params, alpha = 0.05, quick = FALSE,
   coefs_all <- vector()
   # Run the fitting procedure several times (5 seems to be sufficient and not
   # too many) to estimate standard deviation of the output.
+<<<<<<< HEAD
   if(quick) {num_reps <- 2} else {num_reps <- 5}
   for(r in 1:num_reps)
   {
+=======
+  for(r in 1:5) {
+>>>>>>> master
     if(r > 1)
       e <- Resample(estimates_stds_filtered)
     else
@@ -327,8 +359,17 @@ Decode <- function(counts, map, params, alpha = 0.05, quick = FALSE,
   fit$prop_std_error <- fit$std_error / N
 
   # 1.96 standard deviations gives 95% confidence interval.
+<<<<<<< HEAD
   fit$prop_low_95 <- fit$proportion - 1.96 * fit$prop_std_error
   fit$prop_high_95 <- fit$proportion + 1.96 * fit$prop_std_error
+=======
+  low_95 <- fit$proportion - 1.96 * fit$prop_std_error
+  high_95 <- fit$proportion + 1.96 * fit$prop_std_error
+  # Clamp estimated proportion.  pmin/max: vectorized min and max
+  fit$prop_low_95 <- pmax(low_95, 0.0)
+  fit$prop_high_95 <- pmin(high_95, 1.0)
+
+>>>>>>> master
   fit <- fit[, c("string", "estimate", "std_error", "proportion",
                  "prop_std_error", "prop_low_95", "prop_high_95")]
   allocated_mass <- sum(fit$proportion)

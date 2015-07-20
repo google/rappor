@@ -110,6 +110,8 @@ r-unit() {
 
   tests/gen_counts_test.R
 
+  tests/gen_true_values_test.R
+
   analysis/R/decode_test.R
 
   analysis/test/run_tests.R
@@ -130,6 +132,23 @@ doc-lint() {
 spell-all() {
   which spell >/dev/null || die "spell not found"
   spell README.md doc/*.md | sort | uniq
+}
+
+#
+# Smoke Tests.  These can be manually run.
+#
+
+gen-true-values() {
+  local num_unique_values=10
+  local num_clients=10
+  local values_per_client=2
+  local num_cohorts=4
+  local out=_tmp/reports.csv
+
+  tests/gen_true_values.R \
+    exp $num_unique_values $num_clients $values_per_client $num_cohorts $out
+  wc -l $out
+  cat $out
 }
 
 "$@"
