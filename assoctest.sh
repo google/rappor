@@ -115,7 +115,7 @@ _run-one-instance() {
   banner "Generating input"
 
   tests/gen_assoc_reports.R $num_unique_values $num_unique_values2 \
-                            $num_clients $instance_dir/case.csv
+                            $num_clients $num_cohorts $instance_dir/case.csv
 
   banner "Running RAPPOR client"
   tests/rappor_assoc_sim.py \
@@ -135,6 +135,8 @@ _run-one-instance() {
 
 
   # Setting up JSON file containing assoc_sim inputs with python
+  # Currently unused as true values and RAPPOR'd reports are generated
+  # running gen_assoc_reports.R, rappor_assoc_sim.py, and sum_bits_assoc.py
   python -c "import json; \
     f = file('$instance_dir/assoc_inp.json', 'w'); \
     inp = dict(); \
@@ -151,6 +153,8 @@ _run-one-instance() {
     json.dump(inp, f); \
     f.close();"
 
+  # Currently unused as true values and RAPPOR'd reports are generated
+  # running gen_assoc_reports.R, rappor_assoc_sim.py, and sum_bits_assoc.py
   # tests/assoc_sim_expt.R --inp $instance_dir/assoc_inp.json
 
   local out_dir=${instance_dir}_report

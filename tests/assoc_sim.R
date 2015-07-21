@@ -26,6 +26,18 @@
 #         reports.csv file containing reports
 #         map_{1, 2, ...}.csv file(s) containing maps of variables
 
+##############################################################################
+##############################################################################
+##############################################################################
+# D E P R E C A T E D
+# Please look at workflow to use analyze_assoc_expt.R and 
+# run gen_assoc_reports.R, rappor_assoc_sim.py, and sum_bits_assoc.py
+# to generate inputs to association analysis
+# (For more details, see _run-one-instance() in assoctest.sh)
+##############################################################################
+##############################################################################
+##############################################################################
+
 library("optparse")
 
 options(stringsAsFactors = FALSE)

@@ -16,6 +16,7 @@
 
 # TODO: Rename reports to values (more in line with its usage for histogram
 # RAPPOR)
+
 source('tests/gen_counts.R')
 
 # Usage:
@@ -30,10 +31,12 @@ source('tests/gen_counts.R')
 # Output:
 #   csv file with reports sampled according to the specified distribution. 
 
-main <- function(argv) {
-  n <- list(as.integer(argv[[1]]), as.integer(argv[[2]]))
-  N <- as.integer(argv[[3]])
-  out_file <- argv[[4]]
+GenerateAssocReports <- function(n, N, num_cohorts) {
+  # Inputs: n, a list of supports for vars 1, 2
+  #         N, the number of reports/clients
+  #         num_cohorts, the number of cohorts
+  # Output: tuples of values sampled according to a zipf x zipf distr
+  #         with support n[[1]] and n[[2]] respectively
 
   # Sample values to compute partition
   # Resulting distribution is a correlated zipf x zipf
@@ -70,15 +73,26 @@ main <- function(argv) {
   # Shuffle values randomly (may take a few sec for > 10^8 inputs)
   perm <- sample(N)
   values <- list(values[[1]][perm], values[[2]][perm])
+  cohorts <- rep(1:N) %% num_cohorts
+  list(cohorts = cohorts, values = values)
+}
 
+main <- function(argv) {
+  n <- list(as.integer(argv[[1]]), as.integer(argv[[2]]))
+  N <- as.integer(argv[[3]])
+  num_cohorts <- as.integer(argv[[4]])
+  out_file <- argv[[5]]
+
+  res <- GenerateAssocReports(n, N, num_cohorts)
   # Prepend with str and opt
-  reports <- list(sprintf("str%d", values[[1]]),
-                  sprintf("opt%d", values[[2]]))
+  reports <- list(sprintf("str%d", res$values[[1]]),
+                  sprintf("opt%d", res$values[[2]]))
 
-  # paste together client name, cohort input, report1, report2
-  reports <- cbind(sprintf("cli%d", 1:N), 1:N, reports[[1]], reports[[2]])
+
+  # Paste together client name, cohort input, report1, report2
+  reports <- cbind(sprintf("cli%d", 1:N),
+                   res$cohorts, reports[[1]], reports[[2]])
   colnames(reports) <- c("client", "cohort", "value1", "value2")
-
   write.table(reports, file = out_file, row.names = FALSE, col.names = TRUE, 
               sep = ",", quote = FALSE)
 }

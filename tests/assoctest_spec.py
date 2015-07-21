@@ -87,8 +87,8 @@ ASSOC_TEST_CONFIG = {
 #            'fizz',
 #            'fizz-bool',),
 #            'toy',),
-            'compact-noextra-small',
-            'loose-noextra-small',),
+            'compact-noextra-small',),
+#            'loose-noextra-small',),
 #            'compact-extra-small',
 #            'loose-extra-small',
 #            'compact-excess-small',
@@ -100,8 +100,8 @@ ASSOC_TEST_CONFIG = {
 #            'compact-excess-large',
 #            'loose-excess-large'),
   'blooms': (
-             '8x32',
-             '16x32',),
+             '8x32',),
+#             '16x32',),
   'privacy': (
               'eps_small',
               'eps_chrome',)
