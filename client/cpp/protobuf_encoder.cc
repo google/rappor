@@ -172,7 +172,7 @@ bool ProtobufEncoder::Encode(const Record& record, Report* report) {
 // StringEncoder
 //
 
-StringEncoder::StringEncoder(int id, const Params& params, const Deps& deps) 
+StringEncoder::StringEncoder(int id, const Params& params, const Deps& deps)
     : id_(id) {
   schema_ = new RecordSchema();  // we need to own it
   schema_->AddString(id, params);
@@ -195,7 +195,7 @@ bool StringEncoder::EncodeString(const std::string& str, Report* report) {
 // OrdinalEncoder
 //
 
-OrdinalEncoder::OrdinalEncoder(int id, const Params& params, const Deps& deps) 
+OrdinalEncoder::OrdinalEncoder(int id, const Params& params, const Deps& deps)
     : id_(id) {
   schema_ = new RecordSchema();  // we need to own it
   schema_->AddOrdinal(id, params);

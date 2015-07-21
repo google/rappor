@@ -70,13 +70,30 @@ void PrintBitString(const std::string& s) {
   }
 }
 
+// Global constants
+const rappor::Params kParams4 = {
+  .num_bits = 16, .num_hashes = 2, .num_cohorts = 128,
+  .prob_f = 0.25f, .prob_p = 0.5f, .prob_q = 0.75f
+};
+
 int main(int argc, char** argv) {
   if (argc != 7) {
-    rappor::log("Usage: rappor_encode <num bits> <num hashes> <num cohorts> p q f");
+    rappor::log(
+        "Usage: protobuf_encoder_test <num bits> <num hashes> <num cohorts> "
+        "p q f");
     exit(1);
   }
 
   rappor::Params params;
+
+  rappor::Params params2 = { 16, 2, 128, 0.25f, 0.5f, 0.75f };
+
+  // new initializer style
+  rappor::Params params3 = {
+    .num_bits = 16, .num_hashes = 2, .num_cohorts = 128,
+    .prob_f = 0.25f, .prob_p = 0.5f, .prob_q = 0.75f
+  };
+
 
   bool ok1 = StringToInt(argv[1], &params.num_bits);
   bool ok2 = StringToInt(argv[2], &params.num_hashes);
@@ -111,9 +128,10 @@ int main(int argc, char** argv) {
     exit(1);
   }
 
-  rappor::log("bits %d / hashes %d / cohorts %d", params.num_bits, params.num_hashes,
-      params.num_cohorts);
-  rappor::log("p %f / q %f / f %f", params.prob_p, params.prob_q, params.prob_f);
+  rappor::log("bits %d / hashes %d / cohorts %d", params.num_bits,
+      params.num_hashes, params.num_cohorts);
+  rappor::log("p %f / q %f / f %f", params.prob_p, params.prob_q,
+      params.prob_f);
 
   int num_bytes = params.num_bits / 8;
 
