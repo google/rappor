@@ -22,8 +22,8 @@ rappor-sim() {
 }
 
 protobuf-encoder-test() {
-  make _tmp/protobuf_encoder_test
-  _tmp/protobuf_encoder_test "$@"
+  make _tmp/protobuf_encoder_demo
+  _tmp/protobuf_encoder_demo "$@"
 }
 
 rappor-sim-demo() {

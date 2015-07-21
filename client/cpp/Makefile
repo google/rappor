@@ -2,7 +2,7 @@
 
 default: \
 	_tmp/rappor_sim \
-	_tmp/protobuf_encoder_test \
+	_tmp/protobuf_encoder_demo \
 	_tmp/openssl_hash_impl_test
 
 clean:
@@ -45,7 +45,7 @@ SOURCES = \
 	openssl_hash_impl.cc \
 	openssl_hash_impl_test.cc \
 	protobuf_encoder.cc \
-	protobuf_encoder_test.cc \
+	protobuf_encoder_demo.cc \
 	rappor_sim.cc \
 	unix_kernel_rand_impl.cc
 
@@ -103,13 +103,13 @@ _tmp/rappor_sim: \
 		-g
 
 # -I _tmp for protobuf headers
-_tmp/protobuf_encoder_test: \
+_tmp/protobuf_encoder_demo: \
 	_tmp/encoder.o \
 	_tmp/libc_rand_impl.o \
 	_tmp/unix_kernel_rand_impl.o \
 	_tmp/openssl_hash_impl.o \
 	_tmp/protobuf_encoder.o \
-	_tmp/protobuf_encoder_test.o \
+	_tmp/protobuf_encoder_demo.o \
 	_tmp/rappor.pb.o
 	$(CXX) \
 		$(CXXFLAGS) \
