@@ -326,8 +326,11 @@ Decode <- function(counts, map, params, alpha = 0.05,
   fit$prop_std_error <- fit$std_error / N
 
   # 1.96 standard deviations gives 95% confidence interval.
-  fit$prop_low_95 <- fit$proportion - 1.96 * fit$prop_std_error
-  fit$prop_high_95 <- fit$proportion + 1.96 * fit$prop_std_error
+  low_95 <- fit$proportion - 1.96 * fit$prop_std_error
+  high_95 <- fit$proportion + 1.96 * fit$prop_std_error
+  # Clamp estimated proportion.  pmin/max: vectorized min and max
+  fit$prop_low_95 <- pmax(low_95, 0.0)
+  fit$prop_high_95 <- pmin(high_95, 1.0)
 
   fit <- fit[, c("string", "estimate", "std_error", "proportion",
                  "prop_std_error", "prop_low_95", "prop_high_95")]

@@ -26,9 +26,9 @@ import sum_bits  # module under test
 
 
 CSV_IN = """\
-user_id,cohort,rappor
-5,1,0000111100001111
-5,1,0000000000111100
+user_id,cohort,bloom,prr,rappor
+5,1,dummy,dummy,0000111100001111
+5,1,dummy,dummy,0000000000111100
 """
 
 # NOTE: bit order is reversed.

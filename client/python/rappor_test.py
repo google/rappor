@@ -16,10 +16,6 @@
 
 """
 rappor_test.py: Tests for rappor.py
-
-NOTE! This contains tests that might fail with very small
-probability (< 1 in 10,000 times). This is implicitly required
-for testing probability. Such tests start with the stirng "testProbFailure."
 """
 
 import cStringIO
@@ -43,12 +39,6 @@ class RapporParamsTest(unittest.TestCase):
     ti.prob_q = 0.70           # Probability q
     ti.prob_f = 0.30           # Probability f
 
-    # TODO: Move this to constructor, or add a different constructor
-    ti.flag_oneprr = False     # One PRR for each user/word pair
-
-  def tearDown(self):
-    pass
-
   def testFromCsv(self):
     f = cStringIO.StringIO('k,h,m,p,q,f\n32,2,64,0.5,0.75,0.6\n')
     params = rappor.Params.from_csv(f)
@@ -67,116 +57,40 @@ class RapporParamsTest(unittest.TestCase):
     f = cStringIO.StringIO('k,h,m,p,q,f\n32,2,64,0.5,0.75,0.6\nextra')
     self.assertRaises(rappor.Error, rappor.Params.from_csv, f)
 
-  def testGetRapporMasksWithoutOnePRR(self):
-    params = copy.copy(self.typical_instance)
-    params.prob_f = 0.5  # For simplicity
+  def testGetBloomBits(self):
+    for cohort in xrange(0, 64):
+      b = rappor.get_bloom_bits('foo', cohort, 2, 16)
+      #print 'cohort', cohort, 'bloom', b
 
-    num_words = params.num_bloombits // 32 + 1
-    rand = MockRandom()
-    rand_funcs = rappor.SimpleRandFuncs(params, rand)
-    rand_funcs.cohort_rand_fn = (lambda a, b: a)
+  def testGetPrr(self):
+    bloom = 1
+    num_bits = 8
+    for word in ('v1', 'v2', 'v3'):
+      masks = rappor.get_prr_masks('secret', word, 0.5, num_bits)
+      print 'masks', masks
 
-    assigned_cohort, f_bits, mask_indices = rappor.get_rappor_masks(
-        0, ["abc"], params, rand_funcs)
-
-    self.assertEquals(0, assigned_cohort)
-    self.assertEquals(0x000db6d, f_bits)  # dependent on 3 MockRandom values
-    self.assertEquals(0x0006db6, mask_indices)
-
-  def testGetBFBit(self):
-    cohort = 0
-    hash_no = 0
-    input_word = "abc"
-    ti = self.typical_instance
-    # expected_hash = ("\x13O\x0b\xa0\xcc\xc5\x89\x01oI\x85\xc8\xc3P\xfe\xa7 H"
-    #                  "\xb0m")
-    # Output should be
-    # (ord(expected_hash[0]) + ord(expected_hash[1])*256) % 16
-    expected_output = 3
-    actual = rappor.get_bf_bit(input_word, cohort, hash_no, ti.num_bloombits)
-    self.assertEquals(expected_output, actual)
-
-    hash_no = 1
-    # expected_hash = ("\xb6\xcc\x7f\xee@\x95\xb0\xdb\xf5\xf1z\xc7\xdaPM"
-    #                  "\xd4\xd6u\xed3")
-    expected_output = 6
-    actual = rappor.get_bf_bit(input_word, cohort, hash_no, ti.num_bloombits)
-    self.assertEquals(expected_output, actual)
-
-  def testGetRapporMasksWithOnePRR(self):
-    # Set randomness function to be used to sample 32 random bits
-    # Set randomness function that takes two integers and returns a
-    # random integer cohort in [a, b]
-
-    params = copy.copy(self.typical_instance)
-    params.flag_oneprr = True
-
-    num_words = params.num_bloombits // 32 + 1
-    rand = MockRandom()
-    rand_funcs = rappor.SimpleRandFuncs(params, rand)
-
-    # First two calls to get_rappor_masks for identical inputs
-    # Third call for a different input
-    print '\tget_rappor_masks 1'
-    cohort_1, f_bits_1, mask_indices_1 = rappor.get_rappor_masks(
-        "0", "abc", params, rand_funcs)
-    print '\tget_rappor_masks 2'
-    cohort_2, f_bits_2, mask_indices_2 = rappor.get_rappor_masks(
-        "0", "abc", params, rand_funcs)
-    print '\tget_rappor_masks 3'
-    cohort_3, f_bits_3, mask_indices_3 = rappor.get_rappor_masks(
-        "0", "abcd", params, rand_funcs)
-
-    # First two outputs should be identical, i.e., identical PRRs
-    self.assertEquals(f_bits_1, f_bits_2)
-    self.assertEquals(mask_indices_1, mask_indices_2)
-    self.assertEquals(cohort_1, cohort_2)
-
-    # Third PRR should be different from the first PRR
-    self.assertNotEqual(f_bits_1, f_bits_3)
-    self.assertNotEqual(mask_indices_1, mask_indices_3)
-    self.assertNotEqual(cohort_1, cohort_3)
-
-    # Now testing with flag_oneprr false
-    params.flag_oneprr = False
-    cohort_1, f_bits_1, mask_indices_1 = rappor.get_rappor_masks(
-        "0", "abc", params, rand_funcs)
-    cohort_2, f_bits_2, mask_indices_2 = rappor.get_rappor_masks(
-        "0", "abc", params, rand_funcs)
-
-    self.assertNotEqual(f_bits_1, f_bits_2)
-    self.assertNotEqual(mask_indices_1, mask_indices_2)
-    self.assertNotEqual(cohort_1, cohort_2)
+  def testCohortToBytes(self):
+    b = rappor.cohort_to_bytes(1)
+    print repr(b)
+    self.assertEqual(4, len(b))
 
   def testEncoder(self):
-    """Expected bloom bits is computed as follows.
-
-    f_bits = 0xfff0000f and mask_indices = 0x0ffff000 from
-    testGetRapporMasksWithoutPRR()
-
-    q_bits = 0xfffff0ff from mock_rand.randomness[] and how get_rand_bits works
-    p_bits = 0x000ffff0 from -- do --
-
-    bloom_bits_array is 0x0000 0048 (3rd bit and 6th bit, from
-    testSetBloomArray, are set)
-
-    Bit arithmetic ends up computing
-    bloom_bits_prr = 0x0ff00048
-    bloom_bits_irr= = 0x0ffffff8
-    """
+    # Test encoder with deterministic random function.
     params = copy.copy(self.typical_instance)
     params.prob_f = 0.5
     params.prob_p = 0.5
     params.prob_q = 0.75
 
-    rand_funcs = rappor.SimpleRandFuncs(params, MockRandom())
-    rand_funcs.cohort_rand_fn = lambda a, b: a
-    e = rappor.Encoder(params, 0, rand_funcs=rand_funcs)
+    # SimpleRandom will call self.random() below for each bit, which will
+    # return these 3 values in sequence.
+    rand = MockRandom([0.0, 0.6, 0.0])
 
-    cohort, bloom_bits_irr = e.encode("abc")
+    irr_rand = rappor.SimpleIrrRand(params, _rand=rand)
+    e = rappor.Encoder(params, 0, 'secret', irr_rand)
 
-    self.assertEquals(0, cohort)
-    self.assertEquals(0x000ffff, bloom_bits_irr)
+    irr = e.encode("abc")
+
+    self.assertEquals(56301, irr)  # given MockRandom, this is what we get
 
 
 class MockRandom(object):
@@ -187,31 +101,16 @@ class MockRandom(object):
   with stubs for testing purposes.
   """
 
-  def __init__(self):
+  def __init__(self, cycle):
     self.counter = 0
-    # SimpleRandom will call self.random() below for each bit, which will
-    # return these 3 values in sequence.
-    self.randomness = [0.0, 0.6, 0.0]
-    self.n = len(self.randomness)
-
-  def seed(self, seed):
-    self.counter = hash(seed) % self.n
-    #print 'SEED', self.counter
-
-  def getstate(self):
-    #print 'GET STATE', self.counter
-    return self.counter
-
-  def setstate(self, state):
-    #print 'SET STATE', state
-    self.counter = state
-
-  def randint(self, a, b):
-    return a + self.counter
+    self.cycle = cycle
+    self.n = len(self.cycle)
 
   def random(self):
-    rand_val = self.randomness[self.counter]
-    self.counter = (self.counter + 1) % self.n
+    rand_val = self.cycle[self.counter]
+    self.counter += 1
+    self.counter %= self.n  # wrap around
+    print 'RAND', rand_val
     return rand_val
 
 

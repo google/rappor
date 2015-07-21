@@ -44,12 +44,13 @@ set -o errexit
 readonly THIS_DIR=$(dirname $0)
 readonly REPO_ROOT=$THIS_DIR
 readonly CLIENT_DIR=$REPO_ROOT/client/python
-readonly REGTEST_DIR=_tmp/regtest
+# subdirs are in _tmp/$impl, which shouldn't overlap with anything else in _tmp
+readonly REGTEST_BASE_DIR=_tmp
 
 # All the Python tools need this
 export PYTHONPATH=$CLIENT_DIR
 
-print-true-inputs() {
+print-unique-values() {
   local num_unique_values=$1
   seq 1 $num_unique_values | awk '{print "v" $1}'
 }
@@ -69,22 +70,22 @@ more-candidates() {
 }
 
 # Args:
-#   true_inputs: File of true inputs
+#   unique_values: File of unique true values
 #   last_true: last true input, e.g. 50 if we generated "v1" .. "v50".
 #   num_additional: additional candidates to generate (starting at 'last_true')
 #   to_remove: Regex of true values to omit from the candidates list, or the
 #     string 'NONE' if none should be.  (Our values look like 'v1', 'v2', etc. so
 #     there isn't any ambiguity.)
 print-candidates() {
-  local true_inputs=$1
+  local unique_values=$1
   local last_true=$2
   local num_additional=$3 
   local to_remove=$4
 
   if test $to_remove = NONE; then
-    cat $true_inputs  # include all true inputs
+    cat $unique_values  # include all true inputs
   else
-    egrep -v $to_remove $true_inputs  # remove some true inputs
+    egrep -v $to_remove $unique_values  # remove some true inputs
   fi
   more-candidates $last_true $num_additional
 }
@@ -92,6 +93,9 @@ print-candidates() {
 # Generate a single test case, specified by a line of the test spec.
 # This is a helper function for _run_tests().
 _setup-one-case() {
+  local impl=$1
+  shift  # impl is not part of the spec; the next 13 params are
+
   local test_case=$1
 
   # input params
@@ -114,7 +118,7 @@ _setup-one-case() {
 
   banner 'Setting up parameters and candidate files for '$test_case
 
-  local case_dir=$REGTEST_DIR/$test_case
+  local case_dir=$REGTEST_BASE_DIR/$impl/$test_case
   mkdir --verbose -p $case_dir
 
   # Save the "spec"
@@ -125,19 +129,19 @@ _setup-one-case() {
   echo 'k,h,m,p,q,f' > $params_path
   echo "$num_bits,$num_hashes,$num_cohorts,$p,$q,$f" >> $params_path
 
-  print-true-inputs $num_unique_values > $case_dir/case_true_inputs.txt
+  print-unique-values $num_unique_values > $case_dir/case_unique_values.txt
 
   local true_map_path=$case_dir/case_true_map.csv
 
   analysis/tools/hash_candidates.py \
     $params_path \
-    < $case_dir/case_true_inputs.txt \
+    < $case_dir/case_unique_values.txt \
     > $true_map_path
 
   # banner "Constructing candidates"
 
   print-candidates \
-    $case_dir/case_true_inputs.txt $num_unique_values \
+    $case_dir/case_unique_values.txt $num_unique_values \
     $num_additional "$to_remove" \
     > $case_dir/case_candidates.txt
 
@@ -154,51 +158,104 @@ _setup-one-case() {
 _run-one-instance() {
   local test_case=$1
   local test_instance=$2
-  local fast_counts=$3
+  local impl=$3
 
-  local case_dir=$REGTEST_DIR/$test_case
+  local case_dir=$REGTEST_BASE_DIR/$impl/$test_case
   
-  read -r case_name distr num_unique_values num_clients \
-    values_per_client num_bits num_hashes num_cohorts p q f num_additional \
-    to_remove < $case_dir/spec.txt
+  read -r \
+    case_name distr num_unique_values num_clients values_per_client \
+    num_bits num_hashes num_cohorts p q f \
+    num_additional to_remove \
+    < $case_dir/spec.txt
 
-  local instance_dir=$REGTEST_DIR/$test_case/$test_instance
+  local instance_dir=$case_dir/$test_instance
   mkdir --verbose -p $instance_dir
 
-  if test $fast_counts = T; then
-    local params_file=$case_dir/case_params.csv
-    local true_map_file=$case_dir/case_true_map.csv
+  # NOTE: This is a nested case statement on the same variable ($impl).  If
+  # it's fast_counts, we just run gen_counts.R.  If it's anything else, then we
+  # generate raw reports, run them through the appropriate client, and then sum
+  # the bits.
 
-    banner "Using gen_counts.R"
+  case $impl in
+    fast_counts)
+      local params_file=$case_dir/case_params.csv
+      local true_map_file=$case_dir/case_true_map.csv
 
-    tests/gen_counts.R $distr $num_clients $values_per_client $params_file \
-                       $true_map_file "$instance_dir/case"
-  else
-    banner "Generating input"
+      banner "Generating counts directly (gen_counts.R)"
 
-    tests/gen_reports.R $distr $num_unique_values $num_clients \
-                        $values_per_client $instance_dir/case.csv
+      # Writes _counts.csv and _hist.csv
+      tests/gen_counts.R $distr $num_clients $values_per_client $params_file \
+                         $true_map_file "$instance_dir/case"
+      ;;
 
-    banner "Running RAPPOR client"
+    *)
+      banner "Generating reports (gen_reports.R)"
 
-    # Writes encoded "out" file, true histogram, true inputs to $instance_dir.
-    tests/rappor_sim.py \
-      --num-bits $num_bits \
-      --num-hashes $num_hashes \
-      --num-cohorts $num_cohorts \
-      -p $p \
-      -q $q \
-      -f $f \
-      -i $instance_dir/case.csv \
-      --out-prefix "$instance_dir/case"
+      # the TRUE_VALUES_PATH environment variable can be used to avoid
+      # generating new values every time.  NOTE: You are responsible for making
+      # sure the params match!
 
-    banner "Summing bits to get 'counts'"
+      local true_values=${TRUE_VALUES_PATH:-}
+      if test -z "$true_values"; then
+        true_values=$instance_dir/case_true_values.csv
+        tests/gen_true_values.R $distr $num_unique_values $num_clients \
+                                $values_per_client $num_cohorts \
+                                $true_values
+      else
+        # TEMP hack: Make it visible to plot.
+        # TODO: Fix compare_dist.R
+        ln -s -f --verbose \
+          $PWD/$true_values \
+          $instance_dir/case_true_values.csv
+      fi
 
-    analysis/tools/sum_bits.py \
-      $case_dir/case_params.csv \
-      < $instance_dir/case_out.csv \
-      > $instance_dir/case_counts.csv
-  fi
+      case $impl in
+        python)
+          banner "Running RAPPOR Python client"
+
+          # Writes encoded "out" file, true histogram, true inputs to
+          # $instance_dir.
+          time tests/rappor_sim.py \
+            --num-bits $num_bits \
+            --num-hashes $num_hashes \
+            --num-cohorts $num_cohorts \
+            -p $p \
+            -q $q \
+            -f $f \
+            < $true_values \
+            > "$instance_dir/case_reports.csv"
+          ;;
+
+        cpp)
+          banner "Running RAPPOR C++ client (see rappor_sim.log for errors)"
+
+          time client/cpp/_tmp/rappor_sim \
+            $num_bits \
+            $num_hashes \
+            $num_cohorts \
+            $p \
+            $q \
+            $f \
+            < $true_values \
+            > "$instance_dir/case_reports.csv" \
+            2>"$instance_dir/rappor_sim.log"
+
+          ;;
+
+        *)
+          log "Invalid impl $impl (should be one of fast_counts|python|cpp)"
+          exit 1
+          ;;
+      esac
+
+      banner "Summing RAPPOR IRR bits to get 'counts'"
+
+      analysis/tools/sum_bits.py \
+        $case_dir/case_params.csv \
+        < $instance_dir/case_reports.csv \
+        > $instance_dir/case_counts.csv
+      ;;
+  esac
 
   local out_dir=${instance_dir}_report
   mkdir --verbose -p $out_dir
@@ -216,28 +273,31 @@ _run-one-instance() {
 
 # Like _run-once-case, but log to a file.
 _run-one-instance-logged() {
-  local test_case_id=$1
-  local test_case_run=$2
+  local test_case=$1
+  local test_instance=$2
+  local impl=$3
 
-  local log_dir=$REGTEST_DIR/$test_case_id/${test_case_run}_report
+  local log_dir=$REGTEST_BASE_DIR/$impl/$test_case/${test_instance}_report
   mkdir --verbose -p $log_dir
 
-  log "Started '$test_case_id' (instance $test_case_run) -- logging to $log_dir/log.txt"
+  log "Started '$test_case' (instance $test_instance) -- logging to $log_dir/log.txt"
   _run-one-instance "$@" >$log_dir/log.txt 2>&1 \
-    && log "Test case $test_case_id (instance $test_case_run) done" \
-    || log "Test case $test_case_id (instance $test_case_run) failed"
+    && log "Test case $test_case (instance $test_instance) done" \
+    || log "Test case $test_case (instance $test_instance) failed"
 }
 
 make-summary() {
   local dir=$1
-  local filename=${2:-results.html}
+  local impl=$2
+
+  local filename=results.html
 
   tests/make_summary.py $dir $dir/rows.html
 
   pushd $dir >/dev/null
 
   cat ../../tests/regtest.html \
-    | sed -e '/TABLE_ROWS/ r rows.html' \
+    | sed -e '/__TABLE_ROWS__/ r rows.html' -e "s/_IMPL_/$impl/g" \
     > $filename
 
   popd >/dev/null
@@ -258,15 +318,15 @@ test-error() {
 
 # Assuming the spec file, write a list of test case names (first column) with
 # the instance ids (second column), where instance ids run from 1 to $1.
-# Third column is fast_counts (T/F).
+# Third column is impl.
 _setup-test-instances() {
   local instances=$1
-  local fast_counts=$2
+  local impl=$2
 
   while read line; do
     for i in $(seq 1 $instances); do
       read case_name _ <<< $line  # extract the first token
-      echo $case_name $i $fast_counts
+      echo $case_name $i $impl
     done
   done
 }
@@ -286,18 +346,19 @@ default-processes() {
 #   instances: A number of times each test case is run
 #   parallel: Whether the tests are run in parallel (T/F).  Sequential
 #     runs log to the console; parallel runs log to files.
-#   fast_counts: Whether counts are sampled directly (T/F)
+#   impl: one of fast_counts, python, cpp
 
 _run-tests() {
   local spec_gen=$1
   local spec_regex="$2"  # grep -E format on the spec, can be empty
   local instances=$3
   local parallel=$4
-  local fast_counts=$5
+  local impl=$5
 
-  rm -r -f --verbose $REGTEST_DIR
+  local regtest_dir=$REGTEST_BASE_DIR/$impl
+  rm -r -f --verbose $regtest_dir
   
-  mkdir --verbose -p $REGTEST_DIR
+  mkdir --verbose -p $regtest_dir
 
   local func
   local processors
@@ -313,26 +374,26 @@ _run-tests() {
     log "Running $processors parallel processes"
   fi
 
-  local cases_list=$REGTEST_DIR/test-cases.txt
+  local cases_list=$regtest_dir/test-cases.txt
   # Need -- for regexes that start with -
   $spec_gen | grep -E -- "$spec_regex" > $cases_list
 
   # Generate parameters for all test cases.
   cat $cases_list \
-    | xargs -l -P $processors -- $0 _setup-one-case \
+    | xargs -l -P $processors -- $0 _setup-one-case $impl \
     || test-error
 
   log "Done generating parameters for all test cases"
 
-  local instances_list=$REGTEST_DIR/test-instances.txt
-  _setup-test-instances $instances $fast_counts < $cases_list > $instances_list 
+  local instances_list=$regtest_dir/test-instances.txt
+  _setup-test-instances $instances $impl < $cases_list > $instances_list 
 
   cat $instances_list \
     | xargs -l -P $processors -- $0 $func || test-error
 
   log "Done running all test instances"
 
-  make-summary $REGTEST_DIR
+  make-summary $regtest_dir $impl
 }
 
 # used for most tests
@@ -342,18 +403,18 @@ readonly REGTEST_SPEC=tests/regtest_spec.py
 run-seq() {
   local spec_regex=${1:-'^r-'}  # grep -E format on the spec
   local instances=${2:-1}
-  local fast_counts=${3:-T}
+  local impl=${3:-fast_counts}
 
-  time _run-tests $REGTEST_SPEC $spec_regex $instances F $fast_counts
+  time _run-tests $REGTEST_SPEC $spec_regex $instances F $impl
 }
 
 # Run tests in parallel
 run() {
   local spec_regex=${1:-'^r-'}  # grep -E format on the spec
   local instances=${2:-1}
-  local fast_counts=${3:-T}
+  local impl=${3:-fast_counts}
   
-  time _run-tests $REGTEST_SPEC $spec_regex $instances T $fast_counts 
+  time _run-tests $REGTEST_SPEC $spec_regex $instances T $impl
 }
 
 # Run tests in parallel (7+ minutes on 8 cores)
@@ -361,14 +422,43 @@ run-all() {
   local instances=${1:-1}
 
   log "Running all tests. Can take a while."
-  time _run-tests $REGTEST_SPEC '^r-' $instances T T
+  time _run-tests $REGTEST_SPEC '^r-' $instances T fast_counts
 }
 
 run-user() {
   local spec_regex=${1:-}
   local instances=${2:-1}
   local parallel=T  # too much memory
-  time _run-tests tests/user_spec.py "$spec_regex" $instances $parallel T
+  time _run-tests tests/user_spec.py "$spec_regex" $instances $parallel \
+    fast_counts
+}
+
+# Use stable true values
+compare-python-cpp() {
+  local num_unique_values=100
+  local num_clients=10000
+  local values_per_client=10
+  local num_cohorts=64
+
+  local true_values=$REGTEST_BASE_DIR/stable_true_values.csv
+
+  tests/gen_true_values.R \
+    exp $num_unique_values $num_clients $values_per_client $num_cohorts \
+    $true_values
+
+  wc -l $true_values
+
+  # Run Python and C++ simulation on the same input
+
+  ./build.sh cpp-client
+
+  TRUE_VALUES_PATH=$true_values \
+    ./regtest.sh run-seq '^demo3' 1 python
+
+  TRUE_VALUES_PATH=$true_values \
+    ./regtest.sh run-seq '^demo3' 1 cpp
+
+  head _tmp/{python,cpp}/demo3/1/case_reports.csv
 }
 
 "$@"
