@@ -160,7 +160,7 @@ def ExtractTime(log_filename):
     with open(log_filename) as log:
       log_str = log.read()
     # Matching a line output by analyze.R.
-    match = re.search(r'Running analyze.R took ([0-9.]+) seconds', log_str)
+    match = re.search(r'Inference took ([0-9.]+) seconds', log_str)
     if match:
       return float(match.group(1))
   return None

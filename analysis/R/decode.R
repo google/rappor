@@ -106,8 +106,9 @@ FitLasso <- function(X, Y, intercept = TRUE) {
   else
   	XX <- X
 
-  mod <- glmnet(XX, Y, standardize = FALSE, intercept = intercept,
+  mod <- glmnet(XX, Y, standardize = TRUE, intercept = intercept,
                 lower.limits = 0,  # outputs are non-negative
+                lambda.min.ratio = 1E-4,
                 pmax = cap)
 
   coefs <- coef(mod)
