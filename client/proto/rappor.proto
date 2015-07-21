@@ -2,6 +2,14 @@
 
 package rappor;
 
+// Application specific stuff.  TODO: Move into "package
+// protobuf_encoder_demo".
+enum FieldId {
+  NAME_FIELD = 0;
+  ADDRESS_FIELD = 1;
+}
+
+
 // These collection parameters must be known to the RAPPOR analysis code.
 message EncodingParams {
   optional int32 num_bits = 1;  // k
@@ -13,6 +21,7 @@ message EncodingParams {
 
   // TODO: Name of hash function?
 }
+
 enum FieldType {
   STRING = 0;
   ORDINAL = 1;

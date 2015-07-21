@@ -78,13 +78,13 @@ int main(int argc, char** argv) {
   // Collection of reports.  Reports encoded records.
   rappor::ReportList report_list;
 
-  const int kNameField = 1;
-  const int kAddressField = 2;
+  const int NAME_FIELD = 1;
+  const int ADDRESS_FIELD = 2;
 
   // Set up schema with two fields.
   rappor::RecordSchema s;
-  s.AddString(kNameField, params);
-  s.AddString(kAddressField, params);
+  s.AddString(NAME_FIELD, params);
+  s.AddString(ADDRESS_FIELD, params);
 
   // Instantiate encoder.
   rappor::ProtobufEncoder protobuf_encoder(s, deps);
@@ -92,10 +92,10 @@ int main(int argc, char** argv) {
   // Construct a recorder, and then encode it into a new entry in the report
   // list.
   rappor::Record record;
-  record.AddString(kNameField, "foo");
-  //record.AddBoolean(kAddressField, false);  // error
-  record.AddString(kAddressField, "bar");
-  //record.AddBoolean(kAddressField, false);  // error
+  record.AddString(NAME_FIELD, "foo");
+  //record.AddBoolean(ADDRESS_FIELD, false);  // error
+  record.AddString(ADDRESS_FIELD, "bar");
+  //record.AddBoolean(ADDRESS_FIELD, false);  // error
 
   rappor::Report* report = report_list.add_report();
   if (!protobuf_encoder.Encode(record, report)) {
@@ -106,7 +106,7 @@ int main(int argc, char** argv) {
   rappor::log("----------");
 
   rappor::Report* report2 = report_list.add_report();
-  rappor::StringEncoder string_encoder(kNameField, params, deps);
+  rappor::StringEncoder string_encoder(NAME_FIELD, params, deps);
   if (!string_encoder.EncodeString("STRING", report2)) {
     rappor::log("Error encoding string %s", line.c_str());
     return 1;
@@ -115,7 +115,7 @@ int main(int argc, char** argv) {
   rappor::log("----------");
 
   rappor::Report* report3 = report_list.add_report();
-  rappor::OrdinalEncoder ordinal_encoder(kNameField, params, deps);
+  rappor::OrdinalEncoder ordinal_encoder(NAME_FIELD, params, deps);
   if (!ordinal_encoder.EncodeOrdinal(10, report3)) {
     rappor::log("Error encoding ordinal %s", line.c_str());
     return 1;
