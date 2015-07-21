@@ -45,20 +45,14 @@ DISTRIBUTION_PARAMS = (
 BLOOMFILTER_PARAMS = {
     '8x16': (8, 2, 16),  # 16 cohorts, 8 bits each, 2 bits set in each
     '8x32': (8, 2, 32),  # 32 cohorts, 8 bits each, 2 bits set in each
-    '16x32': (16, 2, 32),  # 32 cohorts, 16 bits each, 2 bits set in each
     '8x128': (8, 2, 128),  # 128 cohorts, 8 bits each, 2 bits set in each
     '128x128': (128, 2, 128),  # 8 cohorts, 128 bits each, 2 bits set in each
 }
 
 # 'p, q, f' as in params file.
 PRIVACY_PARAMS = {
-    'eps_zero': (0, 0.99, 0),  # testing purposes only!
     'eps_1_1': (0.39, 0.61, 0.45),  # eps_1 = 1, eps_inf = 5:
     'eps_1_5': (0.225, 0.775, 0.0),  # eps_1 = 5, no eps_inf
-    'eps_verysmall': (0.125, 0.875, 0.125),
-    'eps_small': (0.125, 0.875, 0.5),
-    'eps_chrome': (0.25, 0.75, 0.5),
-    'uma_rappor_type': (0.50, 0.75, 0.5),
 }
 
 # For deriving candidates from true inputs.
@@ -81,6 +75,7 @@ TEST_CONFIGS = [
 #
 # END TEST CONFIGURATION
 #
+
 
 def main(argv):
   rows = []
