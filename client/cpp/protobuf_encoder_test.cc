@@ -50,12 +50,16 @@ void PrintBitString(const std::string& s) {
 
 // Global constants
 const rappor::Params kParams4 = {
-  .num_bits = 16, .num_hashes = 2, .num_cohorts = 128,
+  .num_bits = 8, .num_hashes = 2, .num_cohorts = 128,
   .prob_f = 0.25f, .prob_p = 0.5f, .prob_q = 0.75f
 };
 
 
 int main(int argc, char** argv) {
+
+  // NOTE: This isn't valid C++.  Designated initializers are a C99 feature
+  // that GCC and Clang allow, but warn about.
+  // Probably not allowed in Chrome.
 
   rappor::Params params = {
     .num_bits = 8, .num_hashes = 2, .num_cohorts = 128,
@@ -89,9 +93,9 @@ int main(int argc, char** argv) {
   // list.
   rappor::Record record;
   record.AddString(kNameField, "foo");
-  //record.AddBoolean(kAddressField, false);
+  //record.AddBoolean(kAddressField, false);  // error
   record.AddString(kAddressField, "bar");
-  //record.AddBoolean(kAddressField, false);
+  //record.AddBoolean(kAddressField, false);  // error
 
   rappor::Report* report = report_list.add_report();
   if (!protobuf_encoder.Encode(record, report)) {
