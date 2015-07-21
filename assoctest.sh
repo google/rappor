@@ -125,13 +125,13 @@ _run-one-instance() {
     -p $p \
     -q $q \
     -f $f \
-    -i $instance_dir/case.csv \
-    --out-prefix "$instance_dir/case"
+    < $instance_dir/case.csv \
+    > "$instance_dir/case_reports.csv"
 
   analysis/tools/sum_bits_assoc.py \
     $case_dir/case_params.csv \
     "$instance_dir/case" \
-    < $instance_dir/case_out.csv
+    < $instance_dir/case_reports.csv
 
 
   # Setting up JSON file containing assoc_sim inputs with python
@@ -167,7 +167,7 @@ _run-one-instance() {
     inp = dict(); \
     inp['maps'] = ['$case_dir/case_map1.csv',\
                    '$case_dir/case_map2.csv']; \
-    inp['reports'] = '$instance_dir/case_out.csv'; \
+    inp['reports'] = '$instance_dir/case_reports.csv'; \
     inp['truefile'] = '$instance_dir/case.csv'; \
     inp['outdir'] = '$out_dir'; \
     inp['params'] = '$case_dir/case_params.csv'; \

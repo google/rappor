@@ -45,7 +45,7 @@ def SumBits(params, stdin, f_2way, f_1, f_2):
 
   for i, row in enumerate(csv_in):
     try:
-      (user_id, cohort, irr_1, irr_2) = row
+      (_, cohort, irr_1, irr_2) = row
     except ValueError:
       raise RuntimeError('Error parsing row %r' % row)
 
@@ -53,7 +53,11 @@ def SumBits(params, stdin, f_2way, f_1, f_2):
       continue  # skip header
 
     cohort = int(cohort)
-    num_reports[cohort] += 1
+    try:
+      num_reports[cohort] += 1
+    except IndexError:
+      raise RuntimeError('Error indexing cohort number %d (num_cohorts is %d) \
+                         ' % (cohort, num_cohorts))
 
     # TODO: Extend checking for both reports
     if not len(irr_1) == params.num_bloombits:

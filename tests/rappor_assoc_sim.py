@@ -119,8 +119,8 @@ def main(argv):
   # instance up front per client, rather than one per row below.
   start_time = time.time()
 
-  for i, (client_str, cohort_str, true_value_1, true_value_2) in
-                                                          enumerate(csv_in):
+  for i, (client_str, cohort_str, true_value_1, 
+          true_value_2) in enumerate(csv_in):
     if i == 0:
       if client_str != 'client':
         raise RuntimeError('Expected client header, got %s' % client_str)
@@ -139,7 +139,7 @@ def main(argv):
       elapsed = time.time() - start_time
       log('Processed %d inputs in %.2f seconds', i, elapsed)
 
-    cohort = int(cohort_str)
+    cohort = int(cohort_str) % params.num_cohorts
     secret = client_str
     e = rappor.Encoder(params, cohort, secret, irr_rand)
 
@@ -150,7 +150,7 @@ def main(argv):
     irr_1_str = rappor.bit_string(irr_1, params.num_bloombits)
     irr_2_str = rappor.bit_string(irr_2, params.num_bloombits)
 
-    out_row = (cohort_str, irr_1_str, irr_2_str)
+    out_row = (client_str, cohort, irr_1_str, irr_2_str)
     csv_out.writerow(out_row)
 
 

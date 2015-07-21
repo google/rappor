@@ -382,8 +382,8 @@ ExternalCounts <- function(inp, verbose = FALSE, metrics_filename = "metrics.csv
     lapply(map[[i]]$map, function(z) z[,found_strings[[i]], drop = FALSE]))
   crmap <- CombineMaps(pruned[[1]], pruned[[2]])$crmap
   marginal <- Decode2Way(counts[[1]], crmap, params2, fit = fit)$fit
-  td <- read.csv(file = inp$truefile, header = FALSE)
-  td <- table(td[,2:3])
+  td <- read.csv(file = inp$truefile, header = TRUE)
+  td <- table(td[,3:4])
   td <- td / sum(td)
   ed <- td
   for (cols in colnames(td)) {
@@ -443,13 +443,14 @@ ExternalReportsEM <- function(inp, verbose = FALSE, metrics_filename = "metrics.
                params = params))
   
   # Reports must be of the format
-  #     cohort no, rappor bitstring 1, rappor bitstring 2, ...
+  #     client name, cohort no, rappor bitstring 1, rappor bitstring 2, ...
   reportsObj <- read.csv(inp$reports,
-                           colClasses = c("integer", "integer",
+                           colClasses = c("character", "integer",
                                           rep("character", inp$numvars)),
                            header = TRUE)
   # Ignore the first column
   reportsObj <- reportsObj[,-1]
+
   # Parsing reportsObj
   # ComputeDistributionEM allows for different sets of cohorts
   # for each variable. Here, both sets of cohorts are identical
@@ -476,7 +477,7 @@ ExternalReportsEM <- function(inp, verbose = FALSE, metrics_filename = "metrics.
                                       estimate_var = FALSE)
   em <- joint_dist$fit
   td <- read.csv(file = inp$truefile, header = FALSE)
-  td <- table(td[,2:3])
+  td <- table(td[,3:4])
   td <- td / sum(td)
   time_taken <- proc.time() - ptm
   

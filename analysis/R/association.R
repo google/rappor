@@ -355,6 +355,9 @@ ComputeDistributionEM <- function(reports, report_cohorts,
                                   params)
       found_strings[[j]] <- c(found_strings[[j]], "Other")
     }
+    
+    GetCondProb(variable_report[[1]], candidate_strings = rownames(marginal),
+                params = params, map$map[[variable_cohort[1]]], prob_other[[variable_cohort[1]]])
 
     # Get the joint conditional distribution
     cond_report_dist <- lapply(seq(length(variable_report)), function(i) {

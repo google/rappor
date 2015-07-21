@@ -14,6 +14,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# TODO: Rename reports to values (more in line with its usage for histogram
+# RAPPOR)
 source('tests/gen_counts.R')
 
 # Usage:
@@ -69,13 +71,15 @@ main <- function(argv) {
   perm <- sample(N)
   values <- list(values[[1]][perm], values[[2]][perm])
 
-  # Obtain reports by prefixing values with "v"s. Even slower than shuffling.
+  # Prepend with str and opt
   reports <- list(sprintf("str%d", values[[1]]),
                   sprintf("opt%d", values[[2]]))
 
-  reports <- cbind(1:N, reports[[1]], reports[[2]])  # paste together "1 v342"
+  # paste together client name, cohort input, report1, report2
+  reports <- cbind(sprintf("cli%d", 1:N), 1:N, reports[[1]], reports[[2]])
+  colnames(reports) <- c("client", "cohort", "value1", "value2")
 
-  write.table(reports, file = out_file, row.names = FALSE, col.names = FALSE, 
+  write.table(reports, file = out_file, row.names = FALSE, col.names = TRUE, 
               sep = ",", quote = FALSE)
 }
 
