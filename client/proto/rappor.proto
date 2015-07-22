@@ -33,9 +33,11 @@ enum FieldType {
 
 message Report {
   // ID of field.
+  // TODO: instead of repeated field ID, it's better to have a single schema
+  // ID.  That has the types.
   repeated int32 field_id = 1;
 
-  // RAPPOR report.
+  // Ordered RAPPOR reports that represent a record.
   repeated uint64 bits = 2;
 }
 

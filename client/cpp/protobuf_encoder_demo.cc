@@ -54,12 +54,36 @@ const rappor::Params kParams4 = {
   .prob_f = 0.25f, .prob_p = 0.5f, .prob_q = 0.75f
 };
 
+// Initalize and return some bundle of encoders.
+// Keyed by ID?
+//
+// PROBLEM: There are 4 types of encoders.  You could have them inherit from
+// the same interface?
+// The EncodeString can return false ...
+
+void InitRappor() {
+}
+
+// Given schema ID / encoder ID, prints parameters.  Map file association lives
+// somewhere else.
+//
+// Equivalent of metrics.csv and params.csv.  Although params can be inline.
+//
+// Have an alternative --flag that does this.
+
+void PrintRapporConfig() {
+}
+
+// Simulate the body of the program.
+void EncodeExample() {
+}
+
 
 int main(int argc, char** argv) {
 
   // NOTE: This isn't valid C++.  Designated initializers are a C99 feature
   // that GCC and Clang allow, but warn about.
-  // Probably not allowed in Chrome.
+  // Chrome only has it in third_party, not in their own code.
 
   rappor::Params params = {
     .num_bits = 8, .num_hashes = 2, .num_cohorts = 128,
