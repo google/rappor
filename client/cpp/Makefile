@@ -1,17 +1,17 @@
 # Build RAPPOR C++ code.
 
-default: \
+default : \
 	_tmp/rappor_sim \
 	_tmp/protobuf_encoder_demo \
 	_tmp/openssl_hash_impl_test
 
-clean:
+clean :
 	rm -f --verbose _tmp/*
 
 # Use protobuf compiler to generate .cc and .h files.  The .o and the .d depend
 # on .cc, so that is the target of this rule.
 
-_tmp/rappor.pb.cc: ../proto/rappor.proto
+_tmp/rappor.pb.cc : ../proto/rappor.proto
 	protoc --cpp_out _tmp --proto_path=../proto ../proto/rappor.proto
 
 #
@@ -89,7 +89,7 @@ _tmp/rappor.pb.o : _tmp/rappor.pb.cc
 # You can add -std=c++0x for std::array, etc.
 
 # $^ : all prerequisites
-_tmp/rappor_sim: \
+_tmp/rappor_sim : \
 	_tmp/encoder.o \
 	_tmp/libc_rand_impl.o \
 	_tmp/unix_kernel_rand_impl.o \
@@ -103,7 +103,7 @@ _tmp/rappor_sim: \
 		-g
 
 # -I _tmp for protobuf headers
-_tmp/protobuf_encoder_demo: \
+_tmp/protobuf_encoder_demo : \
 	_tmp/encoder.o \
 	_tmp/libc_rand_impl.o \
 	_tmp/unix_kernel_rand_impl.o \
@@ -120,7 +120,7 @@ _tmp/protobuf_encoder_demo: \
 		-lcrypto \
 		-g
 
-_tmp/openssl_hash_impl_test: \
+_tmp/openssl_hash_impl_test : \
  	_tmp/openssl_hash_impl.o \
 	_tmp/openssl_hash_impl_test.o
 	$(CXX) \
