@@ -302,15 +302,11 @@ Decode <- function(counts, map, params, alpha = 0.05,
 
   mod <- list(coefs = coefs_ave[reported], stds = coefs_ssd[reported])
 
-  if (correction == "Bonferroni") {
-    alpha <- alpha / S
-  }
+  fit <- data.frame(string = colnames(map[, reported]),
+                    Estimate = matrix(mod$coefs, ncol = 1),
+                    SD = mod$stds,
+                    stringsAsFactors = FALSE)
 
-  inf <- PerformInference(map[filter_bits, reported, drop = FALSE],
-                          as.vector(t(estimates_stds_filtered$estimates)),
-                          N, mod, params, alpha,
-                          correction)
-  fit <- inf$fit
   # If this is a basic RAPPOR instance, just use the counts for the estimate
   #     (Check if the map is diagonal to tell if this is basic RAPPOR.)
   if (sum(map) == sum(diag(map))) {
@@ -326,8 +322,11 @@ Decode <- function(counts, map, params, alpha = 0.05,
   fit$prop_std_error <- fit$std_error / N
 
   # 1.96 standard deviations gives 95% confidence interval.
-  fit$prop_low_95 <- fit$proportion - 1.96 * fit$prop_std_error
-  fit$prop_high_95 <- fit$proportion + 1.96 * fit$prop_std_error
+  low_95 <- fit$proportion - 1.96 * fit$prop_std_error
+  high_95 <- fit$proportion + 1.96 * fit$prop_std_error
+  # Clamp estimated proportion.  pmin/max: vectorized min and max
+  fit$prop_low_95 <- pmax(low_95, 0.0)
+  fit$prop_high_95 <- pmin(high_95, 1.0)
 
   fit <- fit[, c("string", "estimate", "std_error", "proportion",
                  "prop_std_error", "prop_low_95", "prop_high_95")]
@@ -335,38 +334,17 @@ Decode <- function(counts, map, params, alpha = 0.05,
   allocated_mass <- sum(fit$proportion)
   num_detected <- nrow(fit)
 
-  ss <- round(inf$SS, digits = 3)
-  explained_var <- ss[[1]]
-  missing_var <- ss[[2]]
-  noise_var <- ss[[3]]
-
-  noise_std_dev <- round(inf$resid_sigma, digits = 3)
-
-  # Compute summary of the fit.
-  parameters <-
-      c("Candidate strings", "Detected strings",
-        "Sample size (N)", "Discovered Prop (out of N)",
-        "Explained Variance", "Missing Variance", "Noise Variance",
-        "Theoretical Noise Std. Dev.")
-  values <- c(S, num_detected, N, allocated_mass,
-              explained_var, missing_var, noise_var, noise_std_dev)
-
-  res_summary <- data.frame(parameters = parameters, values = values)
-
   privacy <- ComputePrivacyGuarantees(params, alpha, N)
   params <- data.frame(parameters =
                        c("k", "h", "m", "p", "q", "f", "N", "alpha"),
                        values = c(k, h, m, p, q, f, N, alpha))
 
-  # This is a list of decode stats in a better format than 'summary'.
-  # TODO: Delete summary.
   metrics <- list(sample_size = N,
                   allocated_mass = allocated_mass,
-                  num_detected = num_detected,
-                  explained_var = explained_var,
-                  missing_var = missing_var)
+                  num_detected = num_detected
+                  )
 
-  list(fit = fit, summary = res_summary, privacy = privacy, params = params,
+  list(fit = fit, privacy = privacy, params = params,
        lasso = NULL, ests = as.vector(t(estimates_stds_filtered$estimates)),
        counts = counts[, -1], resid = NULL, metrics = metrics)
 }

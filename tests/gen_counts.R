@@ -184,14 +184,9 @@ main <- function(argv) {
 
   pdf <- ComputePdf(distr, num_unique_values)
 
-  print("Distribution")
-  print(pdf)
-
   # Computes the number of clients reporting each string
   # according to the pre-specified distribution.
   partition <- RandomPartition(num_clients, pdf)
-  print('PARTITION')
-  print(partition)
 
   # Histogram
   true_hist <- data.frame(string = true_map$strs, count = partition)
@@ -208,7 +203,6 @@ main <- function(argv) {
   cat(sprintf('Wrote %s\n', counts_path))
 
   # TODO: Don't write strings that appear 0 times?
-
   hist_path <- paste0(out_prefix, '_hist.csv')
   write.csv(true_hist, file = hist_path, row.names = FALSE)
   cat(sprintf('Wrote %s\n', hist_path))
