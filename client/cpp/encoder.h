@@ -46,6 +46,9 @@ struct Params {
 
 class Encoder {
  public:
+  // Note that invalid parameters cause runtime assertions in the constructor.
+  // Encoders are intended to be created at application startup with constant
+  // arguments, so errors should be caught early.
   Encoder(const Params& params, const Deps& deps);
 
   // For simulation use only.

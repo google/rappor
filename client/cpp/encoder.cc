@@ -48,7 +48,20 @@ void PrintSha256(Sha256Digest h) {
 
 // We use 1 BYTE of a HMAC-SHA256 value per BIT to generate the PRR.  SHA256
 // has 32 bytes, so the max is 32 bits.
-static int kMaxBits = 32;
+static const int kMaxBits = 32;
+
+// Can't be more than the number of bytes in MD5.
+static const int kMaxHashes = 16;
+
+// Probabilities should be in the interal (0.0, 1.0].  0.0 probability is
+// assumed to be a lack of initialization.
+void CheckValidProbability(float prob, const char* var_name) {
+  if (prob <= 0.0f || prob > 1.0f) {
+    log("%s should be between 0.0 and 1.0 (and non-zero) (got %.2f)",
+        var_name, prob);
+    assert(false);
+  }
+}
 
 //
 // Encoder
@@ -72,33 +85,20 @@ Encoder::Encoder(const Params& params, const Deps& deps)
     log("num_cohorts can't be 0");
     assert(false);
   }
-  if (params_.prob_f == 0.0f) {
-    log("prob_f can't be 0");
-    assert(false);
-  }
-  if (params_.prob_p == 0.0f) {
-    log("prob_p can't be 0");
-    assert(false);
-  }
-  if (params_.prob_q == 0.0f) {
-    log("prob_q can't be 0");
-    assert(false);
-  }
-
-  // Validity constraints:
-  //
-  // bits fit in an integral type uint64_t:
-  //   num_bits < 64 (or sizeof(Bits) * 8)
-  // md5 is long enough:
-  //   128 > ( num_hashes * log2(num_bits) )
-  // sha256 is long enough:
-  //   256 > num_bits + (prob_f resolution * num_bits)
-
-  //log("num_bits: %d", num_bits_);
-  if (params_.num_bits > 32) {
+  // Check Maximum values.
+  if (params_.num_bits > kMaxBits) {
     log("num_bits (%d) can't be greater than %d", params_.num_bits, kMaxBits);
     assert(false);
   }
+  if (params_.num_hashes > kMaxHashes) {
+    log("num_hashes (%d) can't be greater than %d", params_.num_hashes,
+        kMaxHashes);
+    assert(false);
+  }
+
+  CheckValidProbability(params_.prob_f, "prob_f");
+  CheckValidProbability(params_.prob_p, "prob_p");
+  CheckValidProbability(params_.prob_q, "prob_q");
 }
 
 Bits Encoder::MakeBloomFilter(const std::string& value) const {
