@@ -66,6 +66,12 @@ int main(int argc, char** argv) {
     .prob_f = 0.25f, .prob_p = 0.75f, .prob_q = 0.5f
   };
 
+  rappor::Params params2 = {
+    .num_bits = 32, .num_hashes = 2, .num_cohorts = 128,
+    .prob_f = 0.25f, .prob_p = 0.75f, .prob_q = 0.5f
+  };
+
+  // TODO: seed it
   rappor::LibcRand libc_rand(params.num_bits, params.prob_p, params.prob_q);
 
   int cohort = 5;  // random integer in range [0, 512)
@@ -106,11 +112,20 @@ int main(int argc, char** argv) {
   rappor::log("----------");
 
   rappor::Report* report2 = report_list.add_report();
-  rappor::StringEncoder string_encoder(NAME_FIELD, params, deps);
+  rappor::StringEncoder string_encoder(NAME_FIELD, params2, deps);
   if (!string_encoder.EncodeString("STRING", report2)) {
     rappor::log("Error encoding string %s", line.c_str());
     return 1;
   }
+
+  std::string out;
+  BitsToString(static_cast<rappor::Bits>(report2->bits(0)), &out,
+      params2.num_bits / 8);
+
+  PrintBitString(out);
+  printf("\n");
+
+  rappor::log("report2 [%s]", report2->DebugString().c_str());
 
   rappor::log("----------");
 
@@ -125,4 +140,5 @@ int main(int argc, char** argv) {
 
   rappor::log("RecordReport [%s]", report->DebugString().c_str());
 
+  rappor::log("ReportList [%s]", report_list.DebugString().c_str());
 }

@@ -46,13 +46,15 @@ void PrintSha256(Sha256Digest h) {
   fprintf(stderr, "\n");
 }
 
-static int kMaxBits = sizeof(Bits) * 8;
+// We use 1 BYTE of a HMAC-SHA256 value per BIT to generate the PRR.  SHA256
+// has 32 bytes, so the max is 32 bits.
+static int kMaxBits = 32;
 
 //
 // Encoder
 //
 
-Encoder::Encoder(const Params& params, const Deps& deps) 
+Encoder::Encoder(const Params& params, const Deps& deps)
     : params_(params),
       deps_(deps) {
 
@@ -66,9 +68,8 @@ Encoder::Encoder(const Params& params, const Deps& deps)
   //   256 > num_bits + (prob_f resolution * num_bits)
 
   //log("num_bits: %d", num_bits_);
-  if (params_.num_bits > kMaxBits) {
-    log("num_bits (%d) can't be bigger than rappor::Bits type: (%d)",
-        params_.num_bits, kMaxBits);
+  if (params_.num_bits > 32) {
+    log("num_bits (%d) can't be greater than %d", params_.num_bits, kMaxBits);
     assert(false);
   }
 }
