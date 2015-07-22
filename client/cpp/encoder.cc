@@ -58,6 +58,33 @@ Encoder::Encoder(const Params& params, const Deps& deps)
     : params_(params),
       deps_(deps) {
 
+  // None of these should be 0; it probably means the caller forgot to
+  // initialize a field.
+  if (params_.num_bits == 0) {
+    log("num_bits can't be 0");
+    assert(false);
+  }
+  if (params_.num_hashes == 0) {
+    log("num_hashes can't be 0");
+    assert(false);
+  }
+  if (params_.num_cohorts == 0) {
+    log("num_cohorts can't be 0");
+    assert(false);
+  }
+  if (params_.prob_f == 0.0f) {
+    log("prob_f can't be 0");
+    assert(false);
+  }
+  if (params_.prob_p == 0.0f) {
+    log("prob_p can't be 0");
+    assert(false);
+  }
+  if (params_.prob_q == 0.0f) {
+    log("prob_q can't be 0");
+    assert(false);
+  }
+
   // Validity constraints:
   //
   // bits fit in an integral type uint64_t:
