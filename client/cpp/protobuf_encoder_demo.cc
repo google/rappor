@@ -74,10 +74,17 @@ int main(int argc, char** argv) {
   // TODO: seed it
   rappor::LibcRand libc_rand(params.num_bits, params.prob_p, params.prob_q);
 
+  // TODO: assert that params passed to rand match?
+  // Or pass all params to rand?
+  rappor::LibcRand libc_rand2(params2.num_bits, params2.prob_p, params2.prob_q);
+
   int cohort = 5;  // random integer in range [0, 512)
 
   rappor::Deps deps(cohort, rappor::Md5, "client_secret",
                     rappor::Hmac, libc_rand);
+
+  rappor::Deps deps2(cohort, rappor::Md5, "client_secret",
+                     rappor::Hmac, libc_rand2);
 
   const std::string line("foo");
 
@@ -112,18 +119,11 @@ int main(int argc, char** argv) {
   rappor::log("----------");
 
   rappor::Report* report2 = report_list.add_report();
-  rappor::StringEncoder string_encoder(NAME_FIELD, params2, deps);
+  rappor::StringEncoder string_encoder(NAME_FIELD, params2, deps2);
   if (!string_encoder.EncodeString("STRING", report2)) {
     rappor::log("Error encoding string %s", line.c_str());
     return 1;
   }
-
-  std::string out;
-  BitsToString(static_cast<rappor::Bits>(report2->bits(0)), &out,
-      params2.num_bits / 8);
-
-  PrintBitString(out);
-  printf("\n");
 
   rappor::log("report2 [%s]", report2->DebugString().c_str());
 

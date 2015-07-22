@@ -21,23 +21,13 @@ rappor-sim() {
   _tmp/rappor_sim "$@"
 }
 
-protobuf-encoder-test() {
+protobuf-encoder-demo() {
   make _tmp/protobuf_encoder_demo
   _tmp/protobuf_encoder_demo "$@"
 }
 
 rappor-sim-demo() {
-  rappor-sim 8 2 128 0.25 0.75 0.5 <<EOF
-client,cohort,value
-1,1,v1
-1,1,v2
-2,2,v3
-2,2,v4
-EOF
-}
-
-protobuf-encoder-demo() {
-  protobuf-encoder-test 8 2 128 0.25 0.75 0.5 <<EOF
+  rappor-sim 16 2 128 0.25 0.75 0.5 <<EOF
 client,cohort,value
 1,1,v1
 1,1,v2

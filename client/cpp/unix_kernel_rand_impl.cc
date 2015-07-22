@@ -20,7 +20,7 @@
 
 namespace rappor {
 
-const int kMaxBitWidth = 32;
+const int kMaxBitWidth = 32;  // also in encoder.cc
 
 bool UnixKernelRand::CreateMask(uint8_t threshold256, Bits* mask_out) const {
   uint8_t rand_buf[kMaxBitWidth];
