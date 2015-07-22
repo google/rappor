@@ -54,6 +54,19 @@ const rappor::Params kParams4 = {
   .prob_f = 0.25f, .prob_p = 0.5f, .prob_q = 0.75f
 };
 
+class EncoderSet {
+ public:
+  rappor::StringEncoder* GetStringEncoder(int id);
+  rappor::OrdinalEncoder* GetOrdinalEncoder(int id);
+  //rappor::BooleanEncoder* GetBooleanEncoder(int id);
+
+  // TODO: rename RecordEncoder?
+  rappor::ProtobufEncoder* GetProtobufEncoder(int id);
+
+  // How do you create them?
+  void NewStringEncoder(int id);
+};
+
 // Initalize and return some bundle of encoders.
 // Keyed by ID?
 //
@@ -62,6 +75,10 @@ const rappor::Params kParams4 = {
 // The EncodeString can return false ...
 
 void InitRappor() {
+  EncoderSet encoder_set;
+
+  // don't want to create encoders on the stack.  Attach them to EncoderSet
+  // object?
 }
 
 // Given schema ID / encoder ID, prints parameters.  Map file association lives

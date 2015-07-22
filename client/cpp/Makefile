@@ -64,7 +64,7 @@ SOURCES = \
 -include _tmp/rappor.pb.d
 
 # For example, -Wextra warns about unused params, but -Wall doesn't.
-CXXFLAGS = -Wall -Wextra -Wpedantic
+CXXFLAGS = -Wall -Wextra #-Wpedantic
 
 #
 # Build object files (-c: compile only)
