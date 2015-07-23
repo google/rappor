@@ -114,7 +114,7 @@ _run-one-instance() {
 
   banner "Generating input"
 
-  tests/gen_assoc_reports.R $num_unique_values $num_unique_values2 \
+  tests/gen_true_values_assoc.R $num_unique_values $num_unique_values2 \
                             $num_clients $num_cohorts $instance_dir/case.csv
 
   banner "Running RAPPOR client"
