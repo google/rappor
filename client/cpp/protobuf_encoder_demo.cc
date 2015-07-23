@@ -69,6 +69,29 @@ class EncoderSet {
   void NewStringEncoder(int id);
 };
 
+// Wrapper:
+//
+// rappor::EncoderSet e;
+// e.EncodeString(kNameField, "foo");
+// e.EncodeBoolean(kIsSetField, true);
+// e.EncodeOrdinal(kConfigField, 1);
+//
+//
+// rappor::Record record;
+// record.AddString(kUrlField, "bob");
+// record.AddBoolean(kIsHttpField, true);
+//
+// e.EncodeRecord(PERSON_SCHEMA, record);
+//
+// Do we need both field IDs and schema IDs?  I think so.  We want to protect
+// against errors in transposing fields.  And we want.
+// 
+// Possibly the field IDs are only in the application.  You just need to export
+// the names into a CSV file.
+//
+// And the schema IDs are in the protobuf.
+
+
 // Initalize and return some bundle of encoders.
 // Keyed by ID?
 //

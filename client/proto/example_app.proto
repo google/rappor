@@ -7,3 +7,5 @@ enum FieldId {
   ADDRESS_FIELD = 1;
 }
 
+// TODO: Put Schema IDs here?  Get rid of field IDs; those can be in the
+// application.  We just need their names.
