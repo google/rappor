@@ -82,6 +82,16 @@ EXPECTED_F_2 = """\
 3,0,2,0,2\r
 """
 
+WRONG_IRR_BITS = """\
+user_id,cohort,irr1,irr2
+cli1,1,00123,11223
+"""
+
+WRONG_COHORT = """\
+user_id,cohort,irr1,irr2
+cli1,3,0011,0001
+"""
+
 class SumBitsAssocTest(unittest.TestCase):
 
   def setUp(self):
@@ -97,19 +107,24 @@ class SumBitsAssocTest(unittest.TestCase):
     f_2 = cStringIO.StringIO()
 
     sum_bits_assoc.SumBits(self.params, stdin, f_2way, f_1, f_2)
-    print f_2way.getvalue()
-    print EXPECTED_F_2WAY
-
     self.assertMultiLineEqual(EXPECTED_F_1, f_1.getvalue())
     self.assertMultiLineEqual(EXPECTED_F_2, f_2.getvalue())
     self.assertMultiLineEqual(EXPECTED_F_2WAY, f_2way.getvalue())
 
-#  def testErrors(self):
-#    stdin = cStringIO.StringIO(TOO_MANY_COLUMNS)
-#    stdout = cStringIO.StringIO()
-#
-#    self.assertRaises(
-#        RuntimeError, sum_bits.SumBits, self.params, stdin, stdout)
+  def testErrors(self):
+    f_2way = cStringIO.StringIO()
+    f_1 = cStringIO.StringIO()
+    f_2 = cStringIO.StringIO()
+
+    stdin = cStringIO.StringIO(WRONG_IRR_BITS)
+    self.assertRaises(
+        RuntimeError, sum_bits_assoc.SumBits, self.params, stdin,
+        f_2way, f_1, f_2)
+
+    stdin = cStringIO.StringIO(WRONG_COHORT)
+    self.assertRaises(
+        RuntimeError, sum_bits_assoc.SumBits, self.params, stdin,
+        f_2way, f_1, f_2)
 
 
 if __name__ == '__main__':
