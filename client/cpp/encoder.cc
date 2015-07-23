@@ -194,11 +194,11 @@ bool Encoder::_EncodeInternal(const std::string& value, Bits* bloom_out,
   // NOTE: These can fail if say a read() from /dev/urandom fails.
   Bits p_bits;
   Bits q_bits;
-  if (!deps_.irr_rand_.PMask(&p_bits)) {
+  if (!deps_.irr_rand_.GetMask(params_.prob_p, params_.num_bits, &p_bits)) {
     rappor::log("PMask failed");
     return false;
   }
-  if (!deps_.irr_rand_.QMask(&q_bits)) {
+  if (!deps_.irr_rand_.GetMask(params_.prob_q, params_.num_bits, &q_bits)) {
     rappor::log("QMask failed");
     return false;
   }

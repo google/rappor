@@ -51,17 +51,7 @@ typedef bool HmacFunc(const std::string& key, const std::string& value,
 class IrrRandInterface {
  public:
   virtual ~IrrRandInterface() {}
-
-  virtual bool PMask(Bits* mask_out) const = 0;
-  virtual bool QMask(Bits* mask_out) const = 0;
-
- protected:
-  IrrRandInterface(int num_bits, float p, float q)
-      : num_bits_(num_bits), p_(p), q_(q) {
-  }
-  int num_bits_;
-  float p_;
-  float q_;
+  virtual bool GetMask(float prob, int num_bits, Bits* mask_out) const = 0;
 };
 
 class Deps {

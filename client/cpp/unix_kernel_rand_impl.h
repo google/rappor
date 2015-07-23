@@ -27,23 +27,15 @@ namespace rappor {
 
 class UnixKernelRand : public IrrRandInterface {
  public:
-  UnixKernelRand(FILE* fp, int num_bits, float p, float q)
-      : IrrRandInterface(num_bits, p, q),
-        fp_(fp) {
-    p_threshold_256_ = static_cast<uint8_t>(p * 256);
-    q_threshold_256_ = static_cast<uint8_t>(q * 256);
+  UnixKernelRand(FILE* fp)
+      : fp_(fp) {
   }
   virtual ~UnixKernelRand() {}
 
-  virtual bool PMask(Bits* mask_out) const;
-  virtual bool QMask(Bits* mask_out) const;
+  virtual bool GetMask(float prob, int num_bits, Bits* mask_out) const;
 
  private:
-  bool CreateMask(uint8_t threshold256, Bits* mask_out) const;
-
   FILE* fp_;  // open device, e.g. /dev/urandom
-  uint8_t p_threshold_256_;  // [0, 255) probability threshold
-  uint8_t q_threshold_256_;  // [0, 255) probability threshold 
 };
 
 }  // namespace rappor

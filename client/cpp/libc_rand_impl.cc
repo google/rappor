@@ -35,29 +35,16 @@ void LibcRandGlobalInit() {
 //
 
 // Similar to client/python/fastrand.c
-Bits LibcRand::CreateMask(int rand_threshold) const {
-  Bits result = 0;
-  for (int i = 0; i < num_bits_; ++i) {
+bool LibcRand::GetMask(float prob, int num_bits, Bits* mask_out) const {
+  int rand_threshold = static_cast<int>(prob * RAND_MAX);
+  Bits mask = 0;
+
+  for (int i = 0; i < num_bits; ++i) {
     Bits bit = (rand() < rand_threshold);
-    result |= (bit << i);
+    mask |= (bit << i);
   }
-  return result;
-}
-
-LibcRand::LibcRand(int num_bits, float p, float q)
-    : IrrRandInterface(num_bits, p, q) {
-  p_rand_threshold_ = static_cast<int>(p * RAND_MAX);
-  q_rand_threshold_ = static_cast<int>(q * RAND_MAX);
-}
-
-bool LibcRand::PMask(Bits* mask_out) const {
-  *mask_out = CreateMask(p_rand_threshold_);
-  return true;
-}
-
-bool LibcRand::QMask(Bits* mask_out) const {
-  *mask_out = CreateMask(q_rand_threshold_);
-  return true;
+  *mask_out = mask;
+  return true;  // no possible failure
 }
 
 }  // namespace rappor

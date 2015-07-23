@@ -113,11 +113,11 @@ int main(int argc, char** argv) {
   };
 
   // TODO: seed it
-  rappor::LibcRand libc_rand(params.num_bits, params.prob_p, params.prob_q);
+  rappor::LibcRand libc_rand;
 
   // TODO: assert that params passed to rand match?
   // Or pass all params to rand?
-  rappor::LibcRand libc_rand2(params2.num_bits, params2.prob_p, params2.prob_q);
+  rappor::LibcRand libc_rand2;
 
   int cohort = 5;  // random integer in range [0, 512)
 

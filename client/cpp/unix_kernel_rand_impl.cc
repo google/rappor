@@ -22,28 +22,21 @@ namespace rappor {
 
 const int kMaxBitWidth = 32;  // also in encoder.cc
 
-bool UnixKernelRand::CreateMask(uint8_t threshold256, Bits* mask_out) const {
+bool UnixKernelRand::GetMask(float prob, int num_bits, Bits* mask_out) const {
   uint8_t rand_buf[kMaxBitWidth];
-  size_t num_elems = fread(&rand_buf, sizeof(uint8_t), num_bits_, fp_);
-  if (num_elems != static_cast<size_t>(num_bits_)) {  // fread error
+  size_t num_elems = fread(&rand_buf, sizeof(uint8_t), num_bits, fp_);
+  if (num_elems != static_cast<size_t>(num_bits)) {  // fread error
     return false;
   }
+  uint8_t threshold_256 = static_cast<uint8_t>(prob * 256);
 
   Bits mask = 0;
-  for (int i = 0; i < num_bits_; ++i) {
-    uint8_t bit = (rand_buf[i] < threshold256);
+  for (int i = 0; i < num_bits; ++i) {
+    uint8_t bit = (rand_buf[i] < threshold_256);
     mask |= (bit << i);
   }
   *mask_out = mask;
   return true;
-}
-
-bool UnixKernelRand::PMask(Bits* mask_out) const {
-  return CreateMask(p_threshold_256_, mask_out);
-}
-
-bool UnixKernelRand::QMask(Bits* mask_out) const {
-  return CreateMask(q_threshold_256_, mask_out);
 }
 
 }  // namespace rappor

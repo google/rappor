@@ -128,12 +128,10 @@ int main(int argc, char** argv) {
   rappor::IrrRandInterface* irr_rand;
   if (false) {
     FILE* fp = fopen("/dev/urandom", "r");
-    irr_rand = new rappor::UnixKernelRand(
-        fp, params.num_bits, params.prob_p, params.prob_q);
+    irr_rand = new rappor::UnixKernelRand(fp);
   } else {
     rappor::LibcRandGlobalInit();  // seed
-    irr_rand = new rappor::LibcRand(
-        params.num_bits, params.prob_p, params.prob_q);
+    irr_rand = new rappor::LibcRand();
   }
 
   /*

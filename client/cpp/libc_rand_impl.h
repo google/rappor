@@ -24,17 +24,9 @@ void LibcRandGlobalInit();
 
 class LibcRand : public IrrRandInterface {
  public:
-  LibcRand(int num_bits, float p, float q);
   virtual ~LibcRand() {}
 
-  virtual bool PMask(Bits* mask_out) const;
-  virtual bool QMask(Bits* mask_out) const;
-
- private:
-  Bits CreateMask(int rand_threshold) const;
-
-  int p_rand_threshold_;  // [0, RAND_MAX) probability threshold
-  int q_rand_threshold_;  // [0, RAND_MAX) probability threshold 
+  virtual bool GetMask(float prob, int num_bits, Bits* mask_out) const;
 };
 
 }  // namespace rappor
