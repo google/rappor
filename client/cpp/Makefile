@@ -11,8 +11,8 @@ clean :
 # Use protobuf compiler to generate .cc and .h files.  The .o and the .d depend
 # on .cc, so that is the target of this rule.
 
-_tmp/rappor.pb.cc : ../proto/rappor.proto
-	protoc --cpp_out _tmp --proto_path=../proto ../proto/rappor.proto
+_tmp/%.pb.cc : ../proto/%.proto
+	protoc --cpp_out _tmp --proto_path=../proto $<
 
 #
 # Generate .d Makefile fragments.
@@ -35,8 +35,8 @@ _tmp/%.d : %.cc
 		$(CXX) -I _tmp/ -MM $(CPPFLAGS) $<
 
 # Special case for .d file of generated source.
-_tmp/rappor.pb.d : _tmp/rappor.pb.cc
-	./dotd.sh rappor.pb $@ \
+_tmp/%.pb.d : _tmp/%.pb.cc
+	./dotd.sh $*.pb $@ \
 		$(CXX) -I _tmp/ -MM $(CPPFLAGS) $<
 
 SOURCES = \
@@ -62,6 +62,7 @@ SOURCES = \
 -include $(patsubst %.cc,_tmp/%.d,$(SOURCES))
 
 -include _tmp/rappor.pb.d
+-include _tmp/example_app.pb.d
 
 # For example, -Wextra warns about unused params, but -Wall doesn't.
 CXXFLAGS = -Wall -Wextra #-Wpedantic
@@ -75,7 +76,7 @@ CXXFLAGS = -Wall -Wextra #-Wpedantic
 _tmp/%.o : %.cc
 	$(CXX) $(CXXFLAGS) -I _tmp/ -c -o $@ $<
 
-_tmp/rappor.pb.o : _tmp/rappor.pb.cc
+_tmp/%.pb.o : _tmp/%.pb.cc
 	$(CXX) $(CXXFLAGS) -I _tmp/ -c -o $@ $<
 
 #
@@ -110,6 +111,7 @@ _tmp/protobuf_encoder_demo : \
 	_tmp/openssl_hash_impl.o \
 	_tmp/protobuf_encoder.o \
 	_tmp/protobuf_encoder_demo.o \
+	_tmp/example_app.pb.o \
 	_tmp/rappor.pb.o
 	$(CXX) \
 		$(CXXFLAGS) \

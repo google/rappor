@@ -16,13 +16,15 @@
 // Sample code for protobuf_encoder.cc.
 //
 
+#include "protobuf_encoder.h"
+
 #include <cassert>  // assert
 #include <cstdlib>  // strtol, strtof
 #include <iostream>
 #include <stdio.h>
 #include <vector>
 
-#include "protobuf_encoder.h"
+#include "example_app.pb.h"
 #include "rappor.pb.h"
 #include "libc_rand_impl.h"
 #include "openssl_hash_impl.h"
@@ -125,13 +127,10 @@ int main(int argc, char** argv) {
   // Collection of reports.  Reports encoded records.
   rappor::ReportList report_list;
 
-  const int NAME_FIELD = 1;
-  const int ADDRESS_FIELD = 2;
-
   // Set up schema with two fields.
   rappor::RecordSchema s;
-  s.AddString(NAME_FIELD, params);
-  s.AddString(ADDRESS_FIELD, params);
+  s.AddString(example_app::NAME_FIELD, params);
+  s.AddString(example_app::ADDRESS_FIELD, params);
 
   // Instantiate encoder.
   rappor::ProtobufEncoder protobuf_encoder(s, deps);
@@ -139,9 +138,9 @@ int main(int argc, char** argv) {
   // Construct a recorder, and then encode it into a new entry in the report
   // list.
   rappor::Record record;
-  record.AddString(NAME_FIELD, "foo");
+  record.AddString(example_app::NAME_FIELD, "foo");
   //record.AddBoolean(ADDRESS_FIELD, false);  // error
-  record.AddString(ADDRESS_FIELD, "bar");
+  record.AddString(example_app::ADDRESS_FIELD, "bar");
   //record.AddBoolean(ADDRESS_FIELD, false);  // error
 
   rappor::Report* report = report_list.add_report();
@@ -153,7 +152,7 @@ int main(int argc, char** argv) {
   rappor::log("----------");
 
   rappor::Report* report2 = report_list.add_report();
-  rappor::StringEncoder string_encoder(NAME_FIELD, params2, deps);
+  rappor::StringEncoder string_encoder(example_app::NAME_FIELD, params2, deps);
   if (!string_encoder.EncodeString("STRING", report2)) {
     rappor::log("Error encoding string %s", line.c_str());
     return 1;
@@ -164,7 +163,7 @@ int main(int argc, char** argv) {
   rappor::log("----------");
 
   rappor::Report* report3 = report_list.add_report();
-  rappor::OrdinalEncoder ordinal_encoder(NAME_FIELD, params, deps);
+  rappor::OrdinalEncoder ordinal_encoder(example_app::NAME_FIELD, params, deps);
   if (!ordinal_encoder.EncodeOrdinal(10, report3)) {
     rappor::log("Error encoding ordinal %s", line.c_str());
     return 1;

@@ -1,0 +1,9 @@
+package example_app;
+
+// Application specific stuff.  TODO: Move into "package
+// protobuf_encoder_demo".
+enum FieldId {
+  NAME_FIELD = 0;
+  ADDRESS_FIELD = 1;
+}
+
