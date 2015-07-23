@@ -32,7 +32,7 @@ EstimateBloomCounts2Way <- function(params, obs_counts) {
   #            q - P(IRR = 1 | PRR = 1)
   #            f - Proportion of bits in the Bloom filter that are set randomly
   #                to 0 or 1 regardless of the underlying true bit value
-  #    obs_counts: a matrix of size m by (4k**2 + 1). Column one contains sample
+  #    obs_counts: a matrix of size m by (4k^2 + 1). Column one contains sample
   #                sizes for each cohort. Other counts indicated how many times
   #                pairs of bits {11, 10, 01, 00} were set across the two
   #                reports (in a "1st report"-major order)
@@ -104,50 +104,45 @@ FitDistribution2Way <- function(estimates_stds, map,
   lsei(A = X, B = Y, G = G, H = H, type = 2)$X
 }
 
-# FitDistribution2Way <- function(estimates_stds, map, fit) {
-#   # Find a distribution over rows of map that approximates estimates_stds best
-#   #
-#   # Input:
-#   #   estimates_stds: a list of two m x k matrices, one for estimates, another
-#   #                   for standard errors
-#   #   map           : an (m * k) x S boolean matrix
-#   #
-#   # Output:
-#   #   a float vector of length S, so that a distribution over map's rows sampled
-#   #   according to this vector approximates estimates
-#   
-#   X <- as.matrix(map)
-#   Y <- as.vector(t(estimates_stds$estimates))
-#   m <- dim(X)[1]
-#   n <- dim(X)[2]
-#   wt <- 10000  # weight to marginal constraints
-#   
-#   G <- rbind2(Diagonal(n), rep(-1, n))
-#   H <- c(rep(0, n), -1)
-#   
-#   # Adding marginals constraints to X and Y
-#   fstrs <- lapply(fit, function(x) x[,"string"])  # found strings
-#   
-#   Y <- c(Y, wt * t(fit[[1]]["proportion"]), wt * t(fit[[2]]["proportion"]))
-#   
-#   for (strs in fstrs[[1]]) {
-#     indices <- which(colnames(map) %in% outer(strs,
-#                                               fstrs[[2]],
-#                                               function(x, y) paste(x, y, sep = "x")))
-#     vec <- rep(0, n)
-#     vec[indices] <- wt
-#     X <- rbind2(X, vec)
-#   }
-#   for (strs in fstrs[[2]]) {
-#     indices <- which(colnames(map) %in% outer(fstrs[[1]],
-#                                               strs,
-#                                               function(x, y) paste(x, y, sep = "x")))
-#     vec <- rep(0, n)
-#     vec[indices] <- wt
-#     X <- rbind2(X, vec)
-#   }
-#   
-#   lsei(A = X, B = Y, G = G, H = H, type = 2)$X
+FitDistribution2WayAdditionalConstraints <- function(estimates_stds, map, fit) {
+  # Experimental code
+  # Computes the same output as FitDistribution by 
+  # additionally throwing in constraints corresponding to
+  # 1-way marginals
+  # Requires non-NULL fit as input (with "proportion" containing marginal info)
+
+  X <- as.matrix(map)
+  Y <- as.vector(t(estimates_stds$estimates))
+  m <- dim(X)[1]
+  n <- dim(X)[2]
+  wt <- 10000 #  weight to marginal constraints
+  
+  G <- rbind2(Diagonal(n), rep(-1, n))
+  H <- c(rep(0, n), -1)
+  
+  # Adding marginals constraints to X and Y
+  fstrs <- lapply(fit, function(x) x[,"string"]) #  found strings
+  
+  Y <- c(Y, wt * t(fit[[1]]["proportion"]), wt * t(fit[[2]]["proportion"]))
+  
+  for (strs in fstrs[[1]]) {
+    indices <- which(colnames(map) %in% outer(strs,
+                                    fstrs[[2]],
+                                    function(x, y) paste(x, y, sep = "x")))
+    vec <- rep(0, n)
+    vec[indices] <- wt
+    X <- rbind2(X, vec)
+  }
+  for (strs in fstrs[[2]]) {
+    indices <- which(colnames(map) %in% outer(fstrs[[1]],
+                                    strs,
+                                    function(x, y) paste(x, y, sep = "x")))
+    vec <- rep(0, n)
+    vec[indices] <- wt
+    X <- rbind2(X, vec)
+  }
+  
+  lsei(A = X, B = Y, G = G, H = H, type = 2)$X
   
   # Random projection params
   #   size <- 10 * n
@@ -163,7 +158,7 @@ FitDistribution2Way <- function(estimates_stds, map,
   #   G <- rbind2(Diagonal(nproj), rep(-1, nproj))
   #   H <- c(rep(0, nproj), -1)
   #   lsei(A = Xproj, B = Yproj, G = G, H = H, type = 2)$X
-# }
+}
 
 Decode2Way <- function(counts, map, params, fit = NULL) {
   k <- params$k

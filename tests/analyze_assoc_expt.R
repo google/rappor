@@ -351,10 +351,11 @@ ExternalCounts <- function(inp, verbose = FALSE, metrics_filename = "metrics.csv
   ptm <- proc.time()
   params <- ReadParameterFile(inp$params)
   # Ensure sufficient maps as required by number of vars
+  # Correct map from ReadMapFile() for assoc analysis
   stopifnot(inp$numvars == length(inp$maps))
   map <- lapply(inp$maps, function(o)
-    ProcessMap(ReadMapFile(o, params = params),
-               params = params))
+    CorrectMapForAssoc(ReadMapFile(o, params = params),
+                       params = params))
 
   # (2 way counts, marginal 1 counts, marginal 2 counts)
   counts <- lapply(1:3, function(i) ReadCountsFile(inp$counts[[i]]))
@@ -433,14 +434,17 @@ ExternalCounts <- function(inp, verbose = FALSE, metrics_filename = "metrics.csv
 ## Outputs:
 ##
 #####################################################################
-ExternalReportsEM <- function(inp, verbose = FALSE, metrics_filename = "metrics.csv") {
+ExternalReportsEM <- function(inp,
+                              verbose = FALSE,
+                              metrics_filename = "metrics.csv") {
   ptm <- proc.time()
   params <- ReadParameterFile(inp$params)
   # Ensure sufficient maps as required by number of vars
   stopifnot(inp$numvars == length(inp$maps))
+  # Correct map from ReadMapFile() for assoc analysis
   map <- lapply(inp$maps, function(o)
-    ProcessMap(ReadMapFile(o, params = params),
-               params = params))
+    CorrectMapForAssoc(ReadMapFile(o, params = params),
+                       params = params))
   
   # Reports must be of the format
   #     client name, cohort no, rappor bitstring 1, rappor bitstring 2, ...

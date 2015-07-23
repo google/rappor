@@ -184,7 +184,7 @@ _run-one-instance() {
     inp['counts'] = ['$instance_dir/case_2way.csv',\
                      '$instance_dir/case_marg1.csv',\
                      '$instance_dir/case_marg2.csv']; \
-    inp['expt'] = ['external-counts', 'external-reports-em']; \
+    inp['expt'] = ['external-counts']; \
     json.dump(inp, f); \
     f.close();"
 

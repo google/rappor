@@ -110,7 +110,7 @@ ReadMapFile <- function(map_file, params = NULL, quote = "") {
 #             object map$map
 #             This is the expected object from ReadMapFile
 #       params = data field with parameters
-ProcessMap <- function(map, params) {
+CorrectMapForAssoc <- function(map, params) {
   map$rmap <- map$map
   map$map <- lapply(1:params$m, function(i)
     map$rmap[seq(from = ((i - 1) * params$k + 1),
