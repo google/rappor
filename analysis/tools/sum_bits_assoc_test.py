@@ -65,7 +65,7 @@ EXPECTED_F_2WAY = EXPECTED_F_2WAY + ("0,0,2,1,2,0,0,1," * 2)
 # Note that for 3rd LSB of irr1 and LSB of irr2, there are three 00s
 EXPECTED_F_2WAY = EXPECTED_F_2WAY + ("0,0,0,3,0,2,0,1," * 2)
 # MSB of irr1
-EXPECTED_F_2WAY = EXPECTED_F_2WAY + "0,0,0,3,0,2,0,1," + "0,0,0,3,0,2,0,1"
+EXPECTED_F_2WAY = EXPECTED_F_2WAY + "0,0,0,3,0,2,0,1," + "0,0,0,3,0,2,0,1\r\n"
 
 # end of EXPECTED_F_2WAY
 # ###############################
