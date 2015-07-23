@@ -5,6 +5,7 @@ default : \
 	_tmp/protobuf_encoder_demo \
 	_tmp/openssl_hash_impl_test
 
+# All intermediate files live in _tmp/
 clean :
 	rm -f --verbose _tmp/*
 
@@ -39,30 +40,26 @@ _tmp/%.pb.d : _tmp/%.pb.cc
 	./dotd.sh $*.pb $@ \
 		$(CXX) -I _tmp/ -MM $(CPPFLAGS) $<
 
-SOURCES = \
-	encoder.cc \
-	libc_rand_impl.cc \
-	openssl_hash_impl.cc \
-	openssl_hash_impl_test.cc \
-	protobuf_encoder.cc \
-	protobuf_encoder_demo.cc \
-	rappor_sim.cc \
-	unix_kernel_rand_impl.cc
-
-# Don't need this now.  If there is more than one, we can generalize it.
-# GENERATED_SOURCES = \
-#	_tmp/rappor.pb.cc
-
 #
 # Include the Makefile fragments we generated, so that changes to headers will
 # rebuild both .d files and .o files.  ('-include' suppresses the error if they
 # don't exist.)
 #
+# NOTE: We have to list them explicitly.  Every time you add a source file, add
+# the corresponding .d file here.
+#
 
--include $(patsubst %.cc,_tmp/%.d,$(SOURCES))
-
--include _tmp/rappor.pb.d
--include _tmp/example_app.pb.d
+-include \
+	_tmp/encoder.d \
+	_tmp/libc_rand_impl.d \
+	_tmp/openssl_hash_impl.d \
+	_tmp/openssl_hash_impl_test.d \
+	_tmp/protobuf_encoder.d \
+	_tmp/protobuf_encoder_demo.d \
+	_tmp/rappor_sim.d \
+	_tmp/unix_kernel_rand_impl.d \
+	_tmp/rappor.pb.d \
+  _tmp/example_app.pb.d
 
 # For example, -Wextra warns about unused params, but -Wall doesn't.
 CXXFLAGS = -Wall -Wextra #-Wpedantic
