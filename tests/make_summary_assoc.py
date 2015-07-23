@@ -19,6 +19,8 @@ SUMMARY_ROW = """\
   <!-- input params -->
   <td></td>
   <td></td>
+  <td></td>
+  <td></td>
 
   <!-- RAPPOR params -->
   <td></td>
@@ -31,8 +33,6 @@ SUMMARY_ROW = """\
   <!-- Result metrics -->
   <td></td>
   <td></td>
-  <td></td>
-  <td>%(mean_chisqdiff)s</td>
   <td>%(mean_l1d)s</td>
   <td>%(mean_rtime)s</td>
 </tr>
@@ -125,18 +125,14 @@ def MeanOfMeans(dict_of_lists):
 
 
 def ParseSpecFile(spec_filename, empty = False):
-  """Parses the spec (parameters) file.
+  #Parses the spec (parameters) file.
 
-  Returns:
-    An integer and a string. The integer is the number of bogus candidates
-    and the string is parameters in the HTML format.
-  """
   with open(spec_filename) as s:
     spec_row = s.readline().split()
 
-  spec_in_html = ' '.join('<td>%s</td>' % cell for cell in spec_row[3:])
+  spec_in_html = ' '.join('<td>%s</td>' % cell for cell in spec_row[1:])
   if empty == True:
-    spec_in_html = ' '.join('<td></td>' for cell in spec_row[3:])
+    spec_in_html = ' '.join('<td></td>' for cell in spec_row[1:])
 
   return spec_in_html
 
@@ -185,8 +181,6 @@ def ParseMetrics(metrics_file, log_file, italics = False):
   metrics_row_str = [
     '%s' % d1,
     '%s' % d2,
-    '%.3f' % td_chisq,
-    '%.3f' % ed_chisq,
     '%.3f' % l1d,
     str(rtime),
   ]
@@ -249,7 +243,7 @@ def FormatSummaryRow(metrics_lists):
   summary = {
       'name': 'Means',
       'mean_l1d': FormatMeanWithSem(means_with_sem['l1d'], percent=False),
-      'mean_chisqdiff': FormatMeanWithSem(means_with_sem['chisqdiff'], percent=False),
+  #    'mean_chisqdiff': FormatMeanWithSem(means_with_sem['chisqdiff'], percent=False),
       'mean_rtime': FormatMeanWithSem(means_with_sem['rtime']),
   }
   return SUMMARY_ROW % summary
@@ -345,7 +339,7 @@ def main(argv):
 
     # Print summary of test instances
     if(int(test_instance) == num_instances):
-      row_str = ['', '', '', '', 
+      row_str = ['', '',
         '%.3f&plusmn;%.3f' % (Mean(l1d_list), StandardErrorEstimate(l1d_list)),
         '',
       ]
@@ -353,7 +347,7 @@ def main(argv):
               True), ' '.join('<td><b>%s</b></td>' % cell for cell in
                               row_str))
       if (os.path.isfile(metrics_file)):
-        row_str2 = ['', '', '', '', 
+        row_str2 = ['', '',
           '%.3f&plusmn;%.3f' % (Mean(l1d_list2), StandardErrorEstimate(l1d_list2)),
           '',
         ]

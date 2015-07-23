@@ -189,7 +189,7 @@ _run-one-instance() {
     f.close();"
 
   time {
-    tests/analyze_assoc_expt.R --inp $instance_dir/analyze_inp.json
+    tests/compare_assoc.R --inp $instance_dir/analyze_inp.json
   }
 }
 

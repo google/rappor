@@ -112,6 +112,8 @@ r-unit() {
 
   tests/gen_true_values_test.R
 
+  tests/gen_true_values_assoc_test.R
+
   analysis/R/decode_test.R
 
   analysis/test/run_tests.R

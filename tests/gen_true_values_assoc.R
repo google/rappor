@@ -14,14 +14,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# TODO: Rename reports to values (more in line with its usage for histogram
-# RAPPOR)
-
 source('tests/gen_counts.R')
 
 # Usage:
 #
-# $ ./gen_assoc_reports.R 100 20 10000 foo.csv
+# $ ./gen_true_values_assoc.R 100 20 10000 foo.csv
 #
 # Inputs:
 #   size of the distribution's support for var 1
@@ -31,7 +28,7 @@ source('tests/gen_counts.R')
 # Output:
 #   csv file with reports sampled according to the specified distribution. 
 
-GenerateAssocReports <- function(n, N, num_cohorts) {
+GenerateTrueValuesAssoc <- function(n, N, num_cohorts) {
   # Inputs: n, a list of supports for vars 1, 2
   #         N, the number of reports/clients
   #         num_cohorts, the number of cohorts
@@ -83,7 +80,7 @@ main <- function(argv) {
   num_cohorts <- as.integer(argv[[4]])
   out_file <- argv[[5]]
 
-  res <- GenerateAssocReports(n, N, num_cohorts)
+  res <- GenerateTrueValuesAssoc(n, N, num_cohorts)
   # Prepend with str and opt
   reports <- list(sprintf("str%d", res$values[[1]]),
                   sprintf("opt%d", res$values[[2]]))

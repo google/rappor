@@ -25,9 +25,9 @@
   <table cellspacing="0" cellpadding="5">
     <colgroup>
       <col span="1" class="highlight" />
-      <col span="2" />
+      <col span="4" />
       <col span="6" class="highlight" />
-      <col span="6" />
+      <col span="4" />
     </colgroup>
 
     <thead>
@@ -35,20 +35,22 @@
         <td>
           Test Case
         </td>
-        <td colspan=2>
+        <td colspan=4>
           Input Params
         </td>
         <td colspan=6>
           RAPPOR Params
         </td>
-        <td colspan=6>
+        <td colspan=4>
           Result Metrics
         </td>
       </tr>
 
       <tr class="explain">
         <td></td>
-        <td colspan=2>
+        <td colspan=4>
+          d1: orig. support(var1)<br />
+          d2: orig. support(var2)<br />
           n: num reports<br/>
           e: num extras<br/>
         </td>
@@ -58,11 +60,9 @@
           m: cohorts<br/>
           p, q, f: probabilities<br/>
         </td>
-        <td colspan=6>
+        <td colspan=4>
           d1: dimension of var1 solutions. <br />
           d2: dimension of var2 solutions. <br />
-          td_chisq: chisq test on true distr.<br />
-          ed_chisq: chisq test on est. distr.<br />
           tv: tot. var. distance<br/>
           rtime: R runtime<br/>
         </td>
@@ -71,6 +71,8 @@
       <tr class="subhead">
         <td></td>
 
+        <td>d1</td>
+        <td>d2</td>
         <td>n</td>
         <td>e</td>
 
@@ -83,8 +85,6 @@
 
         <td>d1</td>
         <td>d2</td>
-        <td>td_chisq</td>
-        <td>ed_chisq</td>
         <td>tv</td>
         <td>rtime</td>
       </tr>

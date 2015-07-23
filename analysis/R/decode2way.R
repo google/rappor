@@ -61,6 +61,8 @@ EstimateBloomCounts2Way <- function(params, obs_counts) {
   NoiseMatrix[2,] <- c(p11*p01, p11*p00, p10*p01, p10*p00)
   NoiseMatrix[3,] <- c(p01*p11, p01*p10, p00*p11, p00*p01)
   NoiseMatrix[4,] <- c(p01**2, p00*p01, p01*p00, p00**2)
+  # Invert NoiseMatrix for estimator
+  InvNoiseMatrix <- t(solve(NoiseMatrix))
   
   # Apply the inverse of NoiseMatrix to get an unbiased estimator for
   # the number of times input pairs of bits were seen.
@@ -70,7 +72,7 @@ EstimateBloomCounts2Way <- function(params, obs_counts) {
     inds <- seq(0, (k/4)-1)
     v <- x[-1]
     sapply(inds, function(i){
-      as.vector(t(solve(NoiseMatrix)) %*% v[(i*4 + 1):((i+1)*4)])
+      as.vector(InvNoiseMatrix %*% v[(i*4 + 1):((i+1)*4)])
     })
   })
   

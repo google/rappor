@@ -4,15 +4,15 @@
 
 source('analysis/R/util.R')  # Log()
 
-source('tests/gen_assoc_reports.R')  # module under test
+source('tests/gen_true_values_assoc.R')  # module under test
 
 library(RUnit)
 
-TestGenerateAssocReports <- function() {
+TestGenerateTrueValuesAssoc <- function() {
   # list for support of var1, var2, 
   # total number of reports
   # num_cohorts
-  res <- GenerateAssocReports(list(20, 5), 1000, 32)
+  res <- GenerateTrueValuesAssoc(list(20, 5), 1000, 32)
   # print(res$values)
 
   # 1000 reports
@@ -25,10 +25,13 @@ TestGenerateAssocReports <- function() {
 
   # Ensure cohorts are filled up
   checkEquals(32, length(unique(res$cohort)))
+
+  # TODO: Add tests to confirm (w.h.p.?) that certain distribution aspects are
+  # as expected (such as the zipfian on marginals)
 }
 
 TestAll <- function(){
-  TestGenerateAssocReports()
+  TestGenerateTrueValuesAssoc()
 }
 
 TestAll()
