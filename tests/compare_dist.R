@@ -121,11 +121,16 @@ LoadActual <- function(prefix_instance) {
   d  # return this data frame
 }
 
-CompareRapporVsActual <- function(ctx) {
-  # Prepare input data to be plotted
-
-  actual <- ctx$actual  # from the ground truth file
-  rappor <- ctx$rappor  # from output of AnalyzeRAPPOR
+AlignReports <- function(actual, rappor) {
+  # Take the ground truth and RAPPOR output, and aligns them to facilitate
+  # further comparison.
+  # Args:
+  #    actual: the ground truth, a list of (str, count)
+  #    rappor: Decode's output
+  # Output:
+  #    (actual, rappor): two identically sorted structures, of the same length,
+  #                      one of the  ground truth, the other of the RAPPOR
+  #                      output.
 
   # "s12" -> 12, for graphing
   StringToInt <- function(x) as.integer(substring(x, 2))
@@ -149,63 +154,96 @@ CompareRapporVsActual <- function(ctx) {
 
   r <- data.frame(index = rappor_values,
                   proportion = rappor$proportion,
-                  dist = rep("rappor", length(rappor_values)))
+                  prop_low_95 = rappor$prop_low_95,
+                  prop_high_95 = rappor$prop_high_95,
+                  dist = "rappor")
 
   # Extend a and r with the values that they are missing.
   if (length(rappor_only) > 0) {
     z <- data.frame(index = rappor_only,
                     proportion = 0.0,
-                    dist = "actual")
+                    dist = "false positive")
     a <- rbind(a, z)
   }
   if (length(actual_only) > 0) {
     z <- data.frame(index = actual_only,
                     proportion = 0.0,
-                    dist = "rappor")
+                    prop_low_95 = 0,
+                    prop_high_95 = 1,
+                    dist = "false negative")
     r <- rbind(r, z)
   }
 
-  # IMPORTANT: Now a and r have the same rows, but in the wrong order.  Sort by index.
-  a <- a[order(a$index), ]
-  r <- r[order(r$index), ]
+  rownames(a) <- a$index
+  rownames(r) <- r$index
+
+  # IMPORTANT: Now a and r have the same rows, but in the wrong order. Sort by index.
+  list(actual = a[order(a$index), ], rappor = r[order(r$index), ])
+}
+
+CompareRapporVsActual <- function(ctx) {
+  # Prepare input data to be plotted
+
+  aligned <- AlignReports(ctx$actual, ctx$rappor)
+
+  actual <- aligned$actual
+  rappor <- aligned$rappor
 
   # L1 distance between actual and rappor distributions
-  l1 <- sum(abs(a$proportion - r$proportion))
+  l1 <- sum(abs(actual$proportion - rappor$proportion))
   # The max L1 distance between two distributions is 2; the max total variation
   # distance is 1.
   total_variation <- l1 / 2
 
+  num_95CI <- sum(rappor$dist == "rappor"
+                  & (actual$proportion > rappor$prop_low_95)
+                  & (actual$proportion < rappor$prop_high_95))
+
   # Choose false positive strings and their proportion from rappor estimates
-  false_pos <- r[r$index %in% rappor_only, c('index', 'proportion')]
-  false_neg <- a[a$index %in% actual_only, c('index', 'proportion')]
+  false_pos <- which(actual$dist == "false positive")
+  false_neg <- which(rappor$dist == "false negative")
 
   Log("False positives:")
-  str(false_pos)
+  str(rappor[false_pos, c('index', 'proportion')])
 
   Log("False negatives:")
-  str(false_neg)
+  str(actual[false_neg, c('index', 'proportion')])
 
   # NOTE: We should call Decode() directly, and then num_rappor is
   # metrics$num_detected, and sum_proportion is metrics$allocated_mass.
   metrics <- list(
-      num_actual = nrow(actual),  # data frames
-      num_rappor = nrow(rappor),
-      num_false_pos = nrow(false_pos),
-      num_false_neg = nrow(false_neg),
+      num_actual = nrow(ctx$actual),  # data frames
+      num_rappor = nrow(ctx$rappor),
+      num_false_pos = length(false_pos),
+      num_false_neg = length(false_neg),
       total_variation = total_variation,
+      num_95CI = num_95CI,
       sum_proportion = sum(rappor$proportion)
       )
 
   Log("Metrics:")
   str(metrics)
 
+  levels(rappor$dist) <- c(levels(rappor$dist), "false positive")
+  levels(actual$dist) <- c(levels(actual$dist), "false negative")
+
+  rappor[false_pos,]$dist <- "false positive"
+  actual[false_neg,]$dist <- "false negative"
+
+  plot_data <- rbind(rappor[-false_neg, c('index', 'proportion', 'dist')],
+                     actual[-false_pos,])
+
   # Return plot data and metrics
-  list(plot_data = rbind(r, a), metrics = metrics)
+  list(plot_data = plot_data, metrics = metrics)
 }
 
 # Colors selected to be friendly to the color blind:
 # http://www.cookbook-r.com/Graphs/Colors_%28ggplot2%29/
-palette <- c("#E69F00", "#56B4E9")
+palette <- c("#009E73",  # lime green
+             "#E69F00",  # orange
+             "#56B4E9",  # light blue
+             "#0072B2"   # dark blue
+             )
 
 PlotAll <- function(d, title) {
   # NOTE: geom_bar makes a histogram by default; need stat = "identity"

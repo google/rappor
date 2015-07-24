@@ -39,6 +39,7 @@ SUMMARY_ROW = """\
   <td></td>
   <td>%(mean_fpr)s</td>
   <td>%(mean_fnr)s</td>
+  <td>%(mean_CI)s</td>
   <td>%(mean_tv)s</td>
   <td>%(mean_am)s</td>
   <td>%(mean_time)s</td>
@@ -180,7 +181,7 @@ def ParseMetrics(metrics_file, log_file, num_additional):
   """
 
   if not os.path.isfile(metrics_file):
-    metrics_row_str = ['', '', '', '', '', '']
+    metrics_row_str = ['', '', '', '', '', '', '']
     metrics_row_dict = {}
   else:
     with open(metrics_file) as m:
@@ -188,7 +189,7 @@ def ParseMetrics(metrics_file, log_file, num_additional):
       metrics_row = m.readline().split(',')
 
     (num_actual, num_rappor, num_false_pos, num_false_neg, total_variation,
-        allocated_mass) = metrics_row
+     num_95CI, allocated_mass) = metrics_row
 
     num_actual = int(num_actual)
     num_rappor = int(num_rappor)
@@ -199,6 +200,8 @@ def ParseMetrics(metrics_file, log_file, num_additional):
     total_variation = float(total_variation)
     allocated_mass = float(allocated_mass)
 
+    num_95CI = int(num_95CI)
+
     # e.g. if there are 20 additional candidates added, and 1 false positive,
     # the false positive rate is 5%.
     fp_rate = float(num_false_pos) / num_additional if num_additional else 0
@@ -207,12 +210,15 @@ def ParseMetrics(metrics_file, log_file, num_additional):
     # negative rate of 20%.
     fn_rate = float(num_false_neg) / num_actual
 
+    frac_95CI = float(num_95CI) / num_rappor if num_rappor else 0
+
     metrics_row_str = [
         str(num_actual),
         str(num_rappor),
         '%.1f%% (%d)' % (fp_rate * 100, num_false_pos) if num_additional
         else '',
         '%.1f%% (%d)' % (fn_rate * 100, num_false_neg),
+        '%.1f%% (%d)' % (frac_95CI * 100, num_95CI) if num_rappor else '',
         '%.3f' % total_variation,
         '%.3f' % allocated_mass,
     ]
@@ -221,6 +227,7 @@ def ParseMetrics(metrics_file, log_file, num_additional):
         'tv': [total_variation],
         'fpr': [fp_rate] if num_additional else [],
         'fnr': [fn_rate],
+        'CI': [frac_95CI] if num_rappor else [],
         'am': [allocated_mass],
     }
 
@@ -276,6 +283,7 @@ def FormatSummaryRow(metrics_lists):
       'name': 'Means',
       'mean_fpr': FormatMeanWithSem(means_with_sem['fpr'], percent=True),
       'mean_fnr': FormatMeanWithSem(means_with_sem['fnr'], percent=True),
+      'mean_CI': FormatMeanWithSem(means_with_sem['CI'], percent=True),
       'mean_tv': FormatMeanWithSem(means_with_sem['tv'], percent=True),
       'mean_am': FormatMeanWithSem(means_with_sem['am'], percent=True),
       'mean_time': FormatMeanWithSem(means_with_sem['time']),
@@ -318,6 +326,7 @@ def main(argv):
       'tv': {},  # total_variation for all test cases
       'fpr': {},  # dictionary of false positive rates
       'fnr': {},  # dictionary of false negative rates
+      'CI': {},  # dictionary of confidence interval (CI) rates
       'am': {},  # dictionary of total allocated masses
       'time': {},  # dictionary of total elapsed time measurements
   }
