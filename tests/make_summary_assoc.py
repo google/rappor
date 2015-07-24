@@ -130,9 +130,9 @@ def ParseSpecFile(spec_filename, empty = False):
   with open(spec_filename) as s:
     spec_row = s.readline().split()
 
-  spec_in_html = ' '.join('<td>%s</td>' % cell for cell in spec_row[1:])
+  spec_in_html = ' '.join('<td>%s</td>' % cell for cell in spec_row[1:len(spec_row)-1])
   if empty == True:
-    spec_in_html = ' '.join('<td></td>' for cell in spec_row[1:])
+    spec_in_html = ' '.join('<td></td>' for cell in spec_row[1:len(spec_row)-1])
 
   return spec_in_html
 
