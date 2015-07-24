@@ -8,25 +8,31 @@
 # At the end, it will print an HTML summary.
 #
 # Three main functions are
-#    run [[<pattern> [<num>]] - run tests matching <pattern> in
-#                               parallel, each <num> times.
+#    run [[<pattern> [<num> [<compare>]]] - run tests matching <pattern> in
+#                               parallel, each <num> times, additionally
+#                               running the EM algorithm if <compare> = T
 #
-#    run-seq [<pattern> [<num>]] - ditto, except that tests are run sequentially
+#    run-seq [<pattern> [<num> [<compare>]]] - ditto, except that tests are run 
+#                                              sequentially
 #
-#    run-all [<num>]             - run all tests, in parallel, each <num> times
+#    run-all [<num> [<compare>]]             - run all tests, in parallel,
+#                                              each <num> times
+#
+# Note: Patterns always start with a-.
 #
 # Examples:
-# $ ./assoctest.sh run-seq tiny-8x16-     # Sequential run, matches 2 cases
-# $ ./assoctest.sh run-seq tiny-8x16- 3   # Sequential, each test is run three
-#                                           times
-# $ ./assoctest.sh run-all                # Run all tests once
+# $ ./assoctest.sh run-seq a-toy      # Sequential run, matches 2 cases
+# $ ./assoctest.sh run-seq a-fizz 3   # Sequential, each test is run three
+#                                       times
+# $ ./assoctest.sh run-all            # Run all tests once
+# $ ./assoctest.sh run-all 5 T        # Run all tests five times with EM
+#                                       comparisons
 #
 # The <pattern> argument is a regex in 'grep -E' format. (Detail: Don't
 # use $ in the pattern, since it matches the whole spec line and not just the
 # test case name.) The number of processors used in a parallel run is 5.
 #
 # fast_counts param inherited from regtest.sh, but currently not used
-
 
 set -o nounset
 set -o pipefail
@@ -107,7 +113,7 @@ _run-one-instance() {
 
   read -r case_name num_unique_values num_unique_values2 \
     num_clients num_extras \
-    num_bits num_hashes num_cohorts p q f < $case_dir/spec.txt
+    num_bits num_hashes num_cohorts p q f compare < $case_dir/spec.txt
 
   local instance_dir=$ASSOCTEST_DIR/$test_case/$test_instance
   mkdir --verbose -p $instance_dir
@@ -165,29 +171,34 @@ _run-one-instance() {
   # substantial) map file. Timing below is more inclusive.
   TIMEFORMAT='Running analyze.R took %R seconds'
 
-  # Setting up JSON file with python
-  python -c "import json; \
-    f = file('$instance_dir/analyze_inp.json', 'w'); \
-    inp = dict(); \
-    inp['maps'] = ['$case_dir/case_map1.csv',\
-                   '$case_dir/case_map2.csv']; \
-    inp['reports'] = '$instance_dir/case_reports.csv'; \
-    inp['truefile'] = '$instance_dir/case.csv'; \
-    inp['outdir'] = '$out_dir'; \
-    inp['params'] = '$case_dir/case_params.csv'; \
-    inp['newalg'] = 'false'; \
-    inp['numvars'] = 2; \
-    inp['num'] = $num_clients; \
-    inp['extras'] = $num_extras; \
-    inp['varcandidates'] = [$num_unique_values, $num_unique_values2]; \
-    inp['verbose'] = 'true'; \
-    inp['counts'] = ['$instance_dir/case_2way.csv',\
-                     '$instance_dir/case_marg1.csv',\
-                     '$instance_dir/case_marg2.csv']; \
-    inp['expt'] = ['external-counts']; \
-    json.dump(inp, f); \
-    f.close();"
+  # Setting up JSON file
+  json_file="{\
+    \"maps\":           [\"$case_dir/case_map1.csv\",\
+                       \"$case_dir/case_map2.csv\"],\
+    \"reports\":        \"$instance_dir/case_reports.csv\",\
+    \"truefile\":       \"$instance_dir/case.csv\",\
+    \"outdir\":         \"$out_dir\",\
+    \"params\":         \"$case_dir/case_params.csv\",\
+    \"newalg\":         \"false\",\
+    \"numvars\":        2,\
+    \"num\":            $num_clients,\
+    \"extras\":         $num_extras,\
+    \"varcandidates\":  [$num_unique_values, $num_unique_values2],\
+    \"verbose\":        \"true\",\
+    \"counts\":         [\"$instance_dir/case_2way.csv\",\
+                        \"$instance_dir/case_marg1.csv\",\
+                        \"$instance_dir/case_marg2.csv\"],"
 
+  # Adding EM comparison depending on $compare flag
+  if test $compare = F; then
+    json_file=$json_file"\"expt\": [\"external-counts\"]"
+  else 
+    json_file=$json_file"\"expt\": [\"external-counts\", \
+      \"external-reports-em\"]"
+  fi
+  json_file=$json_file"}"
+  echo $json_file > $instance_dir/analyze_inp.json
+  
   time {
     tests/compare_assoc.R --inp $instance_dir/analyze_inp.json
   }
@@ -254,12 +265,15 @@ _setup-test-instances() {
 #   instances: A number of times each test case is run
 #   parallel: Whether the tests are run in parallel (T/F)
 #   fast_counts: Whether counts are sampled directly (T/F)
+#   compare: Whether the tests run comparisons between EM and Marginal
+#   algorithms or not
 #
 _run-tests() {
   local spec_regex=$1  # grep -E format on the spec
   local instances=$2
   local parallel=$3
   local fast_counts=$4
+  local $compare=$5
 
   rm -r -f --verbose $ASSOCTEST_DIR
 
@@ -270,6 +284,7 @@ _run-tests() {
   echo $instances
   echo $parallel
   echo $fast_counts
+  echo $compare
 
   local func
   local processors=1
@@ -290,7 +305,7 @@ _run-tests() {
   fi
 
   local cases_list=$ASSOCTEST_DIR/test-cases.txt
-  tests/assoctest_spec.py | grep -E $spec_regex > $cases_list
+  tests/assoctest_spec.py | grep -E $spec_regex | sed "s/$/ $compare/" > $cases_list
 
   # Generate parameters for all test cases.
   cat $cases_list \
@@ -314,18 +329,20 @@ _run-tests() {
 run-seq() {
   local spec_regex=${1:-'^a-'}  # grep -E format on the spec
   local instances=${2:-1}
+  local compare=${3:-F}
 
-  _run-tests $spec_regex $instances F T
+  _run-tests $spec_regex $instances F T $compare
 }
 
 # Run tests in parallel
 run-all() {
   local instances=${1:-1}
+  local compare=${2:-F}
 
   log "Running all tests. Can take a while."
   # a- for assoc tests
   # F for sequential
-  _run-tests '^a-' $instances T T
+  _run-tests '^a-' $instances T T $compare
 }
 
 "$@"

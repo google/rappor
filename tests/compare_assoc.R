@@ -18,7 +18,7 @@
 # an EM algorithm to estimate joint distribution over two or more variables
 #
 # Usage:
-#       $ ./analyze_assoc_expt.R --inp <input JSON file>
+#       $ ./compare_assoc.R --inp <input JSON file>
 #
 # Input file: 
 # Outputs:

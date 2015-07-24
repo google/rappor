@@ -21,6 +21,30 @@ Read parameters from parameter file and a prefix.
 Output counts of bloom filter bits set for each variable (1-way totals)
 and counts of pairwise bits set (2-way totals) into files with suffixes
 _marg1.csv, _marg2.csv, _2way.csv respectively.
+
+The file formats for each of the files are as follows:
+_marg1.csv, _marg2.csv
+Each row corresponds to a cohort with:
+num reports, total count for bit 1, total count for bit 2, ...
+
+_2way.csv
+Each row corresponds to a cohort
+The first entry corresponds to total number of reports in that cohort
+The next set of values indicate 2 way counts grouped 4 elements at a time:
+  the first 4 refer to information about bit 1 of irr1 and bit 1 of irr2
+  the next 4 refer to information about bit 1 of irr1 and bit 2 of irr2
+  ...
+  the next 4 refer to information about bit 1 of irr1 and bit k of irr2
+  the next 4 refer to information about bit 2 of irr1 and bit 1 of irr2
+  (pairwise information about tuples is stored in a "1st report"-major order)
+  ...
+  the last 4 refer to information about bit k of irr1 and bit k of irr2
+
+  for each 4-tuple, the values represents the counts for the pair of bits from
+  irr1 and irr2 having the value:
+  11, 01, 10, and 00, respectively.
+
+  See sum_bits_assoc_test.py for an example
 """
 
 import csv

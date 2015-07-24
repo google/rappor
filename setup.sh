@@ -30,7 +30,7 @@ r-packages() {
   # glmnet, limSolve: solvers for decode.R
   # RJSONIO: for analysis_tool.R
   sudo R -e \
-    'install.packages(c("glmnet", "optparse", "limSolve", "RUnit", "abind", "RJSONIO"), repos="http://cran.rstudio.com/")'
+    'install.packages(c("glmnet", "optparse", "limSolve", "RUnit", "abind", "RJSONIO", "jsonlite"), repos="http://cran.rstudio.com/")'
 }
 
 # R 3.0.2 on Trusty is out of date with CRAN, so we need this workaround.

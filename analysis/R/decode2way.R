@@ -95,7 +95,8 @@ EstimateBloomCounts2Way <- function(params, obs_counts) {
 # Implements lsei
 FitDistribution2Way <- function(estimates_stds, map,
                                 fit = NULL,
-                                quiet = FALSE) {
+                                quiet = FALSE,
+                                add_constraints = FALSE) {
   X <- map
   Y <- as.vector(t(estimates_stds$estimates))
   m <- dim(X)[1]
@@ -103,25 +104,21 @@ FitDistribution2Way <- function(estimates_stds, map,
   
   G <- rbind2(Diagonal(n), rep(-1, n))
   H <- c(rep(0, n), -1)
-  lsei(A = X, B = Y, G = G, H = H, type = 2)$X
+  if (add_constraints == TRUE) {
+    res <- AddConstraints(fit, X, Y, m, n, G, H)
+    lsei(A = res$X, B = res$Y, G = res$G, H = res$H, type = 2)$X
+  } else {
+    lsei(A = X, B = Y, G = G, H = H, type = 2)$X
+  }
 }
 
-FitDistribution2WayAdditionalConstraints <- function(estimates_stds, map, fit) {
+AddConstraints <- function(fit, X, Y, m, n, G, H) {
   # Experimental code
   # Computes the same output as FitDistribution by 
   # additionally throwing in constraints corresponding to
   # 1-way marginals
   # Requires non-NULL fit as input (with "proportion" containing marginal info)
 
-  X <- as.matrix(map)
-  Y <- as.vector(t(estimates_stds$estimates))
-  m <- dim(X)[1]
-  n <- dim(X)[2]
-  wt <- 10000 #  weight to marginal constraints
-  
-  G <- rbind2(Diagonal(n), rep(-1, n))
-  H <- c(rep(0, n), -1)
-  
   # Adding marginals constraints to X and Y
   fstrs <- lapply(fit, function(x) x[,"string"]) #  found strings
   
@@ -143,24 +140,8 @@ FitDistribution2WayAdditionalConstraints <- function(estimates_stds, map, fit) {
     vec[indices] <- wt
     X <- rbind2(X, vec)
   }
-  
-  lsei(A = X, B = Y, G = G, H = H, type = 2)$X
-  
-  # Random projection params
-  #   size <- 10 * n
-  #   density <- 0.05
-  #   rproj <- matrix(0, size, m)
-  #   rproj[sample(length(rproj), size = density * length(rproj))] <- rnorm(density * length(rproj))
-  #   # rproj <- matrix(rnorm(10*n*m), 10*n, m)
-  #   Xproj <- rproj %*% X
-  #   Yproj <- as.vector(rproj %*% Y)
-  #   mproj <- dim(Xproj)[1]
-  #   nproj <- dim(Xproj)[2]
-  #   
-  #   G <- rbind2(Diagonal(nproj), rep(-1, nproj))
-  #   H <- c(rep(0, nproj), -1)
-  #   lsei(A = Xproj, B = Yproj, G = G, H = H, type = 2)$X
-}
+  list(X = X, Y = Y, G = G, H = H)
+} 
 
 Decode2Way <- function(counts, map, params, fit = NULL) {
   k <- params$k

@@ -37,7 +37,7 @@ user_id,cohort,irr1,irr2
 # EXPECTED_F_2WAY
 #
 # NOTE: bit order is reversed.
-# First row is 65 zeroes
+# First row is 65 zeroes because there are no reports with cohort 0
 EXPECTED_F_2WAY = """\
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,\
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0\r
