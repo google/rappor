@@ -140,29 +140,6 @@ _run-one-instance() {
     < $instance_dir/case_reports.csv
 
 
-  # Setting up JSON file containing assoc_sim inputs with python
-  # Currently unused as true values and RAPPOR'd reports are generated
-  # running gen_assoc_reports.R, rappor_assoc_sim.py, and sum_bits_assoc.py
-  python -c "import json; \
-    f = file('$instance_dir/assoc_inp.json', 'w'); \
-    inp = dict(); \
-    inp['params'] = '$case_dir/case_params.csv'; \
-    inp['reports'] = '$instance_dir/reports.csv'; \
-    inp['true'] = '$instance_dir/truedist.csv'; \
-    inp['map'] = '$instance_dir/map'; \
-    inp['num'] = $num_clients; \
-    inp['extras'] = 0; \
-    inp['distr'] = 'zipf2'; \
-    inp['prefix'] = './'; \
-    inp['vars'] = 2; \
-    inp['varcandidates'] = [$num_unique_values, $num_unique_values2]; \
-    json.dump(inp, f); \
-    f.close();"
-
-  # Currently unused as true values and RAPPOR'd reports are generated
-  # running gen_assoc_reports.R, rappor_assoc_sim.py, and sum_bits_assoc.py
-  # tests/assoc_sim_expt.R --inp $instance_dir/assoc_inp.json
-
   local out_dir=${instance_dir}_report
   mkdir --verbose -p $out_dir
 
