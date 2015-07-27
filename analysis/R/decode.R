@@ -97,26 +97,22 @@ FitLasso <- function(X, Y, intercept = TRUE) {
   #    a vector of size ncol(X) of coefficients.
 
   # TODO(mironov): Test cv.glmnet instead of glmnet
+  mod <- try(glmnet(X, Y, standardize = FALSE, intercept = intercept,
+                    lower.limits = 0,  # outputs are non-negative
+                    # Cap the number of non-zero coefficients to 500 or
+                    # 80% of the length of Y, whichever is less. The 500 cap
+                    # is for performance reasons, 80% is to avoid overfitting.
+                    pmax = min(500, length(Y) * .8)),
+             silent = TRUE)
 
-  # Cap the number of non-zero coefficients to 500 or 80% of the number of
-  # constraints, whichever is less. The 500 cap is for performance reasons, 80%
-  # is to avoid overfitting.
-  cap <- min(500, nrow(X) * .8, ncol(X))
-
-  # TODO: take care of corner case when ncol(X) == 1
-  # currently glmnet() fails
-  mod <- glmnet(X, Y, standardize = FALSE, intercept = intercept,
-                lower.limits = 0,  # outputs are non-negative
-                pmax = cap)
-
-  coefs <- coef(mod)
-  coefs <- coefs[-1, , drop = FALSE]  # drop the intercept
-  l1cap <- sum(colSums(coefs) <= 1.0)  # find all columns with L1 norm <= 1
-  if(l1cap > 0)
-    distr <- coefs[, l1cap]  # return the last set of coefficients with L1 <= 1
-  else
-    distr <- setNames(rep(0, ncol(X)), colnames(X))
-  distr
+  # If fitting fails, return an empty data.frame.
+  if (class(mod)[1] == "try-error") {
+    coefs <- setNames(rep(0, ncol(X)), colnames(X))
+  } else {
+    coefs <- coef(mod)
+    coefs <- coefs[-1, ncol(coefs), drop = FALSE]  # coefs[1] is the intercept
+  }
+  coefs
 }
 
 PerformInference <- function(X, Y, N, mod, params, alpha, correction) {
@@ -227,13 +223,30 @@ FitDistribution <- function(estimates_stds, map, quiet = FALSE) {
   #   according to this vector approximates estimates
 
   S <- ncol(map)  # total number of candidates
-  lasso <- FitLasso(map, as.vector(t(estimates_stds$estimates)))
-  
-  if(!quiet)
-    cat("LASSO selected ", sum(lasso > 0), " non-zero coefficients.\n")
 
-  names(lasso) <- colnames(map)
-  lasso
+  support_coefs <- 1:S
+
+  if (S > length(estimates_stds$estimates) * .8) {
+    # the system is close to being underdetermined
+    lasso <- FitLasso(map, as.vector(t(estimates_stds$estimates)))
+
+    # Select non-zero coefficients.
+    support_coefs <- which(lasso > 0)
+
+    if(!quiet)
+      cat("LASSO selected ", length(support_coefs), " non-zero coefficients.\n")
+  }
+
+  coefs <- setNames(rep(0, S), colnames(map))
+
+  if(length(support_coefs) > 0) {  # LASSO may return an empty list
+    constrained_coefs <- ConstrainedLinModel(map[, support_coefs, drop = FALSE],
+                                             estimates_stds)
+
+    coefs[support_coefs] <- constrained_coefs
+  }
+
+  coefs
 }
 
 Resample <- function(e) {
@@ -247,7 +260,7 @@ Resample <- function(e) {
   list(estimates = estimates, stds = stds)
 }
 
-Decode <- function(counts, map, params, alpha = 0.05, quick = FALSE,
+Decode <- function(counts, map, params, alpha = 0.05,
                    correction = c("Bonferroni"), quiet = FALSE, ...) {
   k <- params$k
   p <- params$p
@@ -273,11 +286,10 @@ Decode <- function(counts, map, params, alpha = 0.05, quick = FALSE,
          stds = es$stds[filter_cohorts, , drop = FALSE])
 
   coefs_all <- vector()
+
   # Run the fitting procedure several times (5 seems to be sufficient and not
   # too many) to estimate standard deviation of the output.
-  if(quick) {num_reps <- 2} else {num_reps <- 5}
-  for(r in 1:num_reps)
-  {
+  for(r in 1:5) {
     if(r > 1)
       e <- Resample(estimates_stds_filtered)
     else
@@ -287,22 +299,15 @@ Decode <- function(counts, map, params, alpha = 0.05, quick = FALSE,
                        FitDistribution(e, map[filter_bits, , drop = FALSE],
                                        quiet))
   }
-  
-  FitDistribution(e, map[filter_bits, , drop = FALSE], quiet)
+
   coefs_ssd <- N * apply(coefs_all, 2, sd)  # compute sample standard deviations
   coefs_ave <- N * apply(coefs_all, 2, mean)
 
   # Only select coefficients more than two standard deviations from 0. May
   # inflate empirical SD of the estimates.
-  reported <- which(coefs_ave > 1E-6 + 1 * coefs_ssd)
+  reported <- which(coefs_ave > 1E-6 + 2 * coefs_ssd)
 
   mod <- list(coefs = coefs_ave[reported], stds = coefs_ssd[reported])
-
-#   Old code  ...
-#     coefs_all <- FitDistribution(estimates_stds_filtered,
-#                                         map[filter_bits, , drop = FALSE])
-#     reported <- which(coefs_all > 1E-6)
-#     mod <- list(coefs = coefs_all[reported], stds = rep(0, length(reported)))
 
   if (correction == "Bonferroni") {
     alpha <- alpha / S
@@ -333,8 +338,10 @@ Decode <- function(counts, map, params, alpha = 0.05, quick = FALSE,
   # Clamp estimated proportion.  pmin/max: vectorized min and max
   fit$prop_low_95 <- pmax(low_95, 0.0)
   fit$prop_high_95 <- pmin(high_95, 1.0)
+
   fit <- fit[, c("string", "estimate", "std_error", "proportion",
                  "prop_std_error", "prop_low_95", "prop_high_95")]
+
   allocated_mass <- sum(fit$proportion)
   num_detected <- nrow(fit)
 
