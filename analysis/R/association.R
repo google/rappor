@@ -219,8 +219,8 @@ EM <- function(cond_prob, starting_pij = NULL, estimate_var = FALSE,
       pij[[i + 1]] <- UpdatePij(pij[[i]], cond_prob)
       dif <- max(abs(pij[[i + 1]] - pij[[i]]))
       if (i == 1) {
-        print("ONE ITERATION")
-        print(proc.time() - ptm_iter)
+        PrintIfVerbose("ONE ITERATION", verbose)
+        PrintIfVerbose(proc.time() - ptm_iter, verbose)
       }
       if (dif < epsilon) {
         break
@@ -292,7 +292,8 @@ ComputeDistributionEM <- function(reports, report_cohorts,
                                   maps, ignore_other = FALSE,
                                   params, quick = FALSE,
                                   marginals = NULL,
-                                  estimate_var = FALSE) {
+                                  estimate_var = FALSE,
+                                  verbose = FALSE) {
   # Computes the distribution of num_variables variables, where
   #     num_variables is chosen by the client, using the EM algorithm.
   #
@@ -334,8 +335,8 @@ ComputeDistributionEM <- function(reports, report_cohorts,
       variable_counts <- ComputeCounts(variable_report, variable_cohort, params)
       marginal <- Decode(variable_counts, map$rmap, params, quick,
                          quiet = TRUE)$fit
-      print("TIME IN MARGINALS")
-      print(proc.time() - ptm2)
+      PrintIfVerbose("TIME IN MARGINALS", verbose)
+      PrintIfVerbose(proc.time() - ptm2, verbose)
       if (nrow(marginal) == 0) {
         return (NULL)
       }
@@ -373,16 +374,16 @@ ComputeDistributionEM <- function(reports, report_cohorts,
     # Update the joint conditional distribution of all variables
     joint_conditional <- UpdateJointConditional(cond_report_dist,
                                               joint_conditional)
-    print("TIME IN COND_REPORT_DIST")
-    print(proc.time()-ptm)
+    PrintIfVerbose("TIME IN COND_REPORT_DIST", verbose)
+    PrintIfVerbose(proc.time()-ptm, verbose)
   }
 
   ptm <- proc.time()
   # Run expectation maximization to find joint distribution
   em <- EM(joint_conditional, epsilon = 10 ^ -6, verbose = FALSE,
            estimate_var = estimate_var)
-  print("TIME IN EM")
-  print(proc.time() - ptm)
+  PrintIfVerbose("TIME IN EM", verbose)
+  PrintIfVerbose(proc.time() - ptm, verbose)
   dimnames(em$est) <- found_strings
 
   # Return results in a usable format
