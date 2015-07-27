@@ -38,34 +38,37 @@ user_id,cohort,irr1,irr2
 #
 # NOTE: bit order is reversed.
 # First row is 65 zeroes because there are no reports with cohort 0
-EXPECTED_F_2WAY = """\
+expected_f_2way = """\
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,\
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0\r
 """
 
 # Cohort 1
 # Total # of reports
-EXPECTED_F_2WAY = EXPECTED_F_2WAY + "3,"
+expected_f_2way = expected_f_2way + "3,"
 
 # Looking at LSBs of both irrs
 # Total # of (11, 01, 10, 00) that appear
-EXPECTED_F_2WAY = EXPECTED_F_2WAY + "0,0,2,1,"
+expected_f_2way = expected_f_2way + "0,0,2,1,"
 
 # Report 1-major order. So looking at LSB of irr1 and 2nd LSB of irr2
-EXPECTED_F_2WAY = EXPECTED_F_2WAY + "2,0,0,1,"
+expected_f_2way = expected_f_2way + "2,0,0,1,"
 
 # And so on ...
-EXPECTED_F_2WAY = EXPECTED_F_2WAY + "0,0,2,1,"
-EXPECTED_F_2WAY = EXPECTED_F_2WAY + "2,0,0,1,"
+expected_f_2way = expected_f_2way + "0,0,2,1,"
+expected_f_2way = expected_f_2way + "2,0,0,1,"
 
 # Now moving on to 2nd LSB of irr1
-EXPECTED_F_2WAY = EXPECTED_F_2WAY + ("0,0,2,1,2,0,0,1," * 2)
+expected_f_2way = expected_f_2way + ("0,0,2,1,2,0,0,1," * 2)
 
 # Now moving on to 3rd LSB of irr1
 # Note that for 3rd LSB of irr1 and LSB of irr2, there are three 00s
-EXPECTED_F_2WAY = EXPECTED_F_2WAY + ("0,0,0,3,0,2,0,1," * 2)
+expected_f_2way = expected_f_2way + ("0,0,0,3,0,2,0,1," * 2)
 # MSB of irr1
-EXPECTED_F_2WAY = EXPECTED_F_2WAY + "0,0,0,3,0,2,0,1," + "0,0,0,3,0,2,0,1\r\n"
+expected_f_2way = expected_f_2way + "0,0,0,3,0,2,0,1," + "0,0,0,3,0,2,0,1\r\n"
+
+# EXPECTED_F_2WAY is a constant
+EXPECTED_F_2WAY = expected_f_2way
 
 # end of EXPECTED_F_2WAY
 # ###############################
