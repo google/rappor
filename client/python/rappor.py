@@ -249,6 +249,23 @@ class Encoder(object):
     self.secret = secret  # associated: HMAC-SHA256
     self.irr_rand = irr_rand  # p and q used
 
+  def _internal_encode_basic(self, word):
+    # Basic RAPPOR uses only a single bit
+    # word \in {0,1}
+    # TODO: extend support to arbitrary set of bits
+    num_bits = 1
+
+    # Compute Permanent Randomized Response (PRR).
+    uniform, f_mask = get_prr_masks(
+        self.secret, str(word), self.params.prob_f, num_bits)
+
+    prr = (word & ~f_mask) | (uniform & f_mask)
+    p_bits = self.irr_rand.p_gen()
+    q_bits = self.irr_rand.q_gen()
+
+    irr = (p_bits & ~prr) | (q_bits & prr)
+    return word, prr, irr  # IRR is the rappor
+
   def _internal_encode(self, word):
     """Helper function for simulation / testing.
 

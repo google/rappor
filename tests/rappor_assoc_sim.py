@@ -145,11 +145,18 @@ def main(argv):
 
     # For testing purposes, call e._internal_encode()
     irr_1 = e.encode(true_value_1)
-    irr_2 = e.encode(true_value_2)
+    if (true_value_2 == "opt1"):
+      w, prr2, irr_2 = e._internal_encode_basic(0)
+    elif (true_value_2 == "opt2"):
+      w, prr2, irr_2 = e._internal_encode_basic(1)
 
     irr_1_str = rappor.bit_string(irr_1, params.num_bloombits)
-    irr_2_str = rappor.bit_string(irr_2, params.num_bloombits)
+    w_str = rappor.bit_string(w, 1)
+    prr2_str = rappor.bit_string(prr2, 1)
+    irr_2_str = rappor.bit_string(irr_2, 1)
+    # irr_2_str = rappor.bit_string(irr_2, params.num_bloombits)
 
+    # out_row = (client_str, cohort, irr_1_str, w_str, prr2_str, irr_2_str)
     out_row = (client_str, cohort, irr_1_str, irr_2_str)
     csv_out.writerow(out_row)
 

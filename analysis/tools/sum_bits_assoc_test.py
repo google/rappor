@@ -109,7 +109,7 @@ class SumBitsAssocTest(unittest.TestCase):
     f_1 = cStringIO.StringIO()
     f_2 = cStringIO.StringIO()
 
-    sum_bits_assoc.SumBits(self.params, stdin, f_2way, f_1, f_2)
+    sum_bits_assoc.SumBits(self.params, self.params, stdin, f_2way, f_1, f_2)
     self.assertMultiLineEqual(EXPECTED_F_1, f_1.getvalue())
     self.assertMultiLineEqual(EXPECTED_F_2, f_2.getvalue())
     self.assertMultiLineEqual(EXPECTED_F_2WAY, f_2way.getvalue())

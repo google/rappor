@@ -22,7 +22,7 @@ readonly THIS_DIR=$(dirname $0)
 readonly REPO_ROOT=$THIS_DIR
 readonly CLIENT_DIR=$REPO_ROOT/client/python
 readonly MAP_SUFFIX=map
-readonly COUNT_SUFFIX=count
+readonly COUNT_SUFFIX=newcount
 
 # All the Python tools need this
 export PYTHONPATH=$CLIENT_DIR

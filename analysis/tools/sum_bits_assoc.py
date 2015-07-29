@@ -16,7 +16,7 @@
 
 """
 Read RAPPOR values of 2 variables from stdin.
-Read parameters from parameter file and a prefix.
+Read parameters from two parameter files and a prefix for output filenames.
 
 Output counts of bloom filter bits set for each variable (1-way totals)
 and counts of pairwise bits set (2-way totals) into files with suffixes
@@ -52,7 +52,6 @@ import sys
 
 import rappor
 
-
 def SumBits(params, params2, stdin, f_2way, f_1, f_2):
   csv_in = csv.reader(stdin)
   csv_out_two_way = csv.writer(f_2way)
@@ -67,7 +66,7 @@ def SumBits(params, params2, stdin, f_2way, f_1, f_2):
 
   if num_cohorts2 != num_cohorts:
     raise RuntimeError('Number of cohorts must be identical.\
-                       %d != %d' % num_cohorts, num_cohorts2)
+                       %d != %d' % (num_cohorts, num_cohorts2))
 
   sums = [[0] * (4 * (num_bloombits * num_bloombits2))
                   for _ in xrange(num_cohorts)]
@@ -91,7 +90,7 @@ def SumBits(params, params2, stdin, f_2way, f_1, f_2):
       raise RuntimeError('Error indexing cohort number %d (num_cohorts is %d) \
                          ' % (cohort, num_cohorts))
 
-    if not len(irr_1) == num_bloombits1:
+    if not len(irr_1) == num_bloombits:
       raise RuntimeError(
         "Expected %d bits in report 1, got %r" % 
         (params.num_bloombits, len(irr_1)))
@@ -103,8 +102,8 @@ def SumBits(params, params2, stdin, f_2way, f_1, f_2):
     index_array = [[3, 1], [2, 0]]
     for i, c in enumerate(irr_1):
       for j, d in enumerate(irr_2):
-        index = 4 * ((num_bloombits - i - 1) * params.num_bloombits +
-                     num_bloombits - j - 1)
+        index = 4 * ((num_bloombits - i - 1) * num_bloombits2 +
+                     num_bloombits2 - j - 1)
         try: 
           diff = index_array[int(c)][int(d)]
         except IndexError:
@@ -120,7 +119,7 @@ def SumBits(params, params2, stdin, f_2way, f_1, f_2):
           raise RuntimeError('Invalid IRRs; digits should be 0/1')
 
     for i, c in enumerate(irr_2):
-      bit_num = num_bloombits - i - 1  # e.g. char 0 = bit 15, char 15 = bit 0
+      bit_num = num_bloombits2 - i - 1  # e.g. char 0 = bit 15, char 15 = bit 0
       if c == '1':
         sums_2[cohort][bit_num] += 1
       else:

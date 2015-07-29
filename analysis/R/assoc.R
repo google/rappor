@@ -73,65 +73,31 @@ TwoWayAlgBasic <- function(inp) {
     stop("No strings found in 1-way marginal.")
   
   pruned_map <- lapply(map$map, function(z) z[,found_strings, drop = FALSE])
-  # Simpler CombineMap
-  colnames_combined <- t(outer(c("FALSE", "TRUE"),
-                               found_strings,
-                               function(x, y) paste(y, x, sep = "x")))
-  final_map <- lapply(pruned_map, function(m) {
-                    z <- rbind2(cbind2(m, m), c(rep(c(0, 1), 1, each = length(found_strings))))
-                    colnames(z) <- colnames_combined
-                    z})
-  # Flatten final_map
-  inds <- lapply(final_map, function(x) which(x, arr.ind = TRUE))
-  for (i in seq(1, length(inds))) {
-    inds[[i]][, 1] <- inds[[i]][, 1] + (i-1) * dim(final_map[[1]])[1]
+  map2 <- lapply(1:length(pruned_map), function(z) {
+    m <- sparseMatrix(c(1), c(2), dims = c(1, 2))
+    colnames(m) <- c("FALSE", "TRUE")
+    m
+  })
+  # Final map
+  fmap <- CombineMaps(pruned_map, map2)$crmap
+  params2 <- params[[1]]
+  # Only for boolean
+  params2$k <- (params[[1]]$k) * 4
+  marginal <- Decode2Way(counts[[1]], fmap, params2)$fit
+  ed <- matrix(0, nrow = length(found_strings), ncol = 2)
+  colnames(ed) <- c("FALSE", "TRUE")
+  rownames(ed) <- found_strings
+  for (cols in colnames(ed)) {
+    for (rows in rownames(ed)) {
+      ed[rows, cols] <- marginal[paste(rows, cols, sep = "x"), "Estimate"]
+    }
   }
-  inds <- do.call("rbind", inds)
-  fmap <- sparseMatrix(inds[, 1], inds[, 2], dims = c(
-    nrow(final_map[[1]]) * length(final_map),
-    ncol(final_map[[1]])))
-  colnames(fmap) <- colnames(final_map[[1]])
+  ed[is.na(ed)] <- 0
+  ed[ed<0] <- 0
   
-  # Now doing Decode algorithm
-  S <- ncol(fmap)  # total number of candidates
-  N <- sum(counts[[2]][, 1])
-  filter_cohorts <- which(counts[[2]][, 1] != 0)  # exclude cohorts with zero reports
-  
-  # stretch cohorts to bits
-  filter_bits <- as.vector(
-    t(matrix(1:nrow(fmap), nrow = params[[1]]$m, byrow = TRUE)[filter_cohorts,]))
-  ests <- lapply(1:2, function(i) EstimateBloomCounts(params[[i]], counts[[i + 1]]))
-  es <- list(
-    estimates = cbind2(ests[[1]]$estimates,
-                       as.matrix(rep(ests[[2]]$estimates, params[[1]]$m), ncol = 1)
-                      ),
-    stds = cbind2(ests[[1]]$stds,
-                  as.matrix(rep(ests[[2]]$stds, params[[1]]$m), ncol = 1)
-                 )
-  )
-  coefs_all <- vector()
-  
-  # Run the fitting procedure several times (5 seems to be sufficient and not
-  # too many) to estimate standard deviation of the output.
-  for(r in 1:5) {
-    if(r > 1)
-      e <- Resample(es)
-    else
-      e <- es
-    
-    coefs_all <- rbind(coefs_all,
-                       FitDistribution(e, fmap[filter_bits, , drop = FALSE],
-                                       quiet))
-  }
-  coefs_ssd <- N * apply(coefs_all, 2, sd)  # compute sample standard deviations
-  coefs_ave <- N * apply(coefs_all, 2, mean)
-  
-  # Only select coefficients more than two standard deviations from 0. May
-  # inflate empirical SD of the estimates.
-  reported <- which(coefs_ave > 1E-6 + 2 * coefs_ssd)
-  
-  mod <- list(coefs = coefs_ave[reported]/N, stds = coefs_ssd[reported]/N)
-  print(mod)
+  time_taken <- proc.time() - ptm
+  print("Two Way Algorithm Results")
+  print(ed[order(-rowSums(ed)), order(-colSums(ed))])
 }
 
 TwoWayAlg <- function(inp) {
