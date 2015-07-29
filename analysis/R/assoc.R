@@ -52,6 +52,88 @@ source("analysis/R/association.R")
 source("tests/gen_counts.R")
 source("tests/compare_assoc.R")  # For CombineMaps; it should be moved elsewhere
 
+# Analysis where second variable is basic RAPPOR
+TwoWayAlgBasic <- function(inp) {
+  ptm <- proc.time()
+  params <- ReadParameterFileMulti(inp$params)
+  stopifnot(inp$numvars == length(inp$maps) ||
+              inp$numvars == length(params))
+  map <- CorrectMapForAssoc(ReadMapFile(inp$maps[[1]], params = params[[1]]),
+                            params = params[[1]])
+  
+  # 2 way counts, marginal 1 counts, marginal 2 counts
+  counts <- lapply(1:3, function(i) ReadCountsFile(inp$counts[[i]]))
+  
+  # Prune candidates for variable 1
+  fit <- Decode(counts[[2]], map$rmap, params[[1]], quick = FALSE)$fit
+  print(fit)
+  found_strings <- fit[,"string"]
+  
+  if(length(found_strings) == 0)
+    stop("No strings found in 1-way marginal.")
+  
+  pruned_map <- lapply(map$map, function(z) z[,found_strings, drop = FALSE])
+  # Simpler CombineMap
+  colnames_combined <- t(outer(c("FALSE", "TRUE"),
+                               found_strings,
+                               function(x, y) paste(y, x, sep = "x")))
+  final_map <- lapply(pruned_map, function(m) {
+                    z <- rbind2(cbind2(m, m), c(rep(c(0, 1), 1, each = length(found_strings))))
+                    colnames(z) <- colnames_combined
+                    z})
+  # Flatten final_map
+  inds <- lapply(final_map, function(x) which(x, arr.ind = TRUE))
+  for (i in seq(1, length(inds))) {
+    inds[[i]][, 1] <- inds[[i]][, 1] + (i-1) * dim(final_map[[1]])[1]
+  }
+  inds <- do.call("rbind", inds)
+  fmap <- sparseMatrix(inds[, 1], inds[, 2], dims = c(
+    nrow(final_map[[1]]) * length(final_map),
+    ncol(final_map[[1]])))
+  colnames(fmap) <- colnames(final_map[[1]])
+  
+  # Now doing Decode algorithm
+  S <- ncol(fmap)  # total number of candidates
+  N <- sum(counts[[2]][, 1])
+  filter_cohorts <- which(counts[[2]][, 1] != 0)  # exclude cohorts with zero reports
+  
+  # stretch cohorts to bits
+  filter_bits <- as.vector(
+    t(matrix(1:nrow(fmap), nrow = params[[1]]$m, byrow = TRUE)[filter_cohorts,]))
+  ests <- lapply(1:2, function(i) EstimateBloomCounts(params[[i]], counts[[i + 1]]))
+  es <- list(
+    estimates = cbind2(ests[[1]]$estimates,
+                       as.matrix(rep(ests[[2]]$estimates, params[[1]]$m), ncol = 1)
+                      ),
+    stds = cbind2(ests[[1]]$stds,
+                  as.matrix(rep(ests[[2]]$stds, params[[1]]$m), ncol = 1)
+                 )
+  )
+  coefs_all <- vector()
+  
+  # Run the fitting procedure several times (5 seems to be sufficient and not
+  # too many) to estimate standard deviation of the output.
+  for(r in 1:5) {
+    if(r > 1)
+      e <- Resample(es)
+    else
+      e <- es
+    
+    coefs_all <- rbind(coefs_all,
+                       FitDistribution(e, fmap[filter_bits, , drop = FALSE],
+                                       quiet))
+  }
+  coefs_ssd <- N * apply(coefs_all, 2, sd)  # compute sample standard deviations
+  coefs_ave <- N * apply(coefs_all, 2, mean)
+  
+  # Only select coefficients more than two standard deviations from 0. May
+  # inflate empirical SD of the estimates.
+  reported <- which(coefs_ave > 1E-6 + 2 * coefs_ssd)
+  
+  mod <- list(coefs = coefs_ave[reported]/N, stds = coefs_ssd[reported]/N)
+  print(mod)
+}
+
 TwoWayAlg <- function(inp) {
   ptm <- proc.time()
   params <- ReadParameterFile(inp$params)

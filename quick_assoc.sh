@@ -9,7 +9,8 @@
 #   $dir/map1.csv -- map files
 #   $dir/map2.csv
 #   $dir/reports.csv -- these are the raw reports
-#   $dir/params.csv -- parameters file
+#   $dir/params.csv -- parameters file for first var
+#   $dir/params2.csv -- parameters file for second var
 #
 # At the end, it will output results of the Two Way Algorithm and EM algorithm
 # (if EM also is set to T) to stdout
@@ -30,7 +31,7 @@ _run-input() {
   
   # Read reports and compute two way counts
   analysis/tools/sum_bits_assoc.py \
-    $1/params.csv \
+    $1/params.csv $1/params2.csv\
     "$1/$COUNT_SUFFIX" \
     < $1/reports.csv
 

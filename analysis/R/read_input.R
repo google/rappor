@@ -33,6 +33,23 @@ ReadParameterFile <- function(params_file) {
   params
 }
 
+ReadParameterFileMulti <- function(params_file) {
+  # Read parameter file. Format:
+  # k, h, m, p, q, f
+  # 128, 2, 8, 0.5, 0.75, 0.75
+  # 32, 2, 4, 0.25, 0.75, 0.5
+  # ...
+  
+  params <- read.csv(gfile(params_file))
+  if (ncol(params) != 6) {
+    stop("There should be exactly 6 columns in the parameter file.")
+  }
+  if (any(colnames(params) != c("k", "h", "m", "p", "q", "f"))) {
+    stop("Parameter names must be k,h,m,p,q,f.")
+  }
+  lapply(1:nrow(params), function(x) params[x,])
+}
+
 ReadCountsFile <- function(counts_file, params = NULL) {
   # Read in the counts file.
   if (!file.exists(counts_file)) {

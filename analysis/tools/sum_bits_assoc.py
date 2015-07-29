@@ -53,21 +53,26 @@ import sys
 import rappor
 
 
-def SumBits(params, stdin, f_2way, f_1, f_2):
+def SumBits(params, params2, stdin, f_2way, f_1, f_2):
   csv_in = csv.reader(stdin)
   csv_out_two_way = csv.writer(f_2way)
   csv_out_1 = csv.writer(f_1)
   csv_out_2 = csv.writer(f_2)
-#  csv_out_two_way = csv.writer(open(f_2way, "w"))
-#  csv_out_1 = csv.writer(open(f_1, "w"))
-#  csv_out_2 = csv.writer(open(f_2, "w"))
 
   num_cohorts = params.num_cohorts
   num_bloombits = params.num_bloombits
 
-  sums = [[0] * (4 * (num_bloombits ** 2)) for _ in xrange(num_cohorts)]
+  num_cohorts2 = params2.num_cohorts
+  num_bloombits2 = params2.num_bloombits
+
+  if num_cohorts2 != num_cohorts:
+    raise RuntimeError('Number of cohorts must be identical.\
+                       %d != %d' % num_cohorts, num_cohorts2)
+
+  sums = [[0] * (4 * (num_bloombits * num_bloombits2))
+                  for _ in xrange(num_cohorts)]
   sums_1 = [[0] * num_bloombits for _ in xrange(num_cohorts)]
-  sums_2 = [[0] * num_bloombits for _ in xrange(num_cohorts)]
+  sums_2 = [[0] * num_bloombits2 for _ in xrange(num_cohorts)]
   num_reports = [0] * num_cohorts
 
   for i, row in enumerate(csv_in):
@@ -86,11 +91,11 @@ def SumBits(params, stdin, f_2way, f_1, f_2):
       raise RuntimeError('Error indexing cohort number %d (num_cohorts is %d) \
                          ' % (cohort, num_cohorts))
 
-    if not len(irr_1) == params.num_bloombits:
+    if not len(irr_1) == num_bloombits1:
       raise RuntimeError(
         "Expected %d bits in report 1, got %r" % 
         (params.num_bloombits, len(irr_1)))
-    if not len(irr_2) == params.num_bloombits:
+    if not len(irr_2) == num_bloombits2:
       raise RuntimeError(
         "Expected %d bits in report 2, got %r" % 
         (params.num_bloombits, len(irr_2)))
@@ -135,19 +140,27 @@ def SumBits(params, stdin, f_2way, f_1, f_2):
 def main(argv):
   try:
     filename = argv[1]
-    prefix = argv[2]
+    filename2 = argv[2]
+    prefix = argv[3]
   except IndexError:
-    raise RuntimeError('Usage: sum_bits.py <params file> <prefix>')
+    raise RuntimeError('Usage: sum_bits.py\
+                        <params file 1> <params file 2> <prefix>')
+  # Read parameter files
   with open(filename) as f:
     try:
       params = rappor.Params.from_csv(f)
+    except rappor.Error as e:
+      raise RuntimeError(e)
+  with open(filename2) as f:
+    try:
+      params2 = rappor.Params.from_csv(f)
     except rappor.Error as e:
       raise RuntimeError(e)
 
   with open(prefix + "_2way.csv", "w") as f_2way:
     with open(prefix + "_marg1.csv", "w") as f_1:
       with open(prefix + "_marg2.csv", "w") as f_2:
-        SumBits(params, sys.stdin, f_2way, f_1, f_2)
+        SumBits(params, params2, sys.stdin, f_2way, f_1, f_2)
 
 
 if __name__ == '__main__':

@@ -121,12 +121,12 @@ class SumBitsAssocTest(unittest.TestCase):
 
     stdin = cStringIO.StringIO(WRONG_IRR_BITS)
     self.assertRaises(
-        RuntimeError, sum_bits_assoc.SumBits, self.params, stdin,
+        RuntimeError, sum_bits_assoc.SumBits, self.params, self.params, stdin,
         f_2way, f_1, f_2)
 
     stdin = cStringIO.StringIO(WRONG_COHORT)
     self.assertRaises(
-        RuntimeError, sum_bits_assoc.SumBits, self.params, stdin,
+        RuntimeError, sum_bits_assoc.SumBits, self.params, self.params, stdin,
         f_2way, f_1, f_2)
 
 
