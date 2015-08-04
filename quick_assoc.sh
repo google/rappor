@@ -50,8 +50,8 @@ _run-input() {
     \"numvars\":        2,\
     \"verbose\":        \"false\",\
     \"counts\":         [\"$1/${COUNT_SUFFIX}_2way.csv\",\
-                        \"${COUNT_SUFFIX}_marg1.csv\",\
-                        \"${COUNT_SUFFIX}_marg2.csv\"],"
+                        \"$1/${COUNT_SUFFIX}_marg1.csv\",\
+                        \"$1/${COUNT_SUFFIX}_marg2.csv\"],"
 
   # Adding EM comparison depending on flag
   if test $2 = T; then
