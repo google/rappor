@@ -97,6 +97,7 @@ TwoWayAlgBasic <- function(inp) {
   
   time_taken <- proc.time() - ptm
   print("Two Way Algorithm Results")
+  print(ed)
   print(ed[order(-rowSums(ed)), order(-colSums(ed))])
 }
 
