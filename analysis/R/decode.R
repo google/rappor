@@ -74,9 +74,14 @@ EstimateBloomCounts <- function(params, obs_counts) {
 
   # Transform counts from absolute values to fractional, removing bias due to
   #      variability of reporting between cohorts.
-  ests <- apply(ests, 1, function(x) x / obs_counts[,1])
-  stds <- apply(variances^.5, 1, function(x) x / obs_counts[,1])
-
+  if (ncol(obs_counts) == 2) {
+    ests <- apply(t(ests), 1, function(x) x / obs_counts[,1])
+    stds <- apply(t(variances^.5), 1, function(x) x / obs_counts[,1])
+  } else {
+    ests <- apply((ests), 1, function(x) x / obs_counts[,1])
+    stds <- apply((variances^.5), 1, function(x) x / obs_counts[,1])
+  }
+  
   # Some estimates may be set to infinity, e.g. if f=1. We want to
   #     account for this possibility, and set the corresponding counts
   #     to 0.

@@ -114,8 +114,19 @@ EMAlg <- function(inp) {
   stopifnot(inp$numvars == length(inp$maps))
   # Correct map from ReadMapFile() for assoc analysis
   map <- lapply(inp$maps, function(o)
-    CorrectMapForAssoc(ReadMapFile(o, params = params),
+    CorrectMapForAssoc(LoadMapFile(o, params = params),
                        params = params))
+  
+  # For BASIC only
+  m1 <- lapply(1:params$m, function(z) {
+    m <- sparseMatrix(c(1), c(2), dims = c(1, 2))
+    colnames(m) <- c("FALSE", "TRUE")
+    m
+  })
+  m2 <- sparseMatrix(1:params$m, rep(2, params$m))
+  colnames(m2) <- colnames(m1[[1]])
+  map[[2]]$map <- m1
+  map[[2]]$rmap <- m2
   
   # Reports must be of the format
   #     client name, cohort no, rappor bitstring 1, rappor bitstring 2, ...
@@ -125,6 +136,9 @@ EMAlg <- function(inp) {
                          header = TRUE)
   # Ignore the first column
   reportsObj <- reportsObj[,-1]
+  
+  params = list(params, params)
+  params[[2]]$k = 1
   
   # Parsing reportsObj
   # ComputeDistributionEM allows for different sets of cohorts

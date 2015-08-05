@@ -332,8 +332,8 @@ ComputeDistributionEM <- function(reports, report_cohorts,
     variable_counts <- NULL
     if (is.null(marginals)) {
       ptm2 <- proc.time()
-      variable_counts <- ComputeCounts(variable_report, variable_cohort, params)
-      marginal <- Decode(variable_counts, map$rmap, params, quick,
+      variable_counts <- ComputeCounts(variable_report, variable_cohort, params[[j]])
+      marginal <- Decode(variable_counts, map$rmap, params[[j]], quick,
                          quiet = TRUE)$fit
       PrintIfVerbose("TIME IN MARGINALS", verbose)
       PrintIfVerbose(proc.time() - ptm2, verbose)
@@ -346,26 +346,26 @@ ComputeDistributionEM <- function(reports, report_cohorts,
     found_strings[[j]] <- marginal$string
 
     if (ignore_other) {
-      prob_other <- vector(mode = "list", length = params$m)
+      prob_other <- vector(mode = "list", length = params[[j]]$m)
     } else {
       if (is.null(variable_counts)) {
         variable_counts <- ComputeCounts(variable_report, variable_cohort,
-                                         params)
+                                         params[[j]])
       }
       prob_other <- GetOtherProbs(variable_counts, map$map, marginal,
-                                  params)
+                                  params[[j]])
       found_strings[[j]] <- c(found_strings[[j]], "Other")
     }
     
     GetCondProb(variable_report[[1]], candidate_strings = rownames(marginal),
-                params = params, map$map[[variable_cohort[1]]], prob_other[[variable_cohort[1]]])
+                params = params[[j]], map$map[[variable_cohort[1]]], prob_other[[variable_cohort[1]]])
 
     # Get the joint conditional distribution
     cond_report_dist <- lapply(seq(length(variable_report)), function(i) {
       idx <- variable_cohort[i]
       rep <- GetCondProb(variable_report[[i]],
                          candidate_strings = rownames(marginal),
-                         params = params,
+                         params = params[[j]],
                          map$map[[idx]],
                          prob_other[[idx]])
       rep
