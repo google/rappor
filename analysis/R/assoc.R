@@ -85,6 +85,7 @@ TwoWayAlgBasic <- function(inp) {
   params2$k <- (params[[1]]$k) * 4
   marginal <- Decode2Way(counts[[1]], fmap, params2)$fit
   ed <- matrix(0, nrow = length(found_strings), ncol = 2)
+  colnames(ed) <- c("FALSE", "TRUE")
   rownames(ed) <- found_strings
   for (cols in colnames(ed)) {
     for (rows in rownames(ed)) {
@@ -214,7 +215,6 @@ EMAlg <- function(inp) {
                                       estimate_var = FALSE,
                                       verbose = inp$time)
   em <- joint_dist$fit
-  colnames(em) <- c("FALSE", "TRUE")
   time_taken <- proc.time() - ptm
   print("EM Algorithm Results")
   print(em[order(-rowSums(em)), order(-colSums(em))])
