@@ -44,7 +44,7 @@ GetOtherProbs <- function(counts, map, marginal, params) {
   # Counts to remove from each cohort.
   top_counts <- ceiling(marginal$proportion * N / params$m)
   sum_top <- sum(top_counts)
-  candidate_map <- lapply(map, function(x) x[, candidate_strings])
+  candidate_map <- lapply(map, function(x) x[, candidate_strings, drop = FALSE])
 
   # Counts set by known strings without noise considerations.
   if (length(marginal) > 0) {
@@ -63,6 +63,10 @@ GetOtherProbs <- function(counts, map, marginal, params) {
   pstar <- (1 - f / 2) * p + (f / 2) * q
   top_counts_cohort <- (sum_top - top_counts_cohort) * pstar +
       top_counts_cohort * qstar
+  
+  # Adjustment for basic rappor
+  if(nrow(top_counts_cohort) == 1) 
+    top_counts_cohort <- t(top_counts_cohort)
   top_counts_cohort <- cbind(sum_top, top_counts_cohort)
 
   # Counts set by the "other" category.
@@ -72,6 +76,9 @@ GetOtherProbs <- function(counts, map, marginal, params) {
   props_other[props_other > 1] <- 1
   props_other[is.nan(props_other)] <- 0
   props_other[is.infinite(props_other)] <- 0
+  # Adjustmet for basic rappor
+  if(is.null(nrow(props_other)))
+    props_other <- t(props_other)
   as.list(as.data.frame(props_other))
 }
 
@@ -332,8 +339,8 @@ ComputeDistributionEM <- function(reports, report_cohorts,
     variable_counts <- NULL
     if (is.null(marginals)) {
       ptm2 <- proc.time()
-      variable_counts <- ComputeCounts(variable_report, variable_cohort, params)
-      marginal <- Decode(variable_counts, map$rmap, params, quick,
+      variable_counts <- ComputeCounts(variable_report, variable_cohort, params[[j]])
+      marginal <- Decode(variable_counts, map$rmap, params[[j]], quick,
                          quiet = TRUE)$fit
       PrintIfVerbose("TIME IN MARGINALS", verbose)
       PrintIfVerbose(proc.time() - ptm2, verbose)
@@ -346,26 +353,23 @@ ComputeDistributionEM <- function(reports, report_cohorts,
     found_strings[[j]] <- marginal$string
 
     if (ignore_other) {
-      prob_other <- vector(mode = "list", length = params$m)
+      prob_other <- vector(mode = "list", length = params[[j]]$m)
     } else {
       if (is.null(variable_counts)) {
         variable_counts <- ComputeCounts(variable_report, variable_cohort,
-                                         params)
+                                         params[[j]])
       }
       prob_other <- GetOtherProbs(variable_counts, map$map, marginal,
-                                  params)
+                                  params[[j]])
       found_strings[[j]] <- c(found_strings[[j]], "Other")
     }
-    
-    GetCondProb(variable_report[[1]], candidate_strings = rownames(marginal),
-                params = params, map$map[[variable_cohort[1]]], prob_other[[variable_cohort[1]]])
 
     # Get the joint conditional distribution
     cond_report_dist <- lapply(seq(length(variable_report)), function(i) {
       idx <- variable_cohort[i]
       rep <- GetCondProb(variable_report[[i]],
                          candidate_strings = rownames(marginal),
-                         params = params,
+                         params = params[[j]],
                          map$map[[idx]],
                          prob_other[[idx]])
       rep
