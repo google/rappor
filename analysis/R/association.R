@@ -342,6 +342,7 @@ ComputeDistributionEM <- function(reports, report_cohorts,
       variable_counts <- ComputeCounts(variable_report, variable_cohort, params[[j]])
       marginal <- Decode(variable_counts, map$rmap, params[[j]], quick,
                          quiet = TRUE)$fit
+      print(marginal)
       PrintIfVerbose("TIME IN MARGINALS", verbose)
       PrintIfVerbose(proc.time() - ptm2, verbose)
       if (nrow(marginal) == 0) {
