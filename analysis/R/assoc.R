@@ -160,7 +160,7 @@ EMAlg <- function(inp) {
   })
   
   joint_dist <- ComputeDistributionEM(reports, cohorts, map,
-                                      ignore_other = TRUE,
+                                      ignore_other = FALSE,
                                       quick = TRUE,
                                       params, marginals = NULL,
                                       estimate_var = FALSE,
