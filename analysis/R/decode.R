@@ -302,7 +302,7 @@ Decode <- function(counts, map, params, alpha = 0.05,
 
   mod <- list(coefs = coefs_ave[reported], stds = coefs_ssd[reported])
 
-  fit <- data.frame(string = colnames(map[, reported]),
+  fit <- data.frame(string = colnames(map[, reported, drop = FALSE]),
                     Estimate = matrix(mod$coefs, ncol = 1),
                     SD = mod$stds,
                     stringsAsFactors = FALSE)
