@@ -17,8 +17,6 @@
 
 library(glmnet)
 
-source('analysis/R/alternative.R')
-
 EstimateBloomCounts <- function(params, obs_counts) {
   # Estimates the number of times each bit in each cohort was set in original
   # Bloom filters.
@@ -97,22 +95,32 @@ FitLasso <- function(X, Y, intercept = TRUE) {
   #    a vector of size ncol(X) of coefficients.
 
   # TODO(mironov): Test cv.glmnet instead of glmnet
-  mod <- try(glmnet(X, Y, standardize = FALSE, intercept = intercept,
-                    lower.limits = 0,  # outputs are non-negative
-                    # Cap the number of non-zero coefficients to 500 or
-                    # 80% of the length of Y, whichever is less. The 500 cap
-                    # is for performance reasons, 80% is to avoid overfitting.
-                    pmax = min(500, length(Y) * .8)),
-             silent = TRUE)
 
-  # If fitting fails, return an empty data.frame.
-  if (class(mod)[1] == "try-error") {
-    coefs <- setNames(rep(0, ncol(X)), colnames(X))
-  } else {
-    coefs <- coef(mod)
-    coefs <- coefs[-1, ncol(coefs), drop = FALSE]  # coefs[1] is the intercept
-  }
-  coefs
+  # Cap the number of non-zero coefficients to 500 or 80% of the number of
+  # constraints, whichever is less. The 500 cap is for performance reasons, 80%
+  # is to avoid overfitting.
+  cap <- min(500, nrow(X) * .8, ncol(X))
+
+  if (ncol(X) == 1)
+  	XX <- cbind2(X, rep(0, nrow(X)))  # add a dummy variable since glmnet can't handle a single-column matrix
+  else
+  	XX <- X
+
+  mod <- glmnet(XX, Y, standardize = TRUE, intercept = intercept,
+                lower.limits = 0,  # outputs are non-negative
+                lambda.min.ratio = 1E-4,
+                pmax = cap)
+
+  coefs <- coef(mod)
+  coefs <- coefs[-1, , drop = FALSE]  # drop the intercept
+  l1cap <- sum(colSums(coefs) <= 1.0)  # find all columns with L1 norm <= 1
+  if (l1cap > 0) {
+   	distr <- coefs[, l1cap]  # return the last set of coefficients with L1 <= 1
+    if (ncol(X) == 1)
+      distr <- distr[1]  # dropping the dummy variable
+  } else
+   	distr <- setNames(rep(0, ncol(X)), colnames(X))
+  distr
 }
 
 PerformInference <- function(X, Y, N, mod, params, alpha, correction) {
@@ -224,29 +232,14 @@ FitDistribution <- function(estimates_stds, map, quiet = FALSE) {
 
   S <- ncol(map)  # total number of candidates
 
-  support_coefs <- 1:S
+  lasso <- FitLasso(map, as.vector(t(estimates_stds$estimates)))
 
-  if (S > length(estimates_stds$estimates) * .8) {
-    # the system is close to being underdetermined
-    lasso <- FitLasso(map, as.vector(t(estimates_stds$estimates)))
+  if (!quiet)
+    cat("LASSO selected ", sum(lasso > 0), " non-zero coefficients.\n")
 
-    # Select non-zero coefficients.
-    support_coefs <- which(lasso > 0)
+  names(lasso) <- colnames(map)
 
-    if(!quiet)
-      cat("LASSO selected ", length(support_coefs), " non-zero coefficients.\n")
-  }
-
-  coefs <- setNames(rep(0, S), colnames(map))
-
-  if(length(support_coefs) > 0) {  # LASSO may return an empty list
-    constrained_coefs <- ConstrainedLinModel(map[, support_coefs, drop = FALSE],
-                                             estimates_stds)
-
-    coefs[support_coefs] <- constrained_coefs
-  }
-
-  coefs
+  lasso
 }
 
 Resample <- function(e) {
@@ -287,10 +280,10 @@ Decode <- function(counts, map, params, alpha = 0.05,
 
   coefs_all <- vector()
 
-  # Run the fitting procedure several times (5 seems to be sufficient and not
-  # too many) to estimate standard deviation of the output.
-  for(r in 1:5) {
-    if(r > 1)
+  # Run the fitting procedure several times (5 seems to be the minimum that
+  # makes sense) to estimate standard deviation of the output.
+  for(r in 1:10) {
+    if (r > 1)
       e <- Resample(estimates_stds_filtered)
     else
       e <- estimates_stds_filtered
@@ -309,15 +302,11 @@ Decode <- function(counts, map, params, alpha = 0.05,
 
   mod <- list(coefs = coefs_ave[reported], stds = coefs_ssd[reported])
 
-  if (correction == "Bonferroni") {
-    alpha <- alpha / S
-  }
+  fit <- data.frame(string = colnames(map[, reported]),
+                    Estimate = matrix(mod$coefs, ncol = 1),
+                    SD = mod$stds,
+                    stringsAsFactors = FALSE)
 
-  inf <- PerformInference(map[filter_bits, reported, drop = FALSE],
-                          as.vector(t(estimates_stds_filtered$estimates)),
-                          N, mod, params, alpha,
-                          correction)
-  fit <- inf$fit
   # If this is a basic RAPPOR instance, just use the counts for the estimate
   #     (Check if the map is diagonal to tell if this is basic RAPPOR.)
   if (sum(map) == sum(diag(map))) {
@@ -345,38 +334,17 @@ Decode <- function(counts, map, params, alpha = 0.05,
   allocated_mass <- sum(fit$proportion)
   num_detected <- nrow(fit)
 
-  ss <- round(inf$SS, digits = 3)
-  explained_var <- ss[[1]]
-  missing_var <- ss[[2]]
-  noise_var <- ss[[3]]
-
-  noise_std_dev <- round(inf$resid_sigma, digits = 3)
-
-  # Compute summary of the fit.
-  parameters <-
-      c("Candidate strings", "Detected strings",
-        "Sample size (N)", "Discovered Prop (out of N)",
-        "Explained Variance", "Missing Variance", "Noise Variance",
-        "Theoretical Noise Std. Dev.")
-  values <- c(S, num_detected, N, allocated_mass,
-              explained_var, missing_var, noise_var, noise_std_dev)
-
-  res_summary <- data.frame(parameters = parameters, values = values)
-
   privacy <- ComputePrivacyGuarantees(params, alpha, N)
   params <- data.frame(parameters =
                        c("k", "h", "m", "p", "q", "f", "N", "alpha"),
                        values = c(k, h, m, p, q, f, N, alpha))
 
-  # This is a list of decode stats in a better format than 'summary'.
-  # TODO: Delete summary.
   metrics <- list(sample_size = N,
                   allocated_mass = allocated_mass,
-                  num_detected = num_detected,
-                  explained_var = explained_var,
-                  missing_var = missing_var)
+                  num_detected = num_detected
+                  )
 
-  list(fit = fit, summary = res_summary, privacy = privacy, params = params,
+  list(fit = fit, privacy = privacy, params = params,
        lasso = NULL, ests = as.vector(t(estimates_stds_filtered$estimates)),
        counts = counts[, -1], resid = NULL, metrics = metrics)
 }

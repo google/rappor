@@ -205,10 +205,12 @@ CheckDecodeAveAndStds <- function(...) {
   results <- RunMultipleTests(...)
 
   estimates <- matrix(nrow = 0, ncol = 0)
-  lapply(results, function(r) MatrixVectorMerge(estimates, r$estimates))
-
   stds <- matrix(nrow = 0, ncol = 0)
-  lapply(results, function(r) MatrixVectorMerge(stds, r$stds))
+
+  for(i in 1:length(results)) {
+    estimates <- MatrixVectorMerge(estimates, results[[i]]$estimates)
+    stds <- MatrixVectorMerge(stds, results[[i]]$stds)
+  }
 
   empirical_stds <- apply(estimates, 2, sd, na.rm = TRUE)
   estimated_stds <- apply(stds, 2, mean, na.rm = TRUE)
@@ -217,7 +219,7 @@ CheckDecodeAveAndStds <- function(...) {
     checkTrue(any(estimated_stds > empirical_stds / 2),
               "Our estimate for the standard deviation is too low")
 
-    checkTrue(any(estimated_stds < empirical_stds * 3),
+    checkTrue(any(estimated_stds < empirical_stds * 2),
               "Our estimate for the standard deviation is too high")
   }
 }
