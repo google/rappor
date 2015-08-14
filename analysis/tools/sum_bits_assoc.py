@@ -49,10 +49,17 @@ The next set of values indicate 2 way counts grouped 4 elements at a time:
 
 import csv
 import sys
+import time
 
 import rappor
 
+def log(msg, *args):
+  if args:
+    msg = msg % args
+  print >>sys.stderr, msg
+
 def SumBits(params, params2, stdin, f_2way, f_1, f_2):
+  start_time = time.time()
   csv_in = csv.reader(stdin)
   csv_out_two_way = csv.writer(f_2way)
   csv_out_1 = csv.writer(f_1)
@@ -75,6 +82,9 @@ def SumBits(params, params2, stdin, f_2way, f_1, f_2):
   num_reports = [0] * num_cohorts
 
   for i, row in enumerate(csv_in):
+    if i % 100000 == 0:
+      elapsed = time.time() - start_time
+      log('Processed %d inputs in %.2f seconds', i, elapsed)
     try:
       (_, cohort, irr_1, irr_2) = row
     except ValueError:

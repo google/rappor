@@ -59,8 +59,8 @@ EstimateBloomCounts2Way <- function(params, obs_counts) {
   NoiseMatrix <- matrix(rep(0, 16), 4)
   NoiseMatrix[1,] <- c(p11**2, p11*p10, p10*p11, p10**2)
   NoiseMatrix[2,] <- c(p11*p01, p11*p00, p10*p01, p10*p00)
-  NoiseMatrix[3,] <- c(p01*p11, p01*p10, p00*p11, p00*p01)
-  NoiseMatrix[4,] <- c(p01**2, p00*p01, p01*p00, p00**2)
+  NoiseMatrix[3,] <- c(p01*p11, p01*p10, p00*p11, p00*p10)
+  NoiseMatrix[4,] <- c(p01**2, p01*p00, p00*p01, p00**2)
   # Invert NoiseMatrix for estimator
   InvNoiseMatrix <- t(solve(NoiseMatrix))
   
@@ -119,26 +119,35 @@ AddConstraints <- function(fit, X, Y, m, n, G, H) {
   # 1-way marginals
   # Requires non-NULL fit as input (with "proportion" containing marginal info)
 
+  X <- cbind2(X, setNames(rep(1, m), "intercept"))
+  G <- cbind2(G, rep(0, n+1))
+  
   # Adding marginals constraints to X and Y
-  fstrs <- lapply(fit, function(x) x[,"string"]) #  found strings
+  wt <- 1
+  fstrs <- fit[,"string"] #  found strings
   
-  Y <- c(Y, wt * t(fit[[1]]["proportion"]), wt * t(fit[[2]]["proportion"]))
+  # H <- c(H, -wt * t(fit["prop_high_95"]))
+  H <- c(H, -wt * t(fit[,2]))
   
-  for (strs in fstrs[[1]]) {
-    indices <- which(colnames(map) %in% outer(strs,
-                                    fstrs[[2]],
+  for (strs in fstrs) {
+    indices <- which(colnames(X) %in% outer(strs,
+                                    c("FALSE", "TRUE"),
                                     function(x, y) paste(x, y, sep = "x")))
-    vec <- rep(0, n)
-    vec[indices] <- wt
-    X <- rbind2(X, vec)
+    vec <- rep(0, n + 1)
+    vec[indices] <- -wt
+    # X <- rbind2(X, vec)
+    G <- rbind2(G, vec)
   }
-  for (strs in fstrs[[2]]) {
-    indices <- which(colnames(map) %in% outer(fstrs[[1]],
-                                    strs,
-                                    function(x, y) paste(x, y, sep = "x")))
-    vec <- rep(0, n)
-    vec[indices] <- wt
-    X <- rbind2(X, vec)
+  
+  if(FALSE) {
+    for (strs in fstrs[[2]]) {
+      indices <- which(colnames(X) %in% outer(fstrs[[1]],
+                                      strs,
+                                      function(x, y) paste(x, y, sep = "x")))
+      vec <- rep(0, n)
+      vec[indices] <- wt
+      X <- rbind2(X, vec)
+    }
   }
   list(X = X, Y = Y, G = G, H = H)
 } 
@@ -164,7 +173,16 @@ Decode2Way <- function(counts, map, params, fit = NULL) {
   es <- EstimateBloomCounts2Way(params, counts)
   e <- list(estimates = es$estimates[filter_cohorts, , drop = FALSE],
             stds = es$stds[filter_cohorts, , drop = FALSE])
-  coefs <- FitDistribution2Way(e, map[filter_bits, , drop = FALSE], fit)
+  coefs <- FitDistribution2Way(e, map[filter_bits, , drop = FALSE], fit, add_constraints = TRUE)
+  # IS LSEI WORKING?
+  X <- map; Y <- as.vector(t(e$estimates));
+  m <- dim(X)[1];
+  n <- dim(X)[2];
+  X <- cbind2(X, setNames(rep(1, m), "intercept"));
+  d = X %*% coefs - Y;
+  print(sum(d * d))
+  
+  coefs <- coefs[1:length(coefs)-1]
   fit <- data.frame(String = colnames(map[filter_bits, , drop = FALSE]),
                     Estimate = matrix(coefs, ncol = 1),
                     SD = matrix(coefs, ncol = 1),

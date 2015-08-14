@@ -83,22 +83,51 @@ TwoWayAlgBasic <- function(inp) {
   params2 <- params[[1]]
   # Only for boolean
   params2$k <- (params[[1]]$k) * 4
-  marginal <- Decode2Way(counts[[1]], fmap, params2)$fit
+  # Get true values (for debug purposes only)
+  truevals <- read.csv(inp$truevals)[,c("value1", "value2")]
+  truevals <- table(truevals) / sum(table(truevals))
+  colnames(truevals) <- c("FALSE", "TRUE")
+  marginal <- Decode2Way(counts[[1]], fmap, params2,
+                         fit = fit[,c("string", "proportion")])$fit
+  rs <- rowSums(truevals)
+  fits <- data.frame(string = rownames(as.data.frame(rs)),
+                     proportion = as.vector(rs))
+  truecol = NULL
+  for (rows in found_strings) {
+    for (cols in c("FALSE", "TRUE")) {
+      truecol <- c(truecol, truevals[rows, cols])
+    }
+  }
+  marginal <- cbind(marginal, true = truecol)
+  for (i in -3:3) {
+    fits_t <- fits
+    fits_t[,"proportion"] <- fits_t[,"proportion"] * (1 + i/10)
+    marginal <- cbind(marginal,
+                      more = Decode2Way(counts[[1]],
+                                 fmap,
+                                 params2,
+                                 fit = fits_t)$fit[,"Estimate"])
+    print("ABS")
+    print(0.5 * sum(abs(marginal$true-marginal[,i + 8])))
+  }
   ed <- matrix(0, nrow = length(found_strings), ncol = 2)
   colnames(ed) <- c("FALSE", "TRUE")
   rownames(ed) <- found_strings
-  for (cols in colnames(ed)) {
-    for (rows in rownames(ed)) {
-      ed[rows, cols] <- marginal[paste(rows, cols, sep = "x"), "Estimate"]
+  for (rows in rownames(ed)) {
+    for (cols in colnames(ed)) {
+      ed[rows, cols] <- marginal[paste(rows, cols, sep = "x"), "Estimate"] 
     }
   }
+
+  print(marginal)
+  print(sum(marginal[,"Estimate"]))
   ed[is.na(ed)] <- 0
   ed[ed<0] <- 0
   
   time_taken <- proc.time() - ptm
   print("Two Way Algorithm Results")
-  print(ed)
-  print(ed[order(-rowSums(ed)), order(-colSums(ed))])
+  # print(ed)
+  # print(ed[order(-rowSums(ed)), order(-colSums(ed))])
 }
 
 TwoWayAlg <- function(inp) {

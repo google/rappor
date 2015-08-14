@@ -140,6 +140,8 @@ ComputePdf <- function(distr, range) {
     pdf <- sapply(1:range, function(x) 1 / x)
   } else if (distr == 'zipf1.5') {
     pdf <- sapply(1:range, function(x) 1 / x^1.5)
+  } else if (distr == 'zipf0.5') {
+    pdf <- sapply(1:range, function(x) 1 / x^0.5)
   }
   else {
     stop(sprintf("Invalid distribution '%s'", distr))

@@ -44,7 +44,7 @@ GenerateTrueValuesAssoc <- function(n, N, num_cohorts) {
   }
   
   # Zipfian over n[[1]] strings
-  part <- RandomPartition(N, ComputePdf("zipf1.5", n[[1]]))
+  part <- RandomPartition(N, ComputePdf("zipf0.5", n[[1]]))
   # Zipfian over n[[2]] strings for each of variable 1
   final_part <- as.vector(sapply(1:n[[1]],
                   function(i) PartitionWithCorrelation(part[[i]], n[[2]], i)))
