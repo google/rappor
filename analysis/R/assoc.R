@@ -33,6 +33,7 @@
 
 library("jsonlite")
 library("optparse")
+library("reshape2")  # For "unrolling" joint results to csv file
 
 options(stringsAsFactors = FALSE)
 
@@ -245,6 +246,15 @@ EMAlg <- function(inp) {
                                       verbose = inp$time)
   em <- joint_dist$fit
   time_taken <- proc.time() - ptm
+  # Replace Other column name with FALSE
+  colnames(em)[which(colnames(em) == "Other")] <- "FALSE"
+  
+  # Unroll and write to results.csv
+  if(is.null(inp$results))
+    inp$results <- "results.csv"
+  write.csv(melt(em), file = inp$results, quote = FALSE,
+            row.names = FALSE)
+  
   print("EM Algorithm Results")
   print(em[order(-rowSums(em)), order(-colSums(em))])
   if(inp$time == TRUE)
