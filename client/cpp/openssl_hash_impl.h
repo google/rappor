@@ -7,8 +7,8 @@ namespace rappor {
 
 // Prototypes using typedefs
 bool Hmac(const std::string& key, const std::string& value,
-          Sha256Digest output);
-bool Md5(const std::string& value, Md5Digest output);
+          std::string* output);
+bool Md5(const std::string& value, std::string* output);
 
 }  // namespace rappor
 

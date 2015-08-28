@@ -58,7 +58,7 @@ class Encoder {
   bool Encode(const std::string& value, Bits* irr_out) const;
 
  private:
-  Bits MakeBloomFilter(const std::string& value) const;
+  bool MakeBloomFilter(const std::string& value, Bits* bloom_out) const;
   void GetPrrMasks(const std::string& value, Bits* uniform,
                    Bits* f_mask) const;
 

@@ -28,18 +28,20 @@ void log(const char* fmt, ...) {
   fprintf(stderr, "\n");
 }
 
-void PrintMd5(Md5Digest md5) {
+// Functions for debugging
+void PrintMd5(const std::string& md5) {
   // GAH!  sizeof(md5) does NOT work.  Because that's a pointer.
-  for (size_t i = 0; i < sizeof(Md5Digest); ++i) {
+  rappor::log("md5 size: %d", md5.size());
+  for (size_t i = 0; i < md5.size(); ++i) {
     //printf("[%d]\n", i);
-    fprintf(stderr, "%02x", md5[i]);
+    fprintf(stderr, "%02x ", md5[i]);
   }
   fprintf(stderr, "\n");
 }
 
-void PrintSha256(Sha256Digest h) {
+void PrintSha256(const std::string& h) {
   // GAH!  sizeof(md5) does NOT work.  Because that's a pointer.
-  for (size_t i = 0; i < sizeof(Sha256Digest); ++i) {
+  for (size_t i = 0; i < h.size(); ++i) {
     //printf("[%d]\n", i);
     fprintf(stderr, "%02x", h[i]);
   }
@@ -101,14 +103,12 @@ Encoder::Encoder(const Params& params, const Deps& deps)
   CheckValidProbability(params_.prob_q, "prob_q");
 }
 
-Bits Encoder::MakeBloomFilter(const std::string& value) const {
+bool Encoder::MakeBloomFilter(const std::string& value, Bits* bloom_out) const {
   const int num_bits = params_.num_bits;
   const int num_hashes = params_.num_hashes;
 
   Bits bloom = 0;
 
-  // First do hashing.
-  Md5Digest md5;
   // 4 byte cohort + actual value
   std::string hash_input(4 + value.size(), '\0');
 
@@ -125,18 +125,28 @@ Bits Encoder::MakeBloomFilter(const std::string& value) const {
     hash_input[i + 4] = value[i];
   }
 
-  deps_.md5_func_(hash_input, md5);
+  // First do hashing.
+  std::string hash_output;
+  deps_.md5_func_(hash_input, &hash_output);
 
   log("MD5:");
-  PrintMd5(md5);
+  PrintMd5(hash_output);
+
+  // Error check
+  if (hash_output.size() < static_cast<size_t>(num_hashes)) {
+    rappor::log("Hash function didn't return enough bytes");
+    return false;
+  }
 
   // To determine which bit to set in the bloom filter, use a byte of the MD5.
   for (int i = 0; i < num_hashes; ++i) {
-    int bit_to_set = md5[i] % num_bits;
+    int bit_to_set = hash_output[i] % num_bits;
     bloom |= 1 << bit_to_set;
     //log("Hash %d, set bit %d", i, bit_to_set);
   }
-  return bloom;
+
+  *bloom_out = bloom;
+  return true;
 }
 
 // Helper function for PRR
@@ -144,8 +154,8 @@ void Encoder::GetPrrMasks(const std::string& value, Bits* uniform_out,
                           Bits* f_mask_out) const {
   // Create HMAC(secret, value), and use its bits to construct f and uniform
   // bits.
-  Sha256Digest sha256;
-  deps_.hmac_func_(deps_.client_secret_, value, sha256);
+  std::string sha256;
+  deps_.hmac_func_(deps_.client_secret_, value, &sha256);
 
   log("secret: %s word: %s sha256:", deps_.client_secret_.c_str(),
       value.c_str());
@@ -178,7 +188,11 @@ bool Encoder::_EncodeInternal(const std::string& value, Bits* bloom_out,
     Bits* prr_out, Bits* irr_out) const {
   rappor::log("Encode '%s' cohort %d", value.c_str(), deps_.cohort_);
 
-  Bits bloom = MakeBloomFilter(value);
+  Bits bloom;
+  if (!MakeBloomFilter(value, &bloom)) {
+    rappor::log("Bloom filter calculation failed");
+    return false;
+  }
   *bloom_out = bloom;
 
   // Compute Permanent Randomized Response (PRR).

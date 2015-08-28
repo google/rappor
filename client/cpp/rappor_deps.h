@@ -15,7 +15,7 @@
 #ifndef RAPPOR_DEPS_H_
 #define RAPPOR_DEPS_H_
 
-#include <stdint.h>  // uint64_t
+#include <stdint.h>  // for uint32_t
 #include <string>
 
 namespace rappor {
@@ -23,20 +23,17 @@ namespace rappor {
 // rappor::Bits type is used for Bloom Filter, PRR, and IRR
 typedef uint32_t Bits;
 
-// NOTE: If using C++11 (-std=c++0x), it's safer to do this:
+// NOTE: If using C++11 (-std=c++0x), you could use something like this instead
+// of std::string output.
+//
 // typedef std::array<unsigned char, 32> Sha256Digest;
 
-typedef unsigned char Md5Digest[16];
-typedef unsigned char Sha256Digest[32];
-
-// rappor:Encoder needs an MD5 function for the bloom filter, and an HMAC
+// rappor::Encoder needs a hash function for the bloom filter, and an HMAC
 // function for the PRR.
 
-// TODO: Make hash generic, and allow failure?
-
-typedef bool Md5Func(const std::string& value, Md5Digest output);
+typedef bool Md5Func(const std::string& value, std::string* output);
 typedef bool HmacFunc(const std::string& key, const std::string& value,
-                      Sha256Digest output);
+                      std::string* output);
 
 // Interface that the encoder use to generate randomness for the IRR.
 // Applications should implement this based on their platform and requirements.

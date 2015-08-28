@@ -32,7 +32,7 @@ int main(int argc, char** argv) {
   rappor::UnixKernelRand irr_rand(fp);
 
   int cohort = 99;
-  std::string client_secret("foo");  // NOTE: const char* conversion is bad
+  std::string client_secret("secret");  // NOTE: const char* conversion is bad
 
   rappor::Deps deps(cohort, rappor::Md5, client_secret, rappor::Hmac, irr_rand);
   rappor::Params params = {
