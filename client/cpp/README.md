@@ -5,8 +5,10 @@ We provide both a low level and high level client API.  The low level API
 implements just the RAPPOR encoding algorithm on strings, with few
 dependencies.
 
-The high level API provides wrappers
-Most applications should be able to use the high level API, but 
+The high level API provides wrappers that bundle encoded values into Protocol Buffer messages.
+
+SimpleEncoder
+-------------
 
 The low level API is `SimpleEncoder`.  You instantitate it with RAPPOR encoding
 parameters and application dependencies.  It has a method `Encode()` that takes
@@ -27,6 +29,7 @@ only strings, and returns a rappor::Bits (uint32\_t).
 
     assert(e.Encode("foo", &encoded));  // returns false on error
 
+<!--
 
 The high level API lets you 1) create records with multiple observations and 2)
 encode them together as a serialized protocol buffer.
@@ -72,27 +75,52 @@ ProtobufEncoder: StringEncoder, BooleanEncoder, and OrdinalEncoder.
     rappor::Report report;
     assert(e.Encode(true, &report));  // encode boolean
 
+-->
+
+Build Instructions
+------------------
+
+You need a C++ compiler, the protobuf compiler, and a library for hashing
+(OpenSSL).
+
+On Ubuntu or Debian, the protobuf compiler and header files can be installed
+with:
+
+    sudo apt-get install protobuf-compiler libprotobuf-dev
+
+OpenSSL can be installed with:
+
+    sudo apt-get install libssl-dev
+
 Dependencies
 ------------
 
 `rappor::Deps` is a struct-like object that holds the dependencies needed by
-both the high level and low level API.
+the API.
 
 The application must provide the following two values:
 
 - cohort: An integer between 0 and `num_cohorts - 1`.  Each value is assigned
   with equal probability to a client process.
-- client_secret: A persistent client secret (used for the PRR "memoization"
-  requirement).
+- client_secret: A persistent client secret (used for deterministic randomness
+  in the PRR, i.e. "memoization" requirement).
 
-It must provide the following functions / classes:
+And it must provide the following functions / classes:
 
 - md5_func - MD5 implementation
-- hmac_func_ - HMAC-SHA256 implementation
-- irr_rand_ - Randomness used for the IRR.  We provide two example
-  implementations: one based on libc `rand()` and one based on Unix
-  `/dev/urandom`.
+- hmac_func - HMAC-SHA256 implementation
 
+We provide an implementation using OpenSSL.  If your application already has a
+different implementation of these functions, you may want to implement the
+`Md5Func` and HmacFunc` interfaces.
+
+- irr_rand
+
+Randomness used for the IRR.  We provide two example implementations: one based
+on libc `rand()` and one based on Unix `/dev/urandom`.
+
+
+<!--
 
 Protocol Buffer Schema
 ----------------------
@@ -106,6 +134,8 @@ of records: `rappor::Report`.
 
 Instead of using protobuf enums, you can also use C / C++ enums.  Protobuf
 enums provide some convenience for viewing raw data.
+
+-->
 
 Error Handling
 --------------

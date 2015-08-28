@@ -10,6 +10,9 @@ set -o errexit
 setup() {
   # need libprotobuf-dev for headers to compile against.
   sudo apt-get install protobuf-compiler libprotobuf-dev
+
+  # OpenSSL dev headers
+  sudo apt-get install libssl-dev
 }
 
 init() {
