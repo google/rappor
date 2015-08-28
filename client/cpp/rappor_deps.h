@@ -12,6 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// This header declares the dependencies that the application must provide to
+// the RAPPOR.
+
 #ifndef RAPPOR_DEPS_H_
 #define RAPPOR_DEPS_H_
 
@@ -41,9 +44,15 @@ class IrrRandInterface {
   virtual bool GetMask(float prob, int num_bits, Bits* mask_out) const = 0;
 };
 
+// Dependencies
+// - cohort: randomly assigned to users
+// - hash_func: hash function for the Bloom Filter client step
+// - client_secret: key for deterministic randomness in the PRR
+// - hmac_func: function for deterministic randomness in the PRR
+// - irr_rand: randomness for the IRR
+
 class Deps {
  public:
-   // 
   Deps(int cohort, HashFunc* hash_func,  // bloom deps
        const std::string& client_secret, HmacFunc* hmac_func,  // PRR deps
        const IrrRandInterface& irr_rand)  // IRR dep

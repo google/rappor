@@ -12,10 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Sample code for encoder.cc.
 //
-// This code is copied into README.md, to make sure the sample code actually
-// works!
-//
+// This is the code in README.md.  It's here to make sure it actually builds
+// and runs.
 
 #include <cassert>  // assert
 
@@ -44,7 +44,7 @@ int main(int argc, char** argv) {
     0.75, // probability p for IRR
     0.5,  // probability q for IRR
   };
-  
+
   // Instantiate an encoder with params and deps.
   rappor::Encoder encoder(params, deps);
 

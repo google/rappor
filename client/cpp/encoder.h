@@ -12,6 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// RAPPOR encoder.
+//
+// See README.md and encoder_demo.cc for an example.
+
 #ifndef RAPPOR_H_
 #define RAPPOR_H_
 
@@ -24,7 +28,9 @@ namespace rappor {
 // For debug logging
 void log(const char* fmt, ...);
 
-// (NOTE: leveldb uses this raw-struct style for leveldb::Options)
+// RAPPOR encoding parameters.
+// (NOTE: We're following the leveldb style of using a plain struct for
+// options, e.g. leveldb::Options)
 
 struct Params {
   // k: size of bloom filter, PRR, and IRR.  0 < k <= 32.
@@ -51,11 +57,13 @@ class Encoder {
   // arguments, so errors should be caught early.
   Encoder(const Params& params, const Deps& deps);
 
+  // Encode a string, settting output parameter irr_out.  This is only valid
+  // when the return value is 'true' (success).
+  bool Encode(const std::string& value, Bits* irr_out) const;
+
   // For simulation use only.
   bool _EncodeInternal(const std::string& value, Bits* bloom_out,
                        Bits* prr_out, Bits* irr_out) const;
-
-  bool Encode(const std::string& value, Bits* irr_out) const;
 
  private:
   bool MakeBloomFilter(const std::string& value, Bits* bloom_out) const;

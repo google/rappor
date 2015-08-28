@@ -12,6 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// A RAPPOR random implementation using bytes from a file like /dev/urandom or
+// /dev/random.
+
 #include "unix_kernel_rand_impl.h"
 
 #include <stdint.h>  // uint64_t
