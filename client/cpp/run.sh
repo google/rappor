@@ -78,15 +78,15 @@ test-md5() {
 
 # -MP: workaround
 
+
 deps() {
+  # -MM seems like the one we want.
   gcc -I _tmp -MM protobuf_encoder_test.cc unix_kernel_rand_impl.cc
   #gcc -I _tmp -MMD -MP protobuf_encoder_test.cc unix_kernel_rand_impl.cc
 }
 
-obj() {
-  # -c: compile only
-  gcc -c -o _tmp/rappor_sim.o rappor_sim.cc 
-  ls *.o
+count() {
+  wc -l *.h *.cc | sort -n
 }
 
 "$@"
