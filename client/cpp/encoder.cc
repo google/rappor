@@ -103,7 +103,7 @@ bool Encoder::MakeBloomFilter(const std::string& value, Bits* bloom_out) const {
   // 4 byte cohort + actual value
   std::string hash_input(4 + value.size(), '\0');
 
-  // Assuming num_cohorts <= 256 , the big endian representation looks like
+  // Assuming num_cohorts <= 256, the big endian representation looks like
   // [0 0 0 <cohort>]
   unsigned char c = deps_.cohort_ & 0xFF;
   hash_input[0] = '\0';
@@ -130,7 +130,6 @@ bool Encoder::MakeBloomFilter(const std::string& value, Bits* bloom_out) const {
   for (int i = 0; i < num_hashes; ++i) {
     int bit_to_set = hash_output[i] % num_bits;
     bloom |= 1 << bit_to_set;
-    //log("Hash %d, set bit %d", i, bit_to_set);
   }
 
   *bloom_out = bloom;
@@ -146,7 +145,7 @@ void Encoder::GetPrrMasks(const std::string& value, Bits* uniform_out,
   deps_.hmac_func_(deps_.client_secret_, value, &sha256);
 
   // We should have already checked this.
-  assert(params_.num_bits <= 32);
+  assert(params_.num_bits <= kMaxBits);
 
   uint8_t threshold128 = static_cast<uint8_t>(params_.prob_f * 128);
 
