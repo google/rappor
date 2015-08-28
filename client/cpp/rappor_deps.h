@@ -21,7 +21,7 @@
 namespace rappor {
 
 // rappor::Bits type is used for Bloom Filter, PRR, and IRR
-typedef uint64_t Bits;
+typedef uint32_t Bits;
 
 // NOTE: If using C++11 (-std=c++0x), it's safer to do this:
 // typedef std::array<unsigned char, 32> Sha256Digest;

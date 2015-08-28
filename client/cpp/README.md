@@ -5,7 +5,41 @@ We provide both a low level and high level client API.  The low level API
 implements just the RAPPOR encoding algorithm on strings, with few
 dependencies.
 
-The high level API provides wrappers that bundle encoded values into Protocol Buffer messages.
+The high level API provides wrappers that bundle encoded values into Protocol
+Buffer messages.
+
+Build Instructions
+------------------
+
+You'll need a C++ compiler, the protobuf compiler, and a library that
+implements common hash functions (e.g. OpenSSL).
+
+On Ubuntu or Debian, the protobuf compiler and header files can be installed
+with:
+
+    sudo apt-get install protobuf-compiler libprotobuf-dev
+
+OpenSSL can be installed with:
+
+    sudo apt-get install libssl-dev
+
+Test
+----
+
+After installing dependencies, You can test it out easily on your machine:
+
+    ./demo.sh quick-cpp
+
+This builds the test harness using a Makefile, and then runs the regtest.sh
+simulation.  The last few lines of output will look like this:
+
+    Done running all test instances
+    Instances succeeded: 1  failed: 0  running: 0  total: 1
+    Wrote _tmp/cpp/results.html
+    URL: file:///usr/local/google/home/andychu/git/rappor/_tmp/cpp/results.html
+
+Open the HTML file to see a plot and stats.
+
 
 SimpleEncoder
 -------------
@@ -28,6 +62,8 @@ only strings, and returns a rappor::Bits (uint32\_t).
     rappor::Bits encoded;
 
     assert(e.Encode("foo", &encoded));  // returns false on error
+
+    printf("Encoded: %d", encoded);  // or send it over the network
 
 <!--
 
@@ -77,20 +113,6 @@ ProtobufEncoder: StringEncoder, BooleanEncoder, and OrdinalEncoder.
 
 -->
 
-Build Instructions
-------------------
-
-You need a C++ compiler, the protobuf compiler, and a library for hashing
-(OpenSSL).
-
-On Ubuntu or Debian, the protobuf compiler and header files can be installed
-with:
-
-    sudo apt-get install protobuf-compiler libprotobuf-dev
-
-OpenSSL can be installed with:
-
-    sudo apt-get install libssl-dev
 
 Dependencies
 ------------
