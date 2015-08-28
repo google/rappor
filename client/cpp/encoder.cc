@@ -29,7 +29,7 @@ void log(const char* fmt, ...) {
 }
 
 // Functions for debugging
-void PrintMd5(const std::string& md5) {
+void PrintMd5(const std::vector<uint8_t>& md5) {
   // GAH!  sizeof(md5) does NOT work.  Because that's a pointer.
   rappor::log("md5 size: %d", md5.size());
   for (size_t i = 0; i < md5.size(); ++i) {
@@ -39,7 +39,7 @@ void PrintMd5(const std::string& md5) {
   fprintf(stderr, "\n");
 }
 
-void PrintSha256(const std::string& h) {
+void PrintSha256(const std::vector<uint8_t>& h) {
   // GAH!  sizeof(md5) does NOT work.  Because that's a pointer.
   for (size_t i = 0; i < h.size(); ++i) {
     //printf("[%d]\n", i);
@@ -126,7 +126,7 @@ bool Encoder::MakeBloomFilter(const std::string& value, Bits* bloom_out) const {
   }
 
   // First do hashing.
-  std::string hash_output;
+  std::vector<uint8_t>  hash_output;
   deps_.md5_func_(hash_input, &hash_output);
 
   log("MD5:");
@@ -154,7 +154,7 @@ void Encoder::GetPrrMasks(const std::string& value, Bits* uniform_out,
                           Bits* f_mask_out) const {
   // Create HMAC(secret, value), and use its bits to construct f and uniform
   // bits.
-  std::string sha256;
+  std::vector<uint8_t> sha256;
   deps_.hmac_func_(deps_.client_secret_, value, &sha256);
 
   log("secret: %s word: %s sha256:", deps_.client_secret_.c_str(),

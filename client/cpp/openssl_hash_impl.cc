@@ -12,38 +12,30 @@ namespace rappor {
 
 // of type HmacFunc in rappor_deps.h
 bool Hmac(const std::string& key, const std::string& value,
-          std::string* output) {
+          std::vector<uint8_t>* output) {
   //log("key %s", key.c_str());
   //log("value %s", value.c_str());
 
-  unsigned char openssl_out[32];
+  output->resize(32, 0);
 
-  // A pointer on success, or NULL on failure.
+  // Returns a pointer on success, or NULL on failure.
   unsigned char* result = HMAC(
       EVP_sha256(), key.c_str(), key.size(),
       // std::string has 'char', OpenSSL wants unsigned char.
       reinterpret_cast<const unsigned char*>(value.c_str()),
       value.size(),
-      openssl_out,
+      output->data(),
       NULL);
 
-  
-  if (result != NULL) {
-    output->assign(reinterpret_cast<const char*>(openssl_out), sizeof(openssl_out));
-    return true;
-  } else {
-    return false;
-  }
+  return (result != NULL);
 }
 
 // of type Md5Func in rappor_deps.h
-bool Md5(const std::string& value, std::string* output) {
-  unsigned char openssl_out[16];
-
+bool Md5(const std::string& value, std::vector<uint8_t>* output) {
+  output->resize(16, 0);
   // std::string has 'char', OpenSSL wants unsigned char.
   MD5(reinterpret_cast<const unsigned char*>(value.c_str()),
-      value.size(), openssl_out);
-  output->assign(reinterpret_cast<const char*>(openssl_out), sizeof(openssl_out));
+      value.size(), output->data());
   return true;  // OpenSSL MD5 doesn't return an error code
 }
 
