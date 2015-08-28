@@ -12,7 +12,7 @@ int main() {
   std::string value("value");
   std::vector<uint8_t> sha256;
 
-  bool ok1 = rappor::Hmac(key, value, &sha256);
+  bool ok1 = rappor::HmacSha256(key, value, &sha256);
   printf("ok: %d\n", ok1);
   printf("digest:\n");
 

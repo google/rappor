@@ -143,7 +143,7 @@ int main(int argc, char** argv) {
   int cohort = 5;  // random integer in range [0, 512)
 
   rappor::Deps deps(cohort, rappor::Md5, "client_secret",
-                    rappor::Hmac, libc_rand);
+                    rappor::HmacSha256, libc_rand);
 
   const std::string line("foo");
 

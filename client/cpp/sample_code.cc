@@ -45,9 +45,11 @@ int main(int argc, char** argv) {
     0.5,  // probability q for IRR
   };
   
-  // Instantiate an encoder with params and deps
+  // Instantiate an encoder with params and deps.
   rappor::Encoder encoder(params, deps);
 
+  // Now use it to encode values.  The 'out' value can be sent over the
+  // network.
   rappor::Bits out;
   assert(encoder.Encode("foo", &out));  // returns false on error
   printf("'foo' encoded with RAPPOR: %x\n", out);

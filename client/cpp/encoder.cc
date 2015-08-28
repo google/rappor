@@ -39,7 +39,7 @@ void PrintHex(const std::vector<uint8_t>& h) {
   fprintf(stderr, "\n");
 }
 
-// We use 1 BYTE of a HMAC-SHA256 value per BIT to generate the PRR.  SHA256
+// We use 1 *byte* of a HMAC-SHA256 value per BIT to generate the PRR.  SHA256
 // has 32 bytes, so the max is 32 bits.
 static const int kMaxBits = 32;
 

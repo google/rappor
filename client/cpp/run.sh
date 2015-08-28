@@ -93,4 +93,13 @@ sample-code() {
   make _tmp/sample_code && _tmp/sample_code
 }
 
+readonly DEST=~/piper/A/google3/third_party/rappor_client
+
+export-google3() {
+  cp -T --recursive . $DEST/cpp
+  cp -T --recursive ../proto $DEST/proto
+
+  cp ../../LICENSE $DEST
+}
+
 "$@"
