@@ -43,17 +43,17 @@ class IrrRandInterface {
 
 class Deps {
  public:
-  Deps(int cohort, HashFunc* md5_func, const std::string& client_secret,
+  Deps(int cohort, HashFunc* hash_func, const std::string& client_secret,
        HmacFunc* hmac_func, const IrrRandInterface& irr_rand)
       : cohort_(cohort),
-        md5_func_(md5_func),
+        hash_func_(hash_func),
         client_secret_(client_secret),
         hmac_func_(hmac_func),
         irr_rand_(irr_rand) {
   }
 
   int cohort_;  // bloom
-  HashFunc* md5_func_;  // bloom
+  HashFunc* hash_func_;  // bloom
   const std::string& client_secret_;  // PRR
   HmacFunc* hmac_func_;  // PRR
   const IrrRandInterface& irr_rand_;  // IRR

@@ -125,7 +125,7 @@ bool Encoder::MakeBloomFilter(const std::string& value, Bits* bloom_out) const {
 
   // First do hashing.
   std::vector<uint8_t>  hash_output;
-  deps_.md5_func_(hash_input, &hash_output);
+  deps_.hash_func_(hash_input, &hash_output);
 
   log("MD5:");
   PrintMd5(hash_output);
