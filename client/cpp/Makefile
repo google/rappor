@@ -2,6 +2,7 @@
 
 default : \
 	_tmp/rappor_sim \
+	_tmp/sample_code \
 	_tmp/protobuf_encoder_demo \
 	_tmp/openssl_hash_impl_test
 
@@ -93,6 +94,19 @@ _tmp/rappor_sim : \
 	_tmp/unix_kernel_rand_impl.o \
 	_tmp/openssl_hash_impl.o \
 	_tmp/rappor_sim.o
+	$(CXX) \
+		$(CXXFLAGS) \
+		-o $@ \
+		$^ \
+		-lcrypto \
+		-g
+
+# $^ : all prerequisites
+_tmp/sample_code: \
+	_tmp/encoder.o \
+	_tmp/unix_kernel_rand_impl.o \
+	_tmp/openssl_hash_impl.o \
+	_tmp/sample_code.o
 	$(CXX) \
 		$(CXXFLAGS) \
 		-o $@ \

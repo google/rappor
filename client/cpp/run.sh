@@ -89,4 +89,8 @@ count() {
   wc -l *.h *.cc | sort -n
 }
 
+sample-code() {
+  make _tmp/sample_code && _tmp/sample_code
+}
+
 "$@"
