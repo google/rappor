@@ -196,7 +196,7 @@ int main(int argc, char** argv) {
     }
 
     rappor::Deps deps(cohort, rappor::Md5, client_str /*client_secret*/,
-                      rappor::Hmac, *irr_rand);
+                      rappor::HmacSha256, *irr_rand);
 
     // For now, construct a new encoder every time.  We could construct one for
     // each client.

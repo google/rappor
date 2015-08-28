@@ -34,7 +34,8 @@ int main(int argc, char** argv) {
   int cohort = 99;  // randomly selected from 0 .. num_cohorts-1
   std::string client_secret("secret");  // NOTE: const char* conversion is bad
 
-  rappor::Deps deps(cohort, rappor::Md5, client_secret, rappor::Hmac, irr_rand);
+  rappor::Deps deps(cohort, rappor::Md5, client_secret, rappor::HmacSha256,
+                    irr_rand);
   rappor::Params params = {
     32,   // k = num_bits
     2,    // h = num_hashes

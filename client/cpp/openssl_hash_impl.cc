@@ -11,7 +11,7 @@
 namespace rappor {
 
 // of type HmacFunc in rappor_deps.h
-bool Hmac(const std::string& key, const std::string& value,
+bool HmacSha256(const std::string& key, const std::string& value,
           std::vector<uint8_t>* output) {
   //log("key %s", key.c_str());
   //log("value %s", value.c_str());
