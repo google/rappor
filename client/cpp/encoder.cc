@@ -28,18 +28,11 @@ void log(const char* fmt, ...) {
   fprintf(stderr, "\n");
 }
 
+//
 // Functions for debugging
-void PrintMd5(const std::vector<uint8_t>& md5) {
-  // GAH!  sizeof(md5) does NOT work.  Because that's a pointer.
-  rappor::log("md5 size: %d", md5.size());
-  for (size_t i = 0; i < md5.size(); ++i) {
-    fprintf(stderr, "%02x", md5[i]);
-  }
-  fprintf(stderr, "\n");
-}
+//
 
-void PrintSha256(const std::vector<uint8_t>& h) {
-  // GAH!  sizeof(md5) does NOT work.  Because that's a pointer.
+void PrintHex(const std::vector<uint8_t>& h) {
   for (size_t i = 0; i < h.size(); ++i) {
     fprintf(stderr, "%02x", h[i]);
   }
@@ -124,11 +117,8 @@ bool Encoder::MakeBloomFilter(const std::string& value, Bits* bloom_out) const {
   }
 
   // First do hashing.
-  std::vector<uint8_t>  hash_output;
+  std::vector<uint8_t> hash_output;
   deps_.hash_func_(hash_input, &hash_output);
-
-  log("MD5:");
-  PrintMd5(hash_output);
 
   // Error check
   if (hash_output.size() < static_cast<size_t>(num_hashes)) {
@@ -155,10 +145,6 @@ void Encoder::GetPrrMasks(const std::string& value, Bits* uniform_out,
   std::vector<uint8_t> sha256;
   deps_.hmac_func_(deps_.client_secret_, value, &sha256);
 
-  log("secret: %s word: %s sha256:", deps_.client_secret_.c_str(),
-      value.c_str());
-  PrintSha256(sha256);
-
   // We should have already checked this.
   assert(params_.num_bits <= 32);
 
@@ -184,8 +170,6 @@ void Encoder::GetPrrMasks(const std::string& value, Bits* uniform_out,
 
 bool Encoder::_EncodeInternal(const std::string& value, Bits* bloom_out,
     Bits* prr_out, Bits* irr_out) const {
-  rappor::log("Encode '%s' cohort %d", value.c_str(), deps_.cohort_);
-
   Bits bloom;
   if (!MakeBloomFilter(value, &bloom)) {
     rappor::log("Bloom filter calculation failed");

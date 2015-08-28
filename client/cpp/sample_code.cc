@@ -31,7 +31,7 @@ int main(int argc, char** argv) {
   FILE* fp = fopen("/dev/urandom", "r");
   rappor::UnixKernelRand irr_rand(fp);
 
-  int cohort = 99;
+  int cohort = 99;  // randomly selected from 0 .. num_cohorts-1
   std::string client_secret("secret");  // NOTE: const char* conversion is bad
 
   rappor::Deps deps(cohort, rappor::Md5, client_secret, rappor::Hmac, irr_rand);
