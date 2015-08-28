@@ -44,12 +44,15 @@ int main(int argc, char** argv) {
     0.5,  // probability q for IRR
   };
   
-  // This can encode strings
-  rappor::Encoder e(params, deps);
+  // Instantiate an encoder with params and deps
+  rappor::Encoder encoder(params, deps);
 
-  rappor::Bits encoded;
-  assert(e.Encode("foo", &encoded));  // returns false on error
+  rappor::Bits out;
+  assert(encoder.Encode("foo", &out));  // returns false on error
 
-  printf("'foo' encoded with RAPPOR: %x\n", encoded);  // or send it over the network
+  printf("'foo' encoded with RAPPOR: %x\n", out);
+
+  // Keep calling Encode() on the same 'encoder' instance, or initialize
+  // another one if you need different params/deps
 }
 

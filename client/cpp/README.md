@@ -46,24 +46,43 @@ SimpleEncoder
 
 The low level API is `SimpleEncoder`.  You instantitate it with RAPPOR encoding
 parameters and application dependencies.  It has a method `Encode()` that takes
-only strings, and returns a rappor::Bits (uint32\_t).
-
+an input string (no other types), writes an output parameter of type
+`rappor::Bits`, and returns success or failure.
 
     #include <cassert>
 
     #include "encoder.h"
-
-    rappor::Deps deps(...);
-    rappor::Params params = { ... };
+    #include "openssl_hash_impl.h"
+    #include "unix_kernel_rand_impl.h"
     
-    // This can encode strings
-    rappor::SimpleEncoder e(params, deps);
+    int main(int argc, char** argv) {
+      FILE* fp = fopen("/dev/urandom", "r");
+      rappor::UnixKernelRand irr_rand(fp);
+    
+      int cohort = 99;
+      std::string client_secret("foo");  // NOTE: const char* conversion is bad
+    
+      rappor::Deps deps(cohort, rappor::Md5, client_secret, rappor::Hmac, irr_rand);
+      rappor::Params params = {
+        32,   // k = num_bits
+        2,    // h = num_hashes
+        128,  // m = num_cohorts
+        0.25, // probability f for PRR
+        0.75, // probability p for IRR
+        0.5,  // probability q for IRR
+      };
+      
+      // Instantiate an encoder with params and deps
+      rappor::Encoder encoder(params, deps);
 
-    rappor::Bits encoded;
+      rappor::Bits out;
+      assert(encoder.Encode("foo", &out));  // returns false on error
 
-    assert(e.Encode("foo", &encoded));  // returns false on error
+      printf("'foo' encoded with RAPPOR: %x\n", out);
 
-    printf("Encoded: %d", encoded);  // or send it over the network
+      // Keep calling Encode() on the same 'encoder' instance, or initialize
+      // another one if you need different params/deps
+    }
 
 <!--
 
