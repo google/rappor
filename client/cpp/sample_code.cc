@@ -50,10 +50,9 @@ int main(int argc, char** argv) {
 
   rappor::Bits out;
   assert(encoder.Encode("foo", &out));  // returns false on error
-
   printf("'foo' encoded with RAPPOR: %x\n", out);
 
-  // Keep calling Encode() on the same 'encoder' instance, or initialize
-  // another one if you need different params/deps
+  assert(encoder.Encode("bar", &out));  // returns false on error
+  printf("'bar' encoded with RAPPOR: %x\n", out);
 }
 

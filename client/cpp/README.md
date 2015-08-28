@@ -58,11 +58,12 @@ an input string (no other types), writes an output parameter of type
     int main(int argc, char** argv) {
       FILE* fp = fopen("/dev/urandom", "r");
       rappor::UnixKernelRand irr_rand(fp);
-    
-      int cohort = 99;
-      std::string client_secret("foo");  // NOTE: const char* conversion is bad
-    
-      rappor::Deps deps(cohort, rappor::Md5, client_secret, rappor::Hmac, irr_rand);
+
+      int cohort = 99;  // randomly selected from 0 .. num_cohorts-1
+      std::string client_secret("secret");  // NOTE: const char* conversion is bad
+
+      rappor::Deps deps(cohort, rappor::Md5, client_secret, rappor::HmacSha256,
+                        irr_rand);
       rappor::Params params = {
         32,   // k = num_bits
         2,    // h = num_hashes
@@ -77,11 +78,10 @@ an input string (no other types), writes an output parameter of type
 
       rappor::Bits out;
       assert(encoder.Encode("foo", &out));  // returns false on error
-
       printf("'foo' encoded with RAPPOR: %x\n", out);
 
-      // Keep calling Encode() on the same 'encoder' instance, or initialize
-      // another one if you need different params/deps
+      assert(encoder.Encode("bar", &out));  // returns false on error
+      printf("'bar' encoded with RAPPOR: %x\n", out);
     }
 
 <!--
