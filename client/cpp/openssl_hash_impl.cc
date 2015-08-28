@@ -16,7 +16,7 @@ bool Hmac(const std::string& key, const std::string& value,
   //log("key %s", key.c_str());
   //log("value %s", value.c_str());
 
-  output->resize(32, 0);
+  output->resize(SHA256_DIGEST_LENGTH, 0);
 
   // Returns a pointer on success, or NULL on failure.
   unsigned char* result = HMAC(
@@ -30,9 +30,9 @@ bool Hmac(const std::string& key, const std::string& value,
   return (result != NULL);
 }
 
-// of type Md5Func in rappor_deps.h
+// of type HashFunc in rappor_deps.h
 bool Md5(const std::string& value, std::vector<uint8_t>* output) {
-  output->resize(16, 0);
+  output->resize(MD5_DIGEST_LENGTH, 0);
   // std::string has 'char', OpenSSL wants unsigned char.
   MD5(reinterpret_cast<const unsigned char*>(value.c_str()),
       value.size(), output->data());

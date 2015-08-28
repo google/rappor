@@ -33,8 +33,7 @@ void PrintMd5(const std::vector<uint8_t>& md5) {
   // GAH!  sizeof(md5) does NOT work.  Because that's a pointer.
   rappor::log("md5 size: %d", md5.size());
   for (size_t i = 0; i < md5.size(); ++i) {
-    //printf("[%d]\n", i);
-    fprintf(stderr, "%02x ", md5[i]);
+    fprintf(stderr, "%02x", md5[i]);
   }
   fprintf(stderr, "\n");
 }
@@ -42,7 +41,6 @@ void PrintMd5(const std::vector<uint8_t>& md5) {
 void PrintSha256(const std::vector<uint8_t>& h) {
   // GAH!  sizeof(md5) does NOT work.  Because that's a pointer.
   for (size_t i = 0; i < h.size(); ++i) {
-    //printf("[%d]\n", i);
     fprintf(stderr, "%02x", h[i]);
   }
   fprintf(stderr, "\n");

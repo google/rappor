@@ -148,12 +148,12 @@ The application must provide the following two values:
 
 And it must provide the following functions / classes:
 
-- md5_func - MD5 implementation
+- hash_func - hash implementation (e.g. md5)
 - hmac_func - HMAC-SHA256 implementation
 
 We provide an implementation using OpenSSL.  If your application already has a
 different implementation of these functions, you may want to implement the
-`Md5Func` and HmacFunc` interfaces.
+`HashFunc` and HmacFunc` interfaces.
 
 - irr_rand
 

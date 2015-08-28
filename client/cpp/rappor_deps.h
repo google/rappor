@@ -27,7 +27,7 @@ typedef uint32_t Bits;
 // rappor::Encoder needs a hash function for the bloom filter, and an HMAC
 // function for the PRR.
 
-typedef bool Md5Func(const std::string& value, std::vector<uint8_t>* output);
+typedef bool HashFunc(const std::string& value, std::vector<uint8_t>* output);
 typedef bool HmacFunc(const std::string& key, const std::string& value,
                       std::vector<uint8_t>* output);
 
@@ -43,7 +43,7 @@ class IrrRandInterface {
 
 class Deps {
  public:
-  Deps(int cohort, Md5Func* md5_func, const std::string& client_secret,
+  Deps(int cohort, HashFunc* md5_func, const std::string& client_secret,
        HmacFunc* hmac_func, const IrrRandInterface& irr_rand)
       : cohort_(cohort),
         md5_func_(md5_func),
@@ -53,7 +53,7 @@ class Deps {
   }
 
   int cohort_;  // bloom
-  Md5Func* md5_func_;  // bloom
+  HashFunc* md5_func_;  // bloom
   const std::string& client_secret_;  // PRR
   HmacFunc* hmac_func_;  // PRR
   const IrrRandInterface& irr_rand_;  // IRR
