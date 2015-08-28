@@ -89,8 +89,8 @@ count() {
   wc -l *.h *.cc | sort -n
 }
 
-sample-code() {
-  make _tmp/sample_code && _tmp/sample_code
+encoder-demo() {
+  make _tmp/encoder_demo && _tmp/encoder_demo
 }
 
 readonly DEST=~/piper/A/google3/third_party/rappor_client
