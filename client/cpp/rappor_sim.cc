@@ -13,6 +13,7 @@
 // limitations under the License.
 
 #include <stdio.h>
+#include <time.h>  // time
 
 #include <cassert>  // assert
 #include <cstdlib>  // strtol, strtof
@@ -129,7 +130,8 @@ int main(int argc, char** argv) {
     FILE* fp = fopen("/dev/urandom", "r");
     irr_rand = new rappor::UnixKernelRand(fp);
   } else {
-    rappor::LibcRandGlobalInit();  // seed
+    int seed = time(NULL);
+    srand(seed);  // seed with nanoseconds
     irr_rand = new rappor::LibcRand();
   }
 

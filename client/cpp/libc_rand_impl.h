@@ -12,15 +12,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// A RAPPOR random implementation using libc's rand().
+//
+// IMPORTANT: This is for demo /simulation purposes only.  Use a better random
+// function in production applications.
+
 #ifndef LIBC_RAND_IMPL_H_
 #define LIBC_RAND_IMPL_H_
 
 #include "rappor_deps.h"
 
 namespace rappor {
-
-// call this once per application.
-void LibcRandGlobalInit();
 
 class LibcRand : public IrrRandInterface {
  public:

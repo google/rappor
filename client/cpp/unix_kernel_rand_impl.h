@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Unix kernels expose random numbers as files (/dev/random, /dev/urandom,
-// etc.).  This uses a file to provide IRR randomness.
+// A RAPPOR random implementation using bytes from a file like /dev/urandom or
+// /dev/random.
 
 #ifndef UNIX_KERNEL_RAND_IMPL_H_
 #define UNIX_KERNEL_RAND_IMPL_H_

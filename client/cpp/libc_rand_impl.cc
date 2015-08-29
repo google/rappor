@@ -12,22 +12,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// IMPORTANT: This is for demo /simulation purposes only.  Use a better random
+// function in production applications.
+
 #include "libc_rand_impl.h"
 
 #include <assert.h>
 #include <stdint.h>  // uint64_t
 #include <stdlib.h>  // srand
-#include <time.h>  // time
-
-static bool gInitialized = false;
 
 namespace rappor {
-
-void LibcRandGlobalInit() {
-  int seed = time(NULL);
-  srand(seed);  // seed with nanoseconds
-  gInitialized = true;
-}
 
 //
 // LibcRand
