@@ -189,3 +189,9 @@ The various `Encode()` members do *not* raise assertions.  If those are used in
 correctly, then the return value will be `false` to indicate an error.  These
 failures should be handled by the application.
 
+Memory Management
+-----------------
+
+The `Encoder` instances contain pointers to `Params` and `Deps` instances, but
+don't own them.  In the examples, all instances live the stack of `main()`, so
+you don't have to worry about them being destroyed.
