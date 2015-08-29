@@ -32,22 +32,39 @@ void log(const char* fmt, ...);
 // (NOTE: We're following the leveldb style of using a plain struct for
 // options, e.g. leveldb::Options)
 
-struct Params {
+class Params {
+ public:
+  Params(int num_bits, int num_hashes, int num_cohorts,
+         float prob_f, float prob_p, float prob_q)
+      : num_bits_(num_bits),
+        num_hashes_(num_hashes),
+        num_cohorts_(num_cohorts),
+        prob_f_(prob_f),
+        prob_p_(prob_p),
+        prob_q_(prob_q) {
+  }
+
+  // Accessors
+  int num_bits() { return num_bits_; }
+
+ private:
+  friend class Encoder;
+
   // k: size of bloom filter, PRR, and IRR.  0 < k <= 32.
-  int num_bits;
+  int num_bits_;
 
   // number of bits set in the Bloom filter ("h")
-  int num_hashes;
+  int num_hashes_;
 
   // Total number of cohorts ("m").  Note that the cohort assignment is what
   // is used in the client, not m.  We include it here for documentation (it
   // can be unset, unlike the other params.)
-  int num_cohorts;
+  int num_cohorts_;
 
-  float prob_f; // for PRR
+  float prob_f_; // probability for PRR
 
-  float prob_p;  // for IRR
-  float prob_q;  // for IRR
+  float prob_p_;  // probability for IRR
+  float prob_q_;  // probability for IRR
 };
 
 class Encoder {

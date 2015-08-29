@@ -66,37 +66,37 @@ Encoder::Encoder(const Params& params, const Deps& deps)
 
   // None of these should be 0; it probably means the caller forgot to
   // initialize a field.
-  if (params_.num_bits == 0) {
+  if (params_.num_bits_ == 0) {
     log("num_bits can't be 0");
     assert(false);
   }
-  if (params_.num_hashes == 0) {
+  if (params_.num_hashes_ == 0) {
     log("num_hashes can't be 0");
     assert(false);
   }
-  if (params_.num_cohorts == 0) {
+  if (params_.num_cohorts_ == 0) {
     log("num_cohorts can't be 0");
     assert(false);
   }
   // Check Maximum values.
-  if (params_.num_bits > kMaxBits) {
-    log("num_bits (%d) can't be greater than %d", params_.num_bits, kMaxBits);
+  if (params_.num_bits_ > kMaxBits) {
+    log("num_bits (%d) can't be greater than %d", params_.num_bits_, kMaxBits);
     assert(false);
   }
-  if (params_.num_hashes > kMaxHashes) {
-    log("num_hashes (%d) can't be greater than %d", params_.num_hashes,
+  if (params_.num_hashes_ > kMaxHashes) {
+    log("num_hashes (%d) can't be greater than %d", params_.num_hashes_,
         kMaxHashes);
     assert(false);
   }
 
-  CheckValidProbability(params_.prob_f, "prob_f");
-  CheckValidProbability(params_.prob_p, "prob_p");
-  CheckValidProbability(params_.prob_q, "prob_q");
+  CheckValidProbability(params_.prob_f_, "prob_f");
+  CheckValidProbability(params_.prob_p_, "prob_p");
+  CheckValidProbability(params_.prob_q_, "prob_q");
 }
 
 bool Encoder::MakeBloomFilter(const std::string& value, Bits* bloom_out) const {
-  const int num_bits = params_.num_bits;
-  const int num_hashes = params_.num_hashes;
+  const int num_bits = params_.num_bits_;
+  const int num_hashes = params_.num_hashes_;
 
   Bits bloom = 0;
 
@@ -145,14 +145,14 @@ void Encoder::GetPrrMasks(const std::string& value, Bits* uniform_out,
   deps_.hmac_func_(deps_.client_secret_, value, &sha256);
 
   // We should have already checked this.
-  assert(params_.num_bits <= kMaxBits);
+  assert(params_.num_bits_ <= kMaxBits);
 
-  uint8_t threshold128 = static_cast<uint8_t>(params_.prob_f * 128);
+  uint8_t threshold128 = static_cast<uint8_t>(params_.prob_f_ * 128);
 
   Bits uniform = 0;
   Bits f_mask = 0;
 
-  for (int i = 0; i < params_.num_bits; ++i) {
+  for (int i = 0; i < params_.num_bits_; ++i) {
     uint8_t byte = sha256[i];
 
     uint8_t u_bit = byte & 0x01;  // 1 bit of entropy
@@ -189,11 +189,11 @@ bool Encoder::_EncodeInternal(const std::string& value, Bits* bloom_out,
   // NOTE: These can fail if say a read() from /dev/urandom fails.
   Bits p_bits;
   Bits q_bits;
-  if (!deps_.irr_rand_.GetMask(params_.prob_p, params_.num_bits, &p_bits)) {
+  if (!deps_.irr_rand_.GetMask(params_.prob_p_, params_.num_bits_, &p_bits)) {
     rappor::log("PMask failed");
     return false;
   }
-  if (!deps_.irr_rand_.GetMask(params_.prob_q, params_.num_bits, &q_bits)) {
+  if (!deps_.irr_rand_.GetMask(params_.prob_q_, params_.num_bits_, &q_bits)) {
     rappor::log("QMask failed");
     return false;
   }

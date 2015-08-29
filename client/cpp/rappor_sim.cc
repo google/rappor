@@ -77,15 +77,16 @@ int main(int argc, char** argv) {
     exit(1);
   }
 
-  rappor::Params params;
+  int num_bits, num_hashes, num_cohorts;
+  float prob_p, prob_q, prob_f;
 
-  bool ok1 = StringToInt(argv[1], &params.num_bits);
-  bool ok2 = StringToInt(argv[2], &params.num_hashes);
-  bool ok3 = StringToInt(argv[3], &params.num_cohorts);
+  bool ok1 = StringToInt(argv[1], &num_bits);
+  bool ok2 = StringToInt(argv[2], &num_hashes);
+  bool ok3 = StringToInt(argv[3], &num_cohorts);
 
-  bool ok4 = StringToFloat(argv[4], &params.prob_p);
-  bool ok5 = StringToFloat(argv[5], &params.prob_q);
-  bool ok6 = StringToFloat(argv[6], &params.prob_f);
+  bool ok4 = StringToFloat(argv[4], &prob_p);
+  bool ok5 = StringToFloat(argv[5], &prob_q);
+  bool ok6 = StringToFloat(argv[6], &prob_f);
 
   if (!ok1) {
     rappor::log("Invalid number of bits: '%s'", argv[1]);
@@ -112,13 +113,9 @@ int main(int argc, char** argv) {
     exit(1);
   }
 
-  rappor::log("bits %d / hashes %d / cohorts %d", params.num_bits,
-      params.num_hashes, params.num_cohorts);
+  rappor::Params params(num_bits, num_hashes, num_cohorts, prob_p, prob_q, prob_f);
 
-  rappor::log("p %f / q %f / f %f", params.prob_p, params.prob_q,
-      params.prob_f);
-
-  int num_bytes = params.num_bits / 8;
+  int num_bytes = params.num_bits() / 8;
 
   // TODO: Add flag for
   // - num_clients
