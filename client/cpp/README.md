@@ -64,15 +64,15 @@ an input string (no other types), writes an output parameter of type
 
       rappor::Deps deps(cohort, rappor::Md5, client_secret, rappor::HmacSha256,
                         irr_rand);
-      rappor::Params params = {
-        32,   // k = num_bits
-        2,    // h = num_hashes
-        128,  // m = num_cohorts
+      rappor::Params params(
+        32,   // num_bits (k)
+        2,    // num_hashes (h)
+        128,  // num_cohorts (m)
         0.25, // probability f for PRR
         0.75, // probability p for IRR
-        0.5,  // probability q for IRR
-      };
-      
+        0.5   // probability q for IRR
+      );
+
       // Instantiate an encoder with params and deps.
       rappor::Encoder encoder(params, deps);
 
