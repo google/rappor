@@ -43,6 +43,11 @@ class Params {
 
   // Accessors
   int num_bits() { return num_bits_; }
+  int num_hashes() { return num_hashes_; }
+  int num_cohorts() { return num_cohorts_; }
+  float prob_f() { return prob_f_; }
+  float prob_p() { return prob_p_; }
+  float prob_q() { return prob_q_; }
 
  private:
   friend class Encoder;

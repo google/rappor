@@ -115,8 +115,11 @@ int main(int argc, char** argv) {
     exit(1);
   }
 
-  rappor::Params params(num_bits, num_hashes, num_cohorts, prob_p, prob_q,
-                        prob_f);
+  rappor::Params params(num_bits, num_hashes, num_cohorts, prob_f, prob_p,
+                        prob_q);
+
+  //rappor::log("k: %d, h: %d, m: %d", params.num_bits(), params.num_hashes(), params.num_cohorts());
+  //rappor::log("f: %f, p: %f, q: %f", prob_f, prob_p, prob_q);
 
   int num_bytes = params.num_bits() / 8;
 
