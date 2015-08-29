@@ -141,27 +141,22 @@ Dependencies
 `rappor::Deps` is a struct-like object that holds the dependencies needed by
 the API.
 
-The application must provide the following two values:
+The application must provide the following values:
 
 - cohort: An integer between 0 and `num_cohorts - 1`.  Each value is assigned
   with equal probability to a client process.
 - client_secret: A persistent client secret (used for deterministic randomness
   in the PRR, i.e. "memoization" requirement).
-
-And it must provide the following functions / classes:
-
-- hash_func - hash implementation (e.g. md5)
+- hash_func - string hash function implementation (e.g. MD5)
 - hmac_func - HMAC-SHA256 implementation
+- irr_rand - randomness for the IRR
 
-We provide an implementation using OpenSSL.  If your application already has a
-different implementation of these functions, you may want to implement the
-`HashFunc` and HmacFunc` interfaces.
+We provide an implementation of `hash_func` and `hmac_func` and using OpenSSL.
+If your application already has a different implementation of these functions,
+you can implement the `HashFunc` and HmacFunc` interfaces.
 
-- irr_rand
-
-Randomness used for the IRR.  We provide two example implementations: one based
-on libc `rand()` and one based on Unix `/dev/urandom`.
-
+We provide two example implementations of `irr_rand`: one based on libc
+`rand()` (insecure, for demo only), and one based on Unix `/dev/urandom`.
 
 <!--
 
