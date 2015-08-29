@@ -123,8 +123,7 @@ int main(int argc, char** argv) {
 
   int num_bytes = params.num_bits() / 8;
 
-  // TODO: Add flag for
-  // - num_clients
+  // TODO: Add a flag for
   // - -r libc / kernel
   // - -c openssl / nacl crpto
 
@@ -137,23 +136,6 @@ int main(int argc, char** argv) {
     srand(seed);  // seed with nanoseconds
     irr_rand = new rappor::LibcRand();
   }
-
-  /*
-  // TODO: Create an encoder for each client
-  std::vector<rappor::Encoder*> encoders(num_cohorts);
-
-  for (int i = 0; i < num_cohorts; ++i) {
-    encoders[i] = new rappor::Encoder(
-        i, num_bits, num_hashes,
-        0.50, rappor::Md5, rappor::Hmac, client_secret, 
-        libc_rand);
-
-    assert(encoders[i]->IsValid());  // bad instantiation
-  }
-  */
-
-  // maybe have rappor_encode and rappor_demo
-  // demo shows how to encode multiple metrics
 
   std::string line;
 
@@ -249,9 +231,4 @@ int main(int argc, char** argv) {
 
   // Cleanup
   delete irr_rand;
-  /*
-  for (int i = 0; i < num_cohorts; ++i) {
-    delete encoders[i];
-  }
-  */
 }
