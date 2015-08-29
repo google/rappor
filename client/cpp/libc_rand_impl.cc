@@ -16,7 +16,6 @@
 
 #include <assert.h>
 #include <stdint.h>  // uint64_t
-//#include <stdio.h>  // printf
 #include <stdlib.h>  // srand
 #include <time.h>  // time
 
@@ -40,6 +39,7 @@ bool LibcRand::GetMask(float prob, int num_bits, Bits* mask_out) const {
   Bits mask = 0;
 
   for (int i = 0; i < num_bits; ++i) {
+    // NOTE: could use rand_r(), which is more thread-safe
     Bits bit = (rand() < rand_threshold);
     mask |= (bit << i);
   }

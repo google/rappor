@@ -19,8 +19,6 @@
 
 #include <stdint.h>  // uint64_t
 
-//#include "rappor.h"  // log
-
 namespace rappor {
 
 const int kMaxBitWidth = 32;  // also in encoder.cc

@@ -102,4 +102,8 @@ export-google3() {
   cp ../../LICENSE $DEST
 }
 
+cpplint() {
+  ../../analysis/cpp/_tmp/cpplint.py "$@"
+}
+
 "$@"

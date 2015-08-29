@@ -29,9 +29,6 @@ namespace rappor {
 void log(const char* fmt, ...);
 
 // RAPPOR encoding parameters.
-// (NOTE: We're following the leveldb style of using a plain struct for
-// options, e.g. leveldb::Options)
-
 class Params {
  public:
   Params(int num_bits, int num_hashes, int num_cohorts,
@@ -61,12 +58,14 @@ class Params {
   // can be unset, unlike the other params.)
   int num_cohorts_;
 
-  float prob_f_; // probability for PRR
+  float prob_f_;  // probability for PRR
 
   float prob_p_;  // probability for IRR
   float prob_q_;  // probability for IRR
 };
 
+// Encoder: take client values and transform them with the RAPPOR privacy
+// algorithm.
 class Encoder {
  public:
   // Note that invalid parameters cause runtime assertions in the constructor.

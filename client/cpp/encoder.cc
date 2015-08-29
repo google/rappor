@@ -12,11 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <cassert>  // assert
+#include "encoder.h"
+
 #include <stdio.h>
 #include <stdarg.h>  // va_list, etc.
 
-#include "encoder.h"
+#include <cassert>  // assert
+#include <vector>
 
 namespace rappor {
 

@@ -27,7 +27,7 @@ namespace rappor {
 
 class UnixKernelRand : public IrrRandInterface {
  public:
-  UnixKernelRand(FILE* fp)
+  explicit UnixKernelRand(FILE* fp)
       : fp_(fp) {
   }
   virtual ~UnixKernelRand() {}

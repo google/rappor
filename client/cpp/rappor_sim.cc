@@ -12,10 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include <stdio.h>
+
 #include <cassert>  // assert
 #include <cstdlib>  // strtol, strtof
 #include <iostream>
-#include <stdio.h>
 #include <vector>
 
 #include "encoder.h"
@@ -113,7 +114,8 @@ int main(int argc, char** argv) {
     exit(1);
   }
 
-  rappor::Params params(num_bits, num_hashes, num_cohorts, prob_p, prob_q, prob_f);
+  rappor::Params params(num_bits, num_hashes, num_cohorts, prob_p, prob_q,
+                        prob_f);
 
   int num_bytes = params.num_bits() / 8;
 
@@ -162,7 +164,7 @@ int main(int argc, char** argv) {
 
   while (true) {
     std::getline(std::cin, line);  // no trailing newline
-    //rappor::log("Got line %s", line.c_str());
+    // rappor::log("Got line %s", line.c_str());
 
     if (line.empty()) {
       break;  // EOF
@@ -179,11 +181,14 @@ int main(int argc, char** argv) {
       return 1;
     }
 
-    // substr(pos, length) not pos, end
-    std::string client_str = line.substr(0, comma1_pos);  // everything before comma
+    // The C++ API substr(pos, length) not (pos, end)
+
+    // everything before comma
+    std::string client_str = line.substr(0, comma1_pos);
     // everything between first and second comma
-    std::string cohort_str = line.substr(comma1_pos + 1, comma2_pos - comma1_pos);
-    std::string value = line.substr(comma2_pos + 1);  // everything after
+    std::string cohort_str = line.substr(comma1_pos + 1, comma2_pos-comma1_pos);
+    // everything after
+    std::string value = line.substr(comma2_pos + 1);
 
     int cohort;
     bool cohort_ok = StringToInt(cohort_str.c_str(), &cohort);
@@ -199,8 +204,8 @@ int main(int argc, char** argv) {
     // each client.
     rappor::Encoder e(params, deps);
 
-    //rappor::log("CLIENT %s VALUE %s COHORT %d", client_str.c_str(),
-    //    value.c_str(), cohort);
+    // rappor::log("CLIENT %s VALUE %s COHORT %d", client_str.c_str(),
+    //             value.c_str(), cohort);
 
     rappor::Bits bloom;
     rappor::Bits prr;
