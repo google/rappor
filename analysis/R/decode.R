@@ -17,7 +17,13 @@
 
 library(glmnet)
 
-source('analysis/R/alternative.R')
+# So we don't have to change pwd
+source.rappor <- function(rel_path)  {
+  abs_path <- paste0(Sys.getenv("RAPPOR_REPO", ""), rel_path)
+  source(abs_path)
+}
+
+source.rappor('analysis/R/alternative.R')
 
 EstimateBloomCounts <- function(params, obs_counts) {
   # Estimates the number of times each bit in each cohort was set in original
