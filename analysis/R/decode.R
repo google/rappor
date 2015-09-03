@@ -17,7 +17,13 @@
 
 library(glmnet)
 
-source('analysis/R/alternative.R')
+# So we don't have to change pwd
+source.rappor <- function(rel_path)  {
+  abs_path <- paste0(Sys.getenv("RAPPOR_REPO", ""), rel_path)
+  source(abs_path)
+}
+
+source.rappor('analysis/R/alternative.R')
 
 EstimateBloomCounts <- function(params, obs_counts) {
   # Estimates the number of times each bit in each cohort was set in original
@@ -333,8 +339,11 @@ Decode <- function(counts, map, params, alpha = 0.05,
   fit$prop_std_error <- fit$std_error / N
 
   # 1.96 standard deviations gives 95% confidence interval.
-  fit$prop_low_95 <- fit$proportion - 1.96 * fit$prop_std_error
-  fit$prop_high_95 <- fit$proportion + 1.96 * fit$prop_std_error
+  low_95 <- fit$proportion - 1.96 * fit$prop_std_error
+  high_95 <- fit$proportion + 1.96 * fit$prop_std_error
+  # Clamp estimated proportion.  pmin/max: vectorized min and max
+  fit$prop_low_95 <- pmax(low_95, 0.0)
+  fit$prop_high_95 <- pmin(high_95, 1.0)
 
   fit <- fit[, c("string", "estimate", "std_error", "proportion",
                  "prop_std_error", "prop_low_95", "prop_high_95")]
