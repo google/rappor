@@ -51,7 +51,6 @@ source("analysis/R/simulation.R")
 source("analysis/R/read_input.R")
 source("analysis/R/association.R")
 source("tests/gen_counts.R")
-source("tests/compare_assoc.R")  # For CombineMaps; it should be moved elsewhere
 
 # Analysis where second variable is basic RAPPOR
 TwoWayAlgBasic <- function(inp) {
@@ -240,7 +239,6 @@ EMAlg <- function(inp) {
   
   joint_dist <- ComputeDistributionEM(reports, cohorts, map,
                                       ignore_other = FALSE,
-                                      quick = TRUE,
                                       params, marginals = NULL,
                                       estimate_var = FALSE,
                                       verbose = inp$time)
@@ -263,8 +261,9 @@ EMAlg <- function(inp) {
 
 main <- function(opts) {
   inp <- fromJSON(opts$inp)
-  # Currently disabled.
-  # TwoWayAlg(inp)
+  # Recommendation: Use EMAlg; TwoWayAlgBasic is still experimental
+  if(is.null(inp$also_em) == TRUE)
+    TwoWayAlgBasic(inp)
   if(inp$also_em == TRUE)
     EMAlg(inp)
 }

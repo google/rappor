@@ -76,7 +76,7 @@ GetOtherProbs <- function(counts, map, marginal, params) {
   props_other[props_other > 1] <- 1
   props_other[is.nan(props_other)] <- 0
   props_other[is.infinite(props_other)] <- 0
-  # Adjustmet for basic rappor
+  # Adjustment for basic rappor
   if(is.null(nrow(props_other)))
     props_other <- t(props_other)
   as.list(as.data.frame(props_other))
@@ -225,6 +225,8 @@ EM <- function(cond_prob, starting_pij = NULL, estimate_var = FALSE,
       }
       pij[[i + 1]] <- UpdatePij(pij[[i]], cond_prob)
       dif <- max(abs(pij[[i + 1]] - pij[[i]]))
+      
+      # Timing information for debugging purposes
       if (i == 1) {
         PrintIfVerbose("ONE ITERATION", verbose)
         PrintIfVerbose(proc.time() - ptm_iter, verbose)
@@ -297,7 +299,7 @@ UpdateJointConditional <- function(cond_report_dist, joint_conditional = NULL) {
 
 ComputeDistributionEM <- function(reports, report_cohorts,
                                   maps, ignore_other = FALSE,
-                                  params, quick = FALSE,
+                                  params,
                                   marginals = NULL,
                                   estimate_var = FALSE,
                                   verbose = FALSE) {
@@ -340,7 +342,7 @@ ComputeDistributionEM <- function(reports, report_cohorts,
     if (is.null(marginals)) {
       ptm2 <- proc.time()
       variable_counts <- ComputeCounts(variable_report, variable_cohort, params[[j]])
-      marginal <- Decode(variable_counts, map$rmap, params[[j]], quick,
+      marginal <- Decode(variable_counts, map$rmap, params[[j]],
                          quiet = TRUE)$fit
       print(marginal)
       PrintIfVerbose("TIME IN MARGINALS", verbose)

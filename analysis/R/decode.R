@@ -75,6 +75,7 @@ EstimateBloomCounts <- function(params, obs_counts) {
   # Transform counts from absolute values to fractional, removing bias due to
   #      variability of reporting between cohorts.
   if (ncol(obs_counts) == 2) {
+    # Basic rappor
     ests <- apply(t(ests), 1, function(x) x / obs_counts[,1])
     stds <- apply(t(variances^.5), 1, function(x) x / obs_counts[,1])
   } else {

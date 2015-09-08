@@ -62,43 +62,6 @@ TVDistance <- function(df1, df2, statement = "TV DISTANCE") {
                  unlist(as.data.frame(df2[rowsi, colsi]), use.names = FALSE)))
 }
 
-# Function to combine reports
-# Currently assume 2-way marginals
-CombineReports <- function(reports1, reports2) {
-  # Encoding (var1, var2) \in {(0, 0), (0, 1), (1, 0), (1, 1)}
-  two_bits <- list(c(0, 0, 0, 1), c(0, 1, 0, 0), c(0, 0, 1, 0), c(1, 0, 0, 0))
-  OuterProd <- function(x, y) {
-    as.vector(outer(x, y,
-                    function(z, t) z + 2 * t))
-  }
-  # "report1-major" order
-  creports <- mapply(OuterProd, reports2, reports1,
-                     SIMPLIFY = FALSE)
-  # Collapse counts to bit vector according to two_bits
-  lapply(creports,
-         function(x) as.vector(sapply(x, function(z) two_bits[[z+1]])))
-}
-
-# Given 2 lists of maps, maps1 and maps2, the function
-# combines the maps by cohort and outputs both
-# cohort-organized maps and flattened versions
-CombineMaps <- function(maps1, maps2) {
-  # Combine maps
-  cmap <- mapply(CombineMapsInternal, maps1, maps2)
-  
-  # Flatten map
-  inds <- lapply(cmap, function(x) which(x, arr.ind = TRUE))
-  for (i in seq(1, length(inds))) {
-    inds[[i]][, 1] <- inds[[i]][, 1] + (i-1) * dim(cmap[[1]])[1]
-  }
-  inds <- do.call("rbind", inds)
-  crmap <- sparseMatrix(inds[, 1], inds[, 2], dims = c(
-    nrow(cmap[[1]]) * length(cmap),
-    ncol(cmap[[1]])))
-  colnames(crmap) <- colnames(cmap[[1]])
-  list(cmap = cmap, crmap = crmap)
-}
-
 # Function to combine maps
 # Using map1-major order for both candidates and bits of the report
 # to be consistent with how CombineReports works
