@@ -156,6 +156,9 @@ bool Encoder::GetPrrMasks(const std::string& value, Bits* uniform_out,
   // Create HMAC(secret, value), and use its bits to construct f and uniform
   // bits.
   std::vector<uint8_t> sha256;
+  // NOTE: Do we need kHmacPrrPrefix here?  Why different prefixes if the keyys
+  // are different?  The HMAC key for the cohort is the client secret; the
+  // HMAC key for the PRR is client secret + encoder ID.
   std::string hmac_key = deps_.client_secret_ + encoder_id_;
   deps_.hmac_func_(hmac_key, value, &sha256);
   if (sha256.size() != kMaxBits) {  // sanity check
