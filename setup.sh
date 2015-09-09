@@ -28,7 +28,9 @@ r-packages() {
   # Install as root so you can write to /usr/local/lib/R.
 
   # glmnet, limSolve: solvers for decode.R
-  # RJSONIO: for analysis_tool.R
+  # RJSONIO, optparse: for decode_dist.R
+  # RUnit: for unit tests
+  # abind: for decode_test only
   sudo R -e \
     'install.packages(c("glmnet", "optparse", "limSolve", "RUnit", "abind", "RJSONIO"), repos="http://cran.rstudio.com/")'
 }

@@ -6,9 +6,17 @@
 library(optparse)
 library(RJSONIO)
 
-source("analysis/R/read_input.R")
-source("analysis/R/decode.R")
-source("analysis/R/util.R")
+# So we don't have to change pwd
+source.rappor <- function(rel_path)  {
+  abs_path <- paste0(Sys.getenv("RAPPOR_REPO", ""), rel_path)
+  source(abs_path)
+}
+
+source.rappor("analysis/R/read_input.R")
+source.rappor("analysis/R/decode.R")
+source.rappor("analysis/R/util.R")
+
+source.rappor("analysis/R/alternative.R")
 
 options(stringsAsFactors = FALSE)
 
@@ -16,24 +24,31 @@ options(stringsAsFactors = FALSE)
 # slow.
 if (!interactive()) {
   option_list <- list(
-    # Flags.
-    make_option("--map", default="MA", help="Map file"),
-    make_option("--counts", default="CO", help="Counts file"),
-    # TODO: Rename this to --params
-    make_option("--config", default="", help="Config file"),
-
-    make_option("--output_dir", default="./", help="Output directory"),
+    # Inputs
+    make_option("--map", default="", help="Map file (required)"),
+    make_option("--counts", default="", help="Counts file (required)"),
+    make_option("--params", default="", help="Params file (required)"),
+    make_option("--output-dir", dest="output_dir", default=".",
+                help="Output directory (default .)"),
 
     make_option("--correction", default="FDR", help="Correction method"),
     make_option("--alpha", default=.05, help="Alpha level")
   )
   # NOTE: This API is bad; if you add positional_arguments, the return value changes!
-  opts <- parse_args(OptionParser(option_list = option_list))
+  parser <- OptionParser(option_list = option_list)
+  opts <- parse_args(parser)
+}
+
+# For command line error checking.
+UsageError <- function(...) {
+  cat(sprintf(...))
+  cat('\n')
+  quit(status = 1)
 }
 
 # Handle the case of redundant cohorts, i.e. the counts file needs to be
 # further aggregated to obtain counts for the number of cohorts specified in
-# the config file.
+# the params file.
 #
 # NOTE: Why is this happening?
 AdjustCounts <- function(counts, params) {
@@ -71,13 +86,23 @@ ValidateInput <- function(params, counts, map) {
 }
 
 main <- function(opts) {
+  if (opts$map == "") {
+    UsageError("--map is required.")
+  }
+  if (opts$counts == "") {
+    UsageError("--counts is required.")
+  }
+  if (opts$params == "") {
+    UsageError("--params is required.")
+  }
+  Log("Loading inputs")
+
   # Run a single model of all inputs are specified.
-  params <- ReadParameterFile(opts$config)
+  params <- ReadParameterFile(opts$params)
   counts <- ReadCountsFile(opts$counts)
 
   # Count BEFORE adjustment.
   num_reports <- sum(counts[, 1])
-  Log("Number of reports: %d", num_reports)
 
   counts <- AdjustCounts(counts, params)
 
@@ -91,24 +116,25 @@ main <- function(opts) {
     quit(status = 1)
   }
 
+  Log("Decoding %d reports", num_reports)
   res <- Decode(counts, map$map, params, correction = opts$correction, alpha =
                 opts$alpha)
+  Log("Done decoding")
 
   if (nrow(res$fit) == 0) {
     Log("FATAL: Analysis returned no strings.")
     quit(status = 1)
   }
 
-  fit <- res$fit
-
   # Write analysis results as CSV.
   results_csv_path <- file.path(opts$output_dir, 'results.csv')
-  write.csv(fit, file = results_csv_path, row.names = FALSE)
+  write.csv(res$fit, file = results_csv_path, row.names = FALSE)
 
   # Write summary as JSON (scalar values).
   metrics_json_path <- file.path(opts$output_dir, 'metrics.json')
   m <- toJSON(res$metrics)
   writeLines(m, con = metrics_json_path)
+  Log("Wrote %s and %s", results_csv_path, metrics_json_path)
 
   # TODO:
   # - These are in an 2 column 'parameters' and 'values' format.  Should these
@@ -118,10 +144,6 @@ main <- function(opts) {
   Log("Privacy summary:")
   print(res$privacy)
   cat("\n")
-
-  # Output metrics as machine-parseable prefix + JSON.
-  Log('__OUTPUT_METRICS__ {"num_rappor": %d, "allocated_mass": %f}',
-      res$metrics$num_detected, res$metrics$allocated_mass)
 
   Log('DONE')
 }

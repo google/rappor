@@ -12,9 +12,7 @@
 # NOTE: The shell script log uses hyphens.
 
 Log <- function(...) {
-  cat('_____ ')
-  cat(proc.time()[['elapsed']])
-  cat(' ')
+  cat(sprintf('_____ %.3f ', proc.time()[['elapsed']]))
   cat(sprintf(...))
   cat('\n')
 }
