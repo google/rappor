@@ -46,10 +46,11 @@ int main(int argc, char** argv) {
   // Now use it to encode values.  The 'out' value can be sent over the
   // network.
   rappor::Bits out;
-  assert(encoder.Encode("foo", &out));  // returns false on error
-  printf("'foo' encoded with RAPPOR: %x, cohort %d\n", out, encoder.cohort());
+  assert(encoder.EncodeString("foo", &out));  // returns false on error
+  printf("'foo' encoded with RAPPOR: %0x, cohort %d\n", out, encoder.cohort());
 
-  assert(encoder.Encode("bar", &out));  // returns false on error
-  printf("'bar' encoded with RAPPOR: %x, cohort %d\n", out, encoder.cohort());
+  // Raw bits
+  assert(encoder.EncodeBits(0x123, &out));  // returns false on error
+  printf("0x123 encoded with RAPPOR: %0x, cohort %d\n", out, encoder.cohort());
 }
 

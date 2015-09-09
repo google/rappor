@@ -192,7 +192,7 @@ int main(int argc, char** argv) {
     rappor::Bits bloom;
     rappor::Bits prr;
     rappor::Bits irr;
-    bool ok = e._EncodeInternal(value, &bloom, &prr, &irr);
+    bool ok = e._EncodeStringInternal(value, &bloom, &prr, &irr);
 
     // NOTE: Are there really encoding errors?
     if (!ok) {

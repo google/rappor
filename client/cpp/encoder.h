@@ -82,26 +82,25 @@ class Encoder {
   Encoder(const std::string& encoder_id, const Params& params,
           const Deps& deps);
 
+  // Encode raw bits (represented as an integer), setting output parameter
+  // irr_out.  Only valid when the return value is 'true' (success).
   bool EncodeBits(Bits bits, Bits* irr_out) const;
 
-  // TODO: Rename EncodeString?
+  // Encode a string, setting output parameter irr_out.  Only valid when the
+  // return value is 'true' (success).
+  bool EncodeString(const std::string& value, Bits* irr_out) const;
 
-  // Encode a string, setting output parameter irr_out.  This is only valid
-  // when the return value is 'true' (success).
-  bool Encode(const std::string& value, Bits* irr_out) const;
-
-  // For simulation use only.
+  // For testing/simulation use only.
   bool _EncodeBitsInternal(Bits bits, Bits* prr_out, Bits* irr_out) const;
-  bool _EncodeInternal(const std::string& value, Bits* bloom_out,
-                       Bits* prr_out, Bits* irr_out) const;
+  bool _EncodeStringInternal(const std::string& value, Bits* bloom_out,
+                             Bits* prr_out, Bits* irr_out) const;
 
-  // Accessor for assigned cohort
+  // Accessor for the assigned cohort.
   uint32_t cohort() { return cohort_; }
 
  private:
   bool MakeBloomFilter(const std::string& value, Bits* bloom_out) const;
-  bool GetPrrMasks(const std::string& value, Bits* uniform,
-                   Bits* f_mask) const;
+  bool GetPrrMasks(Bits bits, Bits* uniform, Bits* f_mask) const;
 
   const std::string encoder_id_;  // copy of constructor param
   const Params& params_;
