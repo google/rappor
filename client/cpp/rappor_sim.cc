@@ -173,18 +173,12 @@ int main(int argc, char** argv) {
     // everything before comma
     std::string client_str = line.substr(0, comma1_pos);
     // everything between first and second comma
-    std::string cohort_str = line.substr(comma1_pos + 1, comma2_pos-comma1_pos);
+    // TODO: remove this
+    std::string unused = line.substr(comma1_pos + 1, comma2_pos-comma1_pos);
     // everything after
     std::string value = line.substr(comma2_pos + 1);
 
-    int cohort;
-    bool cohort_ok = StringToInt(cohort_str.c_str(), &cohort);
-    if (!cohort_ok) {
-      rappor::log("Invalid cohort number '%s'", cohort_str.c_str());
-      return 1;
-    }
-
-    rappor::Deps deps(cohort, rappor::Md5, client_str /*client_secret*/,
+    rappor::Deps deps(rappor::Md5, client_str /*client_secret*/,
                       rappor::HmacSha256, *irr_rand);
 
     // For now, construct a new encoder every time.  We could construct one for

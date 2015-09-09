@@ -89,7 +89,7 @@ class Encoder {
   // For simulation use only.
   bool _EncodeInternal(const std::string& value, Bits* bloom_out,
                        Bits* prr_out, Bits* irr_out) const;
-  // Accessor for cohort
+  // Accessor for assigned cohort
   uint32_t cohort() { return cohort_; }
 
  private:

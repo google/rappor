@@ -31,8 +31,7 @@ int main(int argc, char** argv) {
   FILE* fp = fopen("/dev/urandom", "r");
   rappor::UnixKernelRand irr_rand(fp);
 
-  int cohort = 99;  // randomly selected from 0 .. num_cohorts-1
-  rappor::Deps deps(cohort, rappor::Md5, "client-secret", rappor::HmacSha256,
+  rappor::Deps deps(rappor::Md5, "client-secret", rappor::HmacSha256,
                     irr_rand);
   rappor::Params params(32,    // num_bits (k)
                         2,     // num_hashes (h)
@@ -48,9 +47,9 @@ int main(int argc, char** argv) {
   // network.
   rappor::Bits out;
   assert(encoder.Encode("foo", &out));  // returns false on error
-  printf("'foo' encoded with RAPPOR: %x\n", out);
+  printf("'foo' encoded with RAPPOR: %x, cohort %d\n", out, encoder.cohort());
 
   assert(encoder.Encode("bar", &out));  // returns false on error
-  printf("'bar' encoded with RAPPOR: %x\n", out);
+  printf("'bar' encoded with RAPPOR: %x, cohort %d\n", out, encoder.cohort());
 }
 
