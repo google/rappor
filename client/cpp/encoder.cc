@@ -62,8 +62,10 @@ void CheckValidProbability(float prob, const char* var_name) {
 // Encoder
 //
 
-Encoder::Encoder(const Params& params, const Deps& deps)
-    : params_(params),
+Encoder::Encoder(const std::string& encoder_id, const Params& params, 
+                 const Deps& deps)
+    : encoder_id_(encoder_id),
+      params_(params),
       deps_(deps) {
 
   if (params_.num_bits_ <= 0) {

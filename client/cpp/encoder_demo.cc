@@ -33,6 +33,7 @@ int main(int argc, char** argv) {
 
   int cohort = 99;  // randomly selected from 0 .. num_cohorts-1
   std::string client_secret("secret");  // NOTE: const char* conversion is bad
+  std::string encoder_id("metric-name");
 
   rappor::Deps deps(cohort, rappor::Md5, client_secret, rappor::HmacSha256,
                     irr_rand);
@@ -44,7 +45,7 @@ int main(int argc, char** argv) {
                         0.5);  // probability q for IRR
 
   // Instantiate an encoder with params and deps.
-  rappor::Encoder encoder(params, deps);
+  rappor::Encoder encoder(encoder_id, params, deps);
 
   // Now use it to encode values.  The 'out' value can be sent over the
   // network.
