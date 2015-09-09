@@ -110,15 +110,22 @@ Encoder::Encoder(const std::string& encoder_id, const Params& params,
   assert(sha256.size() == kMaxBits);
 
   // e.g. 128 cohorts is 0x80 - 1 = 0x7f
-  // uint32_t cohort_mask = m * 2 - 1;
 
   // TODO: Fill in cohort_ and cohort_str_.
-  cohort_ = 99; 
+  // Interpret first 4 bytes of sha256 as a uint32_t.
+  uint32_t c = *(reinterpret_cast<uint32_t*>(sha256.data()));
+  uint32_t cohort_mask = m - 1;
+  cohort_ = c & cohort_mask;
+
+  //log("secret: %s", deps_.client_secret_.c_str());
+  //log("c: %u", c);
+  //log("num_cohorts: %d", m);
+  //log("cohort mask: %x", cohort_mask);
+  //log("cohort_: %d", cohort_);
 
   // Assuming num_cohorts <= 256, the big endian representation looks like
   // [0 0 0 <cohort>]
-  //c = sha256[0];
-  //cohort_str_[3] = c;
+  cohort_str_[3] = cohort_;
 }
 
 bool Encoder::MakeBloomFilter(const std::string& value, Bits* bloom_out) const {
@@ -127,7 +134,7 @@ bool Encoder::MakeBloomFilter(const std::string& value, Bits* bloom_out) const {
 
   Bits bloom = 0;
 
-  // 4 byte cohort string + actual value
+  // 4 byte cohort string + true value
   std::string hash_input(cohort_str_ + value);
 
   // First do hashing.

@@ -219,7 +219,7 @@ int main(int argc, char** argv) {
 
     std::cout << client_str;
     std::cout << ',';
-    std::cout << cohort;
+    std::cout << e.cohort();  // cohort the encoder assigned
     std::cout << ',';
     PrintBitString(bloom_str);
     std::cout << ',';

@@ -32,10 +32,10 @@ protobuf-encoder-demo() {
 rappor-sim-demo() {
   rappor-sim 16 2 128 0.25 0.75 0.5 <<EOF
 client,cohort,value
-1,1,v1
-1,1,v2
-2,2,v3
-2,2,v4
+c1,1,v1
+c1,1,v2
+c2,2,v3
+c2,2,v4
 EOF
 }
 

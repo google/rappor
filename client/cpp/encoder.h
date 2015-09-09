@@ -90,7 +90,7 @@ class Encoder {
   bool _EncodeInternal(const std::string& value, Bits* bloom_out,
                        Bits* prr_out, Bits* irr_out) const;
   // Accessor for cohort
-  int cohort() { return cohort_; }
+  uint32_t cohort() { return cohort_; }
 
  private:
   bool MakeBloomFilter(const std::string& value, Bits* bloom_out) const;
@@ -100,7 +100,7 @@ class Encoder {
   const std::string encoder_id_;  // copy of constructor param
   const Params& params_;
   const Deps& deps_;
-  int cohort_;
+  uint32_t cohort_;
   std::string cohort_str_;
 };
 
