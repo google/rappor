@@ -89,6 +89,8 @@ class Encoder {
   // For simulation use only.
   bool _EncodeInternal(const std::string& value, Bits* bloom_out,
                        Bits* prr_out, Bits* irr_out) const;
+  // Accessor for cohort
+  int cohort() { return cohort_; }
 
  private:
   bool MakeBloomFilter(const std::string& value, Bits* bloom_out) const;
@@ -98,6 +100,8 @@ class Encoder {
   const std::string encoder_id_;  // copy of constructor param
   const Params& params_;
   const Deps& deps_;
+  int cohort_;
+  std::string cohort_str_;
 };
 
 }  // namespace rappor

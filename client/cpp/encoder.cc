@@ -56,6 +56,9 @@ void CheckValidProbability(float prob, const char* var_name) {
   }
 }
 
+const char* kHmacCohortPrefix = "\x00";
+const char* kHmacPrrPrefix = "\x01";
+
 //
 // Encoder
 //
@@ -64,7 +67,8 @@ Encoder::Encoder(const std::string& encoder_id, const Params& params,
                  const Deps& deps)
     : encoder_id_(encoder_id),
       params_(params),
-      deps_(deps) {
+      deps_(deps),
+      cohort_str_(4, '\0') {
 
   if (params_.num_bits_ <= 0) {
     log("num_bits must be positive");
@@ -88,15 +92,33 @@ Encoder::Encoder(const std::string& encoder_id, const Params& params,
         kMaxHashes);
     assert(false);
   }
-  if (deps_.cohort_ >= params_.num_cohorts_) {
-    log("num_cohorts (%d) can't be greater than or equal to %d", deps_.cohort_,
-        params_.num_cohorts_);
+  int m = params_.num_cohorts_;
+  if ((m & (m - 1)) != 0) {
+    log("num_cohorts (%d) must be a power of 2 (and not 0)", m);
     assert(false);
   }
 
   CheckValidProbability(params_.prob_f_, "prob_f");
   CheckValidProbability(params_.prob_p_, "prob_p");
   CheckValidProbability(params_.prob_q_, "prob_q");
+
+  std::vector<uint8_t> sha256;
+  if (!deps_.hmac_func_(deps_.client_secret_, kHmacCohortPrefix, &sha256)) {
+    log("HMAC failed");
+    assert(false);
+  }
+  assert(sha256.size() == kMaxBits);
+
+  // e.g. 128 cohorts is 0x80 - 1 = 0x7f
+  // uint32_t cohort_mask = m * 2 - 1;
+
+  // TODO: Fill in cohort_ and cohort_str_.
+  cohort_ = 99; 
+
+  // Assuming num_cohorts <= 256, the big endian representation looks like
+  // [0 0 0 <cohort>]
+  //c = sha256[0];
+  //cohort_str_[3] = c;
 }
 
 bool Encoder::MakeBloomFilter(const std::string& value, Bits* bloom_out) const {
@@ -105,21 +127,8 @@ bool Encoder::MakeBloomFilter(const std::string& value, Bits* bloom_out) const {
 
   Bits bloom = 0;
 
-  // 4 byte cohort + actual value
-  std::string hash_input(4 + value.size(), '\0');
-
-  // Assuming num_cohorts <= 256, the big endian representation looks like
-  // [0 0 0 <cohort>]
-  unsigned char c = deps_.cohort_ & 0xFF;
-  hash_input[0] = '\0';
-  hash_input[1] = '\0';
-  hash_input[2] = '\0';
-  hash_input[3] = c;
-
-  // Copy the rest
-  for (size_t i = 0; i < value.size(); ++i) {
-    hash_input[i + 4] = value[i];
-  }
+  // 4 byte cohort string + actual value
+  std::string hash_input(cohort_str_ + value);
 
   // First do hashing.
   std::vector<uint8_t> hash_output;
