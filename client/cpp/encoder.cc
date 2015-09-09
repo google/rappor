@@ -125,20 +125,11 @@ Encoder::Encoder(const std::string& encoder_id, const Params& params,
   }
   assert(sha256.size() == kMaxBits);
 
-  // e.g. 128 cohorts is 0x80 - 1 = 0x7f
-
-  // TODO: Fill in cohort_ and cohort_str_.
   // Interpret first 4 bytes of sha256 as a uint32_t.
   uint32_t c = *(reinterpret_cast<uint32_t*>(sha256.data()));
-  uint32_t cohort_mask = m - 1;
+  uint32_t cohort_mask = m - 1;  // e.g. 128 cohorts is 0x80 - 1 = 0x7f
   cohort_ = c & cohort_mask;
   cohort_str_ = ToBigEndian(cohort_);
-
-  //log("secret: %s", deps_.client_secret_.c_str());
-  //log("c: %u", c);
-  //log("num_cohorts: %d", m);
-  //log("cohort mask: %x", cohort_mask);
-  //log("cohort_: %d", cohort_);
 }
 
 bool Encoder::MakeBloomFilter(const std::string& value, Bits* bloom_out) const {
@@ -175,9 +166,9 @@ bool Encoder::GetPrrMasks(Bits bits, Bits* uniform_out, Bits* f_mask_out) const 
   // Create HMAC(secret, value), and use its bits to construct f and uniform
   // bits.
   std::vector<uint8_t> sha256;
-  // NOTE: Do we need kHmacPrrPrefix here?  Why different prefixes if the keyys
-  // are different?  The HMAC key for the cohort is the client secret; the
-  // HMAC key for the PRR is client secret + encoder ID.
+  // NOTE: Do we need kHmacPrrPrefix here?
+  // - The HMAC key for the cohort gen is the client secret
+  // - The HMAC key for the PRR is client secret + encoder ID?
   std::string hmac_key = deps_.client_secret_ + encoder_id_;
   std::string hmac_value = ToBigEndian(bits);
   deps_.hmac_func_(hmac_key, hmac_value, &sha256);
