@@ -48,12 +48,10 @@ static const int kMaxBits = 32;
 // Can't be more than the number of bytes in MD5.
 static const int kMaxHashes = 16;
 
-// Probabilities should be in the interal (0.0, 1.0].  0.0 probability is
-// assumed to be a lack of initialization.
+// Probabilities should be in the interval [0.0, 1.0].
 void CheckValidProbability(float prob, const char* var_name) {
-  if (prob <= 0.0f || prob > 1.0f) {
-    log("%s should be between 0.0 and 1.0 (and non-zero) (got %.2f)",
-        var_name, prob);
+  if (prob < 0.0f || prob > 1.0f) {
+    log("%s should be between 0.0 and 1.0 (got %.2f)", var_name, prob);
     assert(false);
   }
 }
