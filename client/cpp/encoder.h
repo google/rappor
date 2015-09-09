@@ -63,10 +63,10 @@ class Params {
   // can be unset, unlike the other params.)
   int num_cohorts_;
 
-  float prob_f_;  // probability for PRR
+  float prob_f_;  // noise probability for PRR, quantized to 1/128
 
-  float prob_p_;  // probability for IRR
-  float prob_q_;  // probability for IRR
+  float prob_p_;  // noise probability for IRR, quantized to 1/128
+  float prob_q_;  // noise probability for IRR, quantized to 1/128
 };
 
 // Encoder: take client values and transform them with the RAPPOR privacy
@@ -78,7 +78,7 @@ class Encoder {
   // arguments, so errors should be caught early.
   Encoder(const Params& params, const Deps& deps);
 
-  // Encode a string, settting output parameter irr_out.  This is only valid
+  // Encode a string, setting output parameter irr_out.  This is only valid
   // when the return value is 'true' (success).
   bool Encode(const std::string& value, Bits* irr_out) const;
 
@@ -88,7 +88,7 @@ class Encoder {
 
  private:
   bool MakeBloomFilter(const std::string& value, Bits* bloom_out) const;
-  void GetPrrMasks(const std::string& value, Bits* uniform,
+  bool GetPrrMasks(const std::string& value, Bits* uniform,
                    Bits* f_mask) const;
 
   const Params& params_;

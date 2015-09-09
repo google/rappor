@@ -66,18 +66,16 @@ Encoder::Encoder(const Params& params, const Deps& deps)
     : params_(params),
       deps_(deps) {
 
-  // None of these should be 0; it probably means the caller forgot to
-  // initialize a field.
-  if (params_.num_bits_ == 0) {
-    log("num_bits can't be 0");
+  if (params_.num_bits_ <= 0) {
+    log("num_bits must be positive");
     assert(false);
   }
-  if (params_.num_hashes_ == 0) {
-    log("num_hashes can't be 0");
+  if (params_.num_hashes_ <= 0) {
+    log("num_hashes must be positive");
     assert(false);
   }
-  if (params_.num_cohorts_ == 0) {
-    log("num_cohorts can't be 0");
+  if (params_.num_cohorts_ <= 0) {
+    log("num_cohorts must be positive");
     assert(false);
   }
   // Check Maximum values.
@@ -88,6 +86,11 @@ Encoder::Encoder(const Params& params, const Deps& deps)
   if (params_.num_hashes_ > kMaxHashes) {
     log("num_hashes (%d) can't be greater than %d", params_.num_hashes_,
         kMaxHashes);
+    assert(false);
+  }
+  if (deps_.cohort_ >= params_.num_cohorts_) {
+    log("num_cohorts (%d) can't be greater than or equal to %d", deps_.cohort_,
+        params_.num_cohorts_);
     assert(false);
   }
 
@@ -139,12 +142,15 @@ bool Encoder::MakeBloomFilter(const std::string& value, Bits* bloom_out) const {
 }
 
 // Helper function for PRR
-void Encoder::GetPrrMasks(const std::string& value, Bits* uniform_out,
+bool Encoder::GetPrrMasks(const std::string& value, Bits* uniform_out,
                           Bits* f_mask_out) const {
   // Create HMAC(secret, value), and use its bits to construct f and uniform
   // bits.
   std::vector<uint8_t> sha256;
   deps_.hmac_func_(deps_.client_secret_, value, &sha256);
+  if (sha256.size() != kMaxBits) {  // sanity check
+    return false;
+  }
 
   // We should have already checked this.
   assert(params_.num_bits_ <= kMaxBits);
@@ -167,6 +173,7 @@ void Encoder::GetPrrMasks(const std::string& value, Bits* uniform_out,
 
   *uniform_out = uniform;
   *f_mask_out = f_mask;
+  return true;
 }
 
 bool Encoder::_EncodeInternal(const std::string& value, Bits* bloom_out,
@@ -181,7 +188,10 @@ bool Encoder::_EncodeInternal(const std::string& value, Bits* bloom_out,
   // Compute Permanent Randomized Response (PRR).
   Bits uniform;
   Bits f_mask;
-  GetPrrMasks(value, &uniform, &f_mask);
+  if (!GetPrrMasks(value, &uniform, &f_mask)) {
+    rappor::log("GetPrrMasks failed");
+    return false;
+  }
 
   Bits prr = (bloom & ~f_mask) | (uniform & f_mask);
   *prr_out = prr;
