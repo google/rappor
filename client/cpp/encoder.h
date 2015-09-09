@@ -82,13 +82,19 @@ class Encoder {
   Encoder(const std::string& encoder_id, const Params& params,
           const Deps& deps);
 
+  bool EncodeBits(Bits bits, Bits* irr_out) const;
+
+  // TODO: Rename EncodeString?
+
   // Encode a string, setting output parameter irr_out.  This is only valid
   // when the return value is 'true' (success).
   bool Encode(const std::string& value, Bits* irr_out) const;
 
   // For simulation use only.
+  bool _EncodeBitsInternal(Bits bits, Bits* prr_out, Bits* irr_out) const;
   bool _EncodeInternal(const std::string& value, Bits* bloom_out,
                        Bits* prr_out, Bits* irr_out) const;
+
   // Accessor for assigned cohort
   uint32_t cohort() { return cohort_; }
 
