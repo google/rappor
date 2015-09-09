@@ -147,7 +147,8 @@ bool Encoder::GetPrrMasks(const std::string& value, Bits* uniform_out,
   // Create HMAC(secret, value), and use its bits to construct f and uniform
   // bits.
   std::vector<uint8_t> sha256;
-  deps_.hmac_func_(deps_.client_secret_, value, &sha256);
+  std::string hmac_key = deps_.client_secret_ + encoder_id_;
+  deps_.hmac_func_(hmac_key, value, &sha256);
   if (sha256.size() != kMaxBits) {  // sanity check
     return false;
   }
