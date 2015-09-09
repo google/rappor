@@ -473,7 +473,8 @@ ExternalReportsEM <- function(inp,
       rev(as.numeric(strsplit(x, split = "")[[1]]))
     })
   })
-    
+  
+  params = list(params, params)
   joint_dist <- ComputeDistributionEM(reports, cohorts, map,
                                       ignore_other = TRUE,
                                       quick = TRUE,
