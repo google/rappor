@@ -79,7 +79,8 @@ class Encoder {
 
   // encoder_id: Typically the metric name, so that different metrics have
   // different PRR mappings.
-  Encoder(std::string encoder_id, const Params& params, const Deps& deps);
+  Encoder(const std::string& encoder_id, const Params& params,
+          const Deps& deps);
 
   // Encode a string, setting output parameter irr_out.  This is only valid
   // when the return value is 'true' (success).
