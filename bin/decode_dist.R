@@ -16,8 +16,6 @@ source.rappor("analysis/R/read_input.R")
 source.rappor("analysis/R/decode.R")
 source.rappor("analysis/R/util.R")
 
-source.rappor("analysis/R/alternative.R")
-
 options(stringsAsFactors = FALSE)
 
 # Do command line parsing first to catch errors.  Loading libraries in R is
