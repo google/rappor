@@ -149,10 +149,6 @@ int main(int argc, char** argv) {
     return 1;
   }
 
-  // We are simulating many clients reporting the same metric, so the encoder
-  // ID is constant.
-  const std::string& encoder_id("metric-name");
-
   while (true) {
     std::getline(std::cin, line);  // no trailing newline
     // rappor::log("Got line %s", line.c_str());
@@ -192,8 +188,9 @@ int main(int argc, char** argv) {
                       rappor::HmacSha256, *irr_rand);
 
     // For now, construct a new encoder every time.  We could construct one for
-    // each client.
-    rappor::Encoder e(encoder_id, params, deps);
+    // each client.  We are simulating many clients reporting the same metric,
+    // so the encoder ID is constant.
+    rappor::Encoder e("metric-name", params, deps);
 
     // rappor::log("CLIENT %s VALUE %s COHORT %d", client_str.c_str(),
     //             value.c_str(), cohort);

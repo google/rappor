@@ -79,8 +79,7 @@ class Encoder {
 
   // encoder_id: Typically the metric name, so that different metrics have
   // different PRR mappings.
-  Encoder(const std::string& encoder_id, const Params& params,
-          const Deps& deps);
+  Encoder(std::string encoder_id, const Params& params, const Deps& deps);
 
   // Encode a string, setting output parameter irr_out.  This is only valid
   // when the return value is 'true' (success).
@@ -95,7 +94,7 @@ class Encoder {
   bool GetPrrMasks(const std::string& value, Bits* uniform,
                    Bits* f_mask) const;
 
-  const std::string& encoder_id_;
+  const std::string encoder_id_;  // copy of constructor param
   const Params& params_;
   const Deps& deps_;
 };

@@ -54,7 +54,7 @@ class IrrRandInterface {
 class Deps {
  public:
   Deps(int cohort, HashFunc* hash_func,
-       const std::string& client_secret, HmacFunc* hmac_func,
+       std::string client_secret, HmacFunc* hmac_func,
        const IrrRandInterface& irr_rand)
       : cohort_(cohort),
         hash_func_(hash_func),
@@ -68,7 +68,7 @@ class Deps {
 
   int cohort_;  // bloom
   HashFunc* hash_func_;  // bloom
-  const std::string& client_secret_;  // PRR
+  std::string client_secret_;  // for PRR; copy of constructor param
   HmacFunc* hmac_func_;  // PRR
   const IrrRandInterface& irr_rand_;  // IRR
 };

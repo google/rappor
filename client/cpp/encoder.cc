@@ -60,7 +60,7 @@ void CheckValidProbability(float prob, const char* var_name) {
 // Encoder
 //
 
-Encoder::Encoder(const std::string& encoder_id, const Params& params, 
+Encoder::Encoder(std::string encoder_id, const Params& params, 
                  const Deps& deps)
     : encoder_id_(encoder_id),
       params_(params),
