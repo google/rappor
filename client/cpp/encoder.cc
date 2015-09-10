@@ -161,17 +161,15 @@ bool Encoder::MakeBloomFilter(const std::string& value, Bits* bloom_out) const {
   return true;
 }
 
-// Helper function for PRR
+// Helper method for PRR
 bool Encoder::GetPrrMasks(Bits bits, Bits* uniform_out, Bits* f_mask_out) const {
-  // Create HMAC(secret, value), and use its bits to construct f and uniform
-  // bits.
+  // Create HMAC(secret, value), and use its bits to construct f_mask and
+  // uniform bits.
   std::vector<uint8_t> sha256;
-  // NOTE: Do we need kHmacPrrPrefix here?
-  // - The HMAC key for the cohort gen is the client secret
-  // - The HMAC key for the PRR is client secret + encoder ID?
-  std::string hmac_key = deps_.client_secret_ + encoder_id_;
-  std::string hmac_value = ToBigEndian(bits);
-  deps_.hmac_func_(hmac_key, hmac_value, &sha256);
+
+  std::string hmac_value = kHmacPrrPrefix + encoder_id_ + ToBigEndian(bits);
+
+  deps_.hmac_func_(deps_.client_secret_, hmac_value, &sha256);
   if (sha256.size() != kMaxBits) {  // sanity check
     return false;
   }
