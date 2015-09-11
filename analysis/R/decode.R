@@ -102,10 +102,10 @@ FitLasso <- function(X, Y, intercept = TRUE) {
 
   # TODO(mironov): Test cv.glmnet instead of glmnet
 
-  # Cap the number of non-zero coefficients to 500 or 80% of the number of
-  # constraints, whichever is less. The 500 cap is for performance reasons, 80%
+  # Cap the number of non-zero coefficients to 1,000 or 80% of the number of
+  # constraints, whichever is less. The 1,000 cap is for performance reasons, 80%
   # is to avoid overfitting.
-  cap <- min(500, nrow(X) * .8, ncol(X))
+  cap <- min(1000, nrow(X) * .8, ncol(X))
 
   if (ncol(X) == 1)
   	XX <- cbind2(X, rep(0, nrow(X)))  # add a dummy variable since glmnet can't handle a single-column matrix
@@ -224,21 +224,18 @@ ComputePrivacyGuarantees <- function(params, alpha, N) {
   privacy
 }
 
-FitDistribution <- function(estimates_stds, map, quiet = FALSE) {
+FitDistribution <- function(estimates, map, quiet = FALSE) {
   # Find a distribution over rows of map that approximates estimates_stds best
   #
   # Input:
-  #   estimates_stds: a list of two m x k matrices, one for estimates, another
-  #                   for standard errors
-  #   map           : an (m * k) x S boolean matrix
+  #   estimates: an m x k matrix of estimates
+  #   map      : an (m * k) x S boolean matrix
   #
   # Output:
-  #   a float vector of length S, so that a distribution over map's rows sampled
-  #   according to this vector approximates estimates
+  #   an S-long of vector of non-negative floats, so that a distribution over
+  #   the map's rows sampled according to this vector approximates estimates
 
-  S <- ncol(map)  # total number of candidates
-
-  lasso <- FitLasso(map, as.vector(t(estimates_stds$estimates)))
+  lasso <- FitLasso(map, estimates)
 
   if (!quiet)
     cat("LASSO selected ", sum(lasso > 0), " non-zero coefficients.\n")
@@ -259,7 +256,7 @@ Resample <- function(e) {
   list(estimates = estimates, stds = stds)
 }
 
-Decode <- function(counts, map, params, alpha = 0.05,
+Decode <- function(counts, map, params, alpha = 0.05, iterations = 20,
                    correction = c("Bonferroni"), quiet = FALSE, ...) {
   k <- params$k
   p <- params$p
@@ -288,23 +285,29 @@ Decode <- function(counts, map, params, alpha = 0.05,
 
   # Run the fitting procedure several times (5 seems to be the minimum that
   # makes sense) to estimate standard deviation of the output.
-  for(r in 1:10) {
+  groups <- sample(1:iterations, length(filter_bits), replace=T)
+
+  for(r in 1:iterations) {
     if (r > 1)
       e <- Resample(estimates_stds_filtered)
     else
       e <- estimates_stds_filtered
 
+    e_vec <- as.vector(t(e$estimates))
+    subset <- filter_bits[groups != r]
+
     coefs_all <- rbind(coefs_all,
-                       FitDistribution(e, map[filter_bits, , drop = FALSE],
+                       FitDistribution(e_vec[subset],
+                                       map[subset, , drop = FALSE],
                                        quiet))
   }
 
   coefs_ssd <- N * apply(coefs_all, 2, sd)  # compute sample standard deviations
   coefs_ave <- N * apply(coefs_all, 2, mean)
 
-  # Only select coefficients more than two standard deviations from 0. May
+  # Only select coefficients more than one standard deviation from 0. May
   # inflate empirical SD of the estimates.
-  reported <- which(coefs_ave > 1E-6 + 2 * coefs_ssd)
+  reported <- which(coefs_ave > 1E-6 + 1 * coefs_ssd)
 
   mod <- list(coefs = coefs_ave[reported], stds = coefs_ssd[reported])
 
