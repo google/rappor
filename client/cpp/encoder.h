@@ -77,21 +77,27 @@ class Encoder {
   // Encoders are intended to be created at application startup with constant
   // arguments, so errors should be caught early.
 
-  // encoder_id: Typically the metric name, so that different metrics have
-  // different PRR mappings.
+  // encoder_id: A unique ID for this encoder -- typically the name of the
+  //   metric being encoded, so that different metrics have different PRR
+  //   mappings.
+  // params: RAPPOR encoding parameters, which affect privacy and decoding.
+  //   (held by reference; it must outlive the Encoder)
+  // deps: application-supplied dependencies.
+  //   (held by reference; it must outlive the Encoder)
   Encoder(const std::string& encoder_id, const Params& params,
           const Deps& deps);
 
   // Encode raw bits (represented as an integer), setting output parameter
   // irr_out.  Only valid when the return value is 'true' (success).
-  bool EncodeBits(Bits bits, Bits* irr_out) const;
+  bool EncodeBits(const Bits bits, Bits* irr_out) const;
 
   // Encode a string, setting output parameter irr_out.  Only valid when the
   // return value is 'true' (success).
   bool EncodeString(const std::string& value, Bits* irr_out) const;
 
   // For testing/simulation use only.
-  bool _EncodeBitsInternal(Bits bits, Bits* prr_out, Bits* irr_out) const;
+  bool _EncodeBitsInternal(const Bits bits, Bits* prr_out, Bits* irr_out)
+    const;
   bool _EncodeStringInternal(const std::string& value, Bits* bloom_out,
                              Bits* prr_out, Bits* irr_out) const;
 
@@ -100,13 +106,16 @@ class Encoder {
 
  private:
   bool MakeBloomFilter(const std::string& value, Bits* bloom_out) const;
-  bool GetPrrMasks(Bits bits, Bits* uniform, Bits* f_mask) const;
+  bool GetPrrMasks(const Bits bits, Bits* uniform, Bits* f_mask) const;
 
-  const std::string encoder_id_;  // copy of constructor param
+  // static helper function for initialization
+  static uint32_t AssignCohort(const Deps& deps, int num_cohorts);
+
+  const std::string encoder_id_;
   const Params& params_;
   const Deps& deps_;
-  uint32_t cohort_;
-  std::string cohort_str_;
+  const uint32_t cohort_;
+  const std::string cohort_str_;
 };
 
 }  // namespace rappor

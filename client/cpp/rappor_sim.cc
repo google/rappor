@@ -172,8 +172,8 @@ int main(int argc, char** argv) {
 
     // everything before comma
     std::string client_str = line.substr(0, comma1_pos);
-    // everything between first and second comma
-    // TODO: remove this
+    // everything between first and second comma.
+    // TODO(andychu): Remove unused second column.
     std::string unused = line.substr(comma1_pos + 1, comma2_pos-comma1_pos);
     // everything after
     std::string value = line.substr(comma2_pos + 1);

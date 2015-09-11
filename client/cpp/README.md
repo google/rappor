@@ -45,8 +45,8 @@ Encoder
 -------
 
 The low level API is `Encoder`.  You instantiatate it with RAPPOR encoding
-parameters and application dependencies.  It has a method `EncodeString()` that takes
-an input string (no other types), sets an output parameter of type
+parameters and application dependencies.  It has a method `EncodeString()` that
+takes an input string (no other types), sets an output parameter of type
 `rappor::Bits`, and returns success or failure.
 
     #include <cassert>
