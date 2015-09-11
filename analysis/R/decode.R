@@ -256,7 +256,7 @@ Resample <- function(e) {
   list(estimates = estimates, stds = stds)
 }
 
-Decode <- function(counts, map, params, alpha = 0.05, iterations = 20,
+Decode <- function(counts, map, params, alpha = 0.05, iterations = 10,
                    correction = c("Bonferroni"), quiet = FALSE, ...) {
   k <- params$k
   p <- params$p
