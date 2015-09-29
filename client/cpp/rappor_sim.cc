@@ -172,24 +172,19 @@ int main(int argc, char** argv) {
 
     // everything before comma
     std::string client_str = line.substr(0, comma1_pos);
-    // everything between first and second comma
-    std::string cohort_str = line.substr(comma1_pos + 1, comma2_pos-comma1_pos);
+    // everything between first and second comma.
+    // TODO(andychu): Remove unused second column.
+    std::string unused = line.substr(comma1_pos + 1, comma2_pos-comma1_pos);
     // everything after
     std::string value = line.substr(comma2_pos + 1);
 
-    int cohort;
-    bool cohort_ok = StringToInt(cohort_str.c_str(), &cohort);
-    if (!cohort_ok) {
-      rappor::log("Invalid cohort number '%s'", cohort_str.c_str());
-      return 1;
-    }
-
-    rappor::Deps deps(cohort, rappor::Md5, client_str /*client_secret*/,
+    rappor::Deps deps(rappor::Md5, client_str /*client_secret*/,
                       rappor::HmacSha256, *irr_rand);
 
     // For now, construct a new encoder every time.  We could construct one for
-    // each client.
-    rappor::Encoder e(params, deps);
+    // each client.  We are simulating many clients reporting the same metric,
+    // so the encoder ID is constant.
+    rappor::Encoder e("metric-name", params, deps);
 
     // rappor::log("CLIENT %s VALUE %s COHORT %d", client_str.c_str(),
     //             value.c_str(), cohort);
@@ -197,7 +192,7 @@ int main(int argc, char** argv) {
     rappor::Bits bloom;
     rappor::Bits prr;
     rappor::Bits irr;
-    bool ok = e._EncodeInternal(value, &bloom, &prr, &irr);
+    bool ok = e._EncodeStringInternal(value, &bloom, &prr, &irr);
 
     // NOTE: Are there really encoding errors?
     if (!ok) {
@@ -218,7 +213,7 @@ int main(int argc, char** argv) {
 
     std::cout << client_str;
     std::cout << ',';
-    std::cout << cohort;
+    std::cout << e.cohort();  // cohort the encoder assigned
     std::cout << ',';
     PrintBitString(bloom_str);
     std::cout << ',';

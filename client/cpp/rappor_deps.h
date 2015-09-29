@@ -45,7 +45,6 @@ class IrrRandInterface {
 };
 
 // Dependencies
-// - cohort: randomly assigned to users
 // - hash_func: hash function for the Bloom Filter client step
 // - client_secret: key for deterministic randomness in the PRR
 // - hmac_func: function for deterministic randomness in the PRR
@@ -53,11 +52,9 @@ class IrrRandInterface {
 
 class Deps {
  public:
-  Deps(int cohort, HashFunc* hash_func,
-       const std::string& client_secret, HmacFunc* hmac_func,
-       const IrrRandInterface& irr_rand)
-      : cohort_(cohort),
-        hash_func_(hash_func),
+  Deps(HashFunc* const hash_func, const std::string& client_secret,
+       HmacFunc* const hmac_func, const IrrRandInterface& irr_rand)
+      : hash_func_(hash_func),
         client_secret_(client_secret),
         hmac_func_(hmac_func),
         irr_rand_(irr_rand) {
@@ -66,9 +63,8 @@ class Deps {
  private:
   friend class Encoder;
 
-  int cohort_;  // bloom
-  HashFunc* hash_func_;  // bloom
-  const std::string& client_secret_;  // PRR
+  HashFunc* hash_func_;  // for bloom filter
+  const std::string client_secret_;  // for PRR; copy of constructor param
   HmacFunc* hmac_func_;  // PRR
   const IrrRandInterface& irr_rand_;  // IRR
 };

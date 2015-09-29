@@ -31,10 +31,7 @@ int main(int argc, char** argv) {
   FILE* fp = fopen("/dev/urandom", "r");
   rappor::UnixKernelRand irr_rand(fp);
 
-  int cohort = 99;  // randomly selected from 0 .. num_cohorts-1
-  std::string client_secret("secret");  // NOTE: const char* conversion is bad
-
-  rappor::Deps deps(cohort, rappor::Md5, client_secret, rappor::HmacSha256,
+  rappor::Deps deps(rappor::Md5, "client-secret", rappor::HmacSha256,
                     irr_rand);
   rappor::Params params(32,    // num_bits (k)
                         2,     // num_hashes (h)
@@ -43,16 +40,17 @@ int main(int argc, char** argv) {
                         0.75,  // probability p for IRR
                         0.5);  // probability q for IRR
 
-  // Instantiate an encoder with params and deps.
-  rappor::Encoder encoder(params, deps);
+  const char* encoder_id = "metric-name";
+  rappor::Encoder encoder(encoder_id, params, deps);
 
   // Now use it to encode values.  The 'out' value can be sent over the
   // network.
   rappor::Bits out;
-  assert(encoder.Encode("foo", &out));  // returns false on error
-  printf("'foo' encoded with RAPPOR: %x\n", out);
+  assert(encoder.EncodeString("foo", &out));  // returns false on error
+  printf("'foo' encoded with RAPPOR: %0x, cohort %d\n", out, encoder.cohort());
 
-  assert(encoder.Encode("bar", &out));  // returns false on error
-  printf("'bar' encoded with RAPPOR: %x\n", out);
+  // Raw bits
+  assert(encoder.EncodeBits(0x123, &out));  // returns false on error
+  printf("0x123 encoded with RAPPOR: %0x, cohort %d\n", out, encoder.cohort());
 }
 

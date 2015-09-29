@@ -34,7 +34,7 @@ void log(const char* fmt, ...) {
 // Functions for debugging
 //
 
-void PrintHex(const std::vector<uint8_t>& h) {
+static void PrintHex(const std::vector<uint8_t>& h) {
   for (size_t i = 0; i < h.size(); ++i) {
     fprintf(stderr, "%02x", h[i]);
   }
@@ -48,36 +48,70 @@ static const int kMaxBits = 32;
 // Can't be more than the number of bytes in MD5.
 static const int kMaxHashes = 16;
 
-// Probabilities should be in the interal (0.0, 1.0].  0.0 probability is
-// assumed to be a lack of initialization.
-void CheckValidProbability(float prob, const char* var_name) {
-  if (prob <= 0.0f || prob > 1.0f) {
-    log("%s should be between 0.0 and 1.0 (and non-zero) (got %.2f)",
-        var_name, prob);
+// Probabilities should be in the interval [0.0, 1.0].
+static void CheckValidProbability(float prob, const char* var_name) {
+  if (prob < 0.0f || prob > 1.0f) {
+    log("%s should be between 0.0 and 1.0 inclusive (got %.2f)", var_name,
+        prob);
     assert(false);
   }
 }
+
+// Used to 1) turn cohort into a string, and 2) Turn raw bits into a string.
+// Return by value since it's small.
+static std::string ToBigEndian(uint32_t u) {
+  std::string result(4, '\0');
+
+  // rely on truncation to char
+  result[0] = u >> 24;
+  result[1] = u >> 16;
+  result[2] = u >> 8;
+  result[3] = u;
+
+  return result;
+}
+
+static const char* kHmacCohortPrefix = "\x00";
+static const char* kHmacPrrPrefix = "\x01";
+
 
 //
 // Encoder
 //
 
-Encoder::Encoder(const Params& params, const Deps& deps)
-    : params_(params),
-      deps_(deps) {
+uint32_t Encoder::AssignCohort(const Deps& deps, int num_cohorts) {
+  std::vector<uint8_t> sha256;
+  if (!deps.hmac_func_(deps.client_secret_, kHmacCohortPrefix, &sha256)) {
+    log("HMAC failed");
+    assert(false);
+  }
+  assert(sha256.size() == kMaxBits);
 
-  // None of these should be 0; it probably means the caller forgot to
-  // initialize a field.
-  if (params_.num_bits_ == 0) {
-    log("num_bits can't be 0");
+  // Interpret first 4 bytes of sha256 as a uint32_t.
+  uint32_t c = *(reinterpret_cast<uint32_t*>(sha256.data()));
+  // e.g. for 128 cohorts, 0x80 - 1 = 0x7f
+  uint32_t cohort_mask = num_cohorts - 1;
+  return c & cohort_mask;
+}
+
+Encoder::Encoder(const std::string& encoder_id, const Params& params,
+                 const Deps& deps)
+    : encoder_id_(encoder_id),
+      params_(params),
+      deps_(deps),
+      cohort_(AssignCohort(deps, params.num_cohorts_)),
+      cohort_str_(ToBigEndian(cohort_)) {
+
+  if (params_.num_bits_ <= 0) {
+    log("num_bits must be positive");
     assert(false);
   }
-  if (params_.num_hashes_ == 0) {
-    log("num_hashes can't be 0");
+  if (params_.num_hashes_ <= 0) {
+    log("num_hashes must be positive");
     assert(false);
   }
-  if (params_.num_cohorts_ == 0) {
-    log("num_cohorts can't be 0");
+  if (params_.num_cohorts_ <= 0) {
+    log("num_cohorts must be positive");
     assert(false);
   }
   // Check Maximum values.
@@ -90,6 +124,12 @@ Encoder::Encoder(const Params& params, const Deps& deps)
         kMaxHashes);
     assert(false);
   }
+  int m = params_.num_cohorts_;
+  if ((m & (m - 1)) != 0) {
+    log("num_cohorts (%d) must be a power of 2 (and not 0)", m);
+    assert(false);
+  }
+  // TODO: check max cohorts?
 
   CheckValidProbability(params_.prob_f_, "prob_f");
   CheckValidProbability(params_.prob_p_, "prob_p");
@@ -102,21 +142,8 @@ bool Encoder::MakeBloomFilter(const std::string& value, Bits* bloom_out) const {
 
   Bits bloom = 0;
 
-  // 4 byte cohort + actual value
-  std::string hash_input(4 + value.size(), '\0');
-
-  // Assuming num_cohorts <= 256, the big endian representation looks like
-  // [0 0 0 <cohort>]
-  unsigned char c = deps_.cohort_ & 0xFF;
-  hash_input[0] = '\0';
-  hash_input[1] = '\0';
-  hash_input[2] = '\0';
-  hash_input[3] = c;
-
-  // Copy the rest
-  for (size_t i = 0; i < value.size(); ++i) {
-    hash_input[i + 4] = value[i];
-  }
+  // 4 byte cohort string + true value
+  std::string hash_input(cohort_str_ + value);
 
   // First do hashing.
   std::vector<uint8_t> hash_output;
@@ -124,7 +151,7 @@ bool Encoder::MakeBloomFilter(const std::string& value, Bits* bloom_out) const {
 
   // Error check
   if (hash_output.size() < static_cast<size_t>(num_hashes)) {
-    rappor::log("Hash function didn't return enough bytes");
+    log("Hash function didn't return enough bytes");
     return false;
   }
 
@@ -138,13 +165,19 @@ bool Encoder::MakeBloomFilter(const std::string& value, Bits* bloom_out) const {
   return true;
 }
 
-// Helper function for PRR
-void Encoder::GetPrrMasks(const std::string& value, Bits* uniform_out,
+// Helper method for PRR
+bool Encoder::GetPrrMasks(const Bits bits, Bits* uniform_out,
                           Bits* f_mask_out) const {
-  // Create HMAC(secret, value), and use its bits to construct f and uniform
-  // bits.
+  // Create HMAC(secret, value), and use its bits to construct f_mask and
+  // uniform bits.
   std::vector<uint8_t> sha256;
-  deps_.hmac_func_(deps_.client_secret_, value, &sha256);
+
+  std::string hmac_value = kHmacPrrPrefix + encoder_id_ + ToBigEndian(bits);
+
+  deps_.hmac_func_(deps_.client_secret_, hmac_value, &sha256);
+  if (sha256.size() != kMaxBits) {  // sanity check
+    return false;
+  }
 
   // We should have already checked this.
   assert(params_.num_bits_ <= kMaxBits);
@@ -167,23 +200,20 @@ void Encoder::GetPrrMasks(const std::string& value, Bits* uniform_out,
 
   *uniform_out = uniform;
   *f_mask_out = f_mask;
+  return true;
 }
 
-bool Encoder::_EncodeInternal(const std::string& value, Bits* bloom_out,
-    Bits* prr_out, Bits* irr_out) const {
-  Bits bloom;
-  if (!MakeBloomFilter(value, &bloom)) {
-    rappor::log("Bloom filter calculation failed");
-    return false;
-  }
-  *bloom_out = bloom;
-
+bool Encoder::_EncodeBitsInternal(const Bits bits, Bits* prr_out,
+                                  Bits* irr_out) const {
   // Compute Permanent Randomized Response (PRR).
   Bits uniform;
   Bits f_mask;
-  GetPrrMasks(value, &uniform, &f_mask);
+  if (!GetPrrMasks(bits, &uniform, &f_mask)) {
+    log("GetPrrMasks failed");
+    return false;
+  }
 
-  Bits prr = (bloom & ~f_mask) | (uniform & f_mask);
+  Bits prr = (bits & ~f_mask) | (uniform & f_mask);
   *prr_out = prr;
 
   // Compute Instantaneous Randomized Response (IRR).
@@ -192,11 +222,11 @@ bool Encoder::_EncodeInternal(const std::string& value, Bits* bloom_out,
   Bits p_bits;
   Bits q_bits;
   if (!deps_.irr_rand_.GetMask(params_.prob_p_, params_.num_bits_, &p_bits)) {
-    rappor::log("PMask failed");
+    log("PMask failed");
     return false;
   }
   if (!deps_.irr_rand_.GetMask(params_.prob_q_, params_.num_bits_, &q_bits)) {
-    rappor::log("QMask failed");
+    log("QMask failed");
     return false;
   }
 
@@ -206,10 +236,24 @@ bool Encoder::_EncodeInternal(const std::string& value, Bits* bloom_out,
   return true;
 }
 
-bool Encoder::Encode(const std::string& value, Bits* irr_out) const {
+bool Encoder::_EncodeStringInternal(const std::string& value, Bits* bloom_out,
+    Bits* prr_out, Bits* irr_out) const {
+  if (!MakeBloomFilter(value, bloom_out)) {
+    log("Bloom filter calculation failed");
+    return false;
+  }
+  return _EncodeBitsInternal(*bloom_out, prr_out, irr_out);
+}
+
+bool Encoder::EncodeBits(const Bits bits, Bits* irr_out) const {
+  Bits unused_prr;
+  return _EncodeBitsInternal(bits, &unused_prr, irr_out);
+}
+
+bool Encoder::EncodeString(const std::string& value, Bits* irr_out) const {
   Bits unused_bloom;
   Bits unused_prr;
-  return _EncodeInternal(value, &unused_bloom, &unused_prr, irr_out);
+  return _EncodeStringInternal(value, &unused_bloom, &unused_prr, irr_out);
 }
 
 }  // namespace rappor
