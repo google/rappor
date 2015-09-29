@@ -166,8 +166,8 @@ bool Encoder::MakeBloomFilter(const std::string& value, Bits* bloom_out) const {
 }
 
 // Helper method for PRR
-bool Encoder::GetPrrMasks(const Bits bits, Bits* uniform_out, Bits* f_mask_out)
-  const {
+bool Encoder::GetPrrMasks(const Bits bits, Bits* uniform_out,
+                          Bits* f_mask_out) const {
   // Create HMAC(secret, value), and use its bits to construct f_mask and
   // uniform bits.
   std::vector<uint8_t> sha256;
