@@ -101,4 +101,11 @@ fastrand() {
   popd >/dev/null
 }
 
+cpp-client() {
+  pushd client/cpp
+  mkdir --verbose -p _tmp
+  make _tmp/rappor_sim  # this builds an executable using it
+  popd
+}
+
 "$@"
