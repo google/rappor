@@ -9,12 +9,15 @@
 #   $dir/map.csv -- map file
 #   $dir/reports.csv -- these are the raw reports
 #   $dir/params.csv -- parameters file for first var
+#   ONLY NEEDED FOR 2WAY ALGORITHM
 #   $dir/params2.csv -- parameters file for second var
 #
-# At the end, it will output results of the EM algorithm to stdout
+# At the end, it will output results of the EM algorithm to stdout and
+# results.csv
 #
 # Examples:
-# $ ./quick_assoc_boolean.sh .
+# If your files lie in data/csv, run
+# $ ./quick_assoc_boolean.sh data/csv/
 
 readonly THIS_DIR=$(dirname $0)
 readonly REPO_ROOT=$THIS_DIR
@@ -28,10 +31,11 @@ export PYTHONPATH=$CLIENT_DIR
 _run-input() {
   
   # Read reports and compute two way counts
-  analysis/tools/sum_bits_assoc.py \
-    $1/params.csv $1/params2.csv\
-    "$1/$COUNT_SUFFIX" \
-    < $1/reports.csv
+  # Uncomment when kinks in 2way algorithm are ironed out
+  #  analysis/tools/sum_bits_assoc.py \
+  #    $1/params.csv $1/params2.csv\
+  #    "$1/$COUNT_SUFFIX" \
+  #    < $1/reports.csv
 
   # Currently, the summary file shows and aggregates timing of the inference
   # engine, which excludes R's loading time and reading of the (possibly
@@ -46,14 +50,13 @@ _run-input() {
     \"reports\":        \"$1/reports.csv\",\
     \"params\":         \"$1/params.csv\",\
     \"numvars\":        2,\
-    \"verbose\":        \"false\",\
-    \"counts\":         [\"$1/${COUNT_SUFFIX}_2way.csv\",\
-                        \"$1/${COUNT_SUFFIX}_marg1.csv\",\
-                        \"$1/${COUNT_SUFFIX}_marg2.csv\"],"
+    \"verbose\":        \"false\",
+    \"algo\":           \"EM\"}"  # Replace "EM" with "2Way" for new alg
+  # Uncomment when kinks in 2way algorithm are ironed out
+  #    \"counts\":         [\"$1/${COUNT_SUFFIX}_2way.csv\",\
+  #                        \"$1/${COUNT_SUFFIX}_marg1.csv\",\
+  #                        \"$1/${COUNT_SUFFIX}_marg2.csv\"],"
 
-  # Setting algorithm to EM
-  json_file=$json_file"\"algo\": \"EM\""
-  json_file=$json_file"}"
   echo $json_file > inp.json
   
   time {
@@ -64,7 +67,7 @@ _run-input() {
 main() {
   if test $# -eq 0; then
     echo "Usage: ./quick_assoc_boolean.sh <dir name>. Directory must have map,\
-reports, params, and params2 file (parameters for both vars resp.)."
+reports, and params file (parameters for both vars resp.)."
   else
     dir=$1
     _run-input $dir

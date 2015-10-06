@@ -37,6 +37,77 @@ CombineReports <- function(reports1, reports2) {
          function(x) as.vector(sapply(x, function(z) two_bits[[z+1]])))
 }
 
+# Function to combine maps
+# Using map1-major order for both candidates and bits of the report
+# to be consistent with how CombineReports works
+# Currently assume 2-way marginals
+CombineMapsInternal <- function(map1, map2) {
+  # Retrieve set indices and dimensions
+  rows1 <- which(map1, arr.ind = TRUE)[,1]
+  cols1 <- which(map1, arr.ind = TRUE)[,2]
+  length1 <- dim(map1)[[1]]
+  width1 <- dim(map1)[[2]]
+  rows2 <- which(map2, arr.ind = TRUE)[,1]
+  cols2 <- which(map2, arr.ind = TRUE)[,2]
+  length2 <- dim(map2)[[1]]
+  width2 <- dim(map2)[[2]]
+  
+  # Now process map1
+  map1fn <- function(i, j) {
+    i1 <- seq(1, length2) + ((i-1) * length2)
+    j1 <- seq(1, width2) + ((j-1) * width2)
+    expand.grid(i1, j1)  
+  }
+  map1indices <- do.call(rbind,
+                         mapply(map1fn, rows1, cols1, SIMPLIFY = FALSE))
+  map1_big <- sparseMatrix(map1indices[,"Var1"],
+                           map1indices[,"Var2"],
+                           dims = c(length1 * length2,
+                                    width1 * width2))
+  colnames(map1_big) <- t(outer(colnames(map1),
+                              colnames(map2),
+                              function(x, y) paste(x, y, sep = "x")))
+  
+  # Now process map2
+  map2fn <- function(i, j) {
+    i2 <- i + (seq(0, length1 - 1) * length2)
+    j2 <- j + (seq(0, width1 - 1) * width2)
+    expand.grid(i2, j2)
+  }
+  map2indices <- do.call(rbind,
+                         mapply(map2fn, rows2, cols2, SIMPLIFY = FALSE))
+  map2_big <- sparseMatrix(map2indices[,"Var1"],
+                           map2indices[,"Var2"],
+                           dims = c(length1 * length2,
+                                    width1 * width2))
+  colnames(map2_big) <- t(outer(colnames(map1),
+                              colnames(map2),
+                              function(x, y) paste(x, y, sep = "x")))
+  
+  # Now collate two maps with entries in (1000, 0100, 0010, 0001)
+  # (m1&m2, !m1 & m2, m1 & !m2, !(m1 & m2)) respectively
+  findices <- which(map1_big & map2_big, arr.ind = TRUE)
+  # 1000
+  findices[, 1] <- findices[, 1] * 4 - 3
+  # 0100
+  indices_0100 <- which((!map1_big) & map2_big, arr.ind = TRUE)
+  indices_0100[, 1] <- indices_0100[, 1] * 4 - 2
+  findices <- rbind(findices, indices_0100)
+  # 0010
+  indices_0010 <- which(map1_big & (!map2_big), arr.ind = TRUE)
+  indices_0010[, 1] <- indices_0010[, 1] * 4 - 1
+  findices <- rbind(findices, indices_0010)
+  # 0001
+  indices_0001 <- which((!map1_big) & (!map2_big), arr.ind = TRUE)
+  indices_0001[, 1] <- indices_0001[, 1] * 4
+  findices <- rbind(findices, indices_0001)
+  sm <- sparseMatrix(findices[, 1], findices[, 2],
+                     dims = c(4 * length1 * length2,
+                        width1 * width2))
+  colnames(sm) <- colnames(map1_big)
+  sm
+}
+
 
 # Given 2 lists of maps, maps1 and maps2, the function
 # combines the maps by cohort and outputs both
