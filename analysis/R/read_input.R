@@ -33,6 +33,23 @@ ReadParameterFile <- function(params_file) {
   params
 }
 
+ReadParameterFileMulti <- function(params_file) {
+  # Read parameter file. Format:
+  # k, h, m, p, q, f
+  # 128, 2, 8, 0.5, 0.75, 0.75
+  # 32, 2, 4, 0.25, 0.75, 0.5
+  # ...
+  
+  params <- read.csv(gfile(params_file))
+  if (ncol(params) != 6) {
+    stop("There should be exactly 6 columns in the parameter file.")
+  }
+  if (any(colnames(params) != c("k", "h", "m", "p", "q", "f"))) {
+    stop("Parameter names must be k,h,m,p,q,f.")
+  }
+  lapply(1:nrow(params), function(x) params[x,])
+}
+
 ReadCountsFile <- function(counts_file, params = NULL) {
   # Read in the counts file.
   if (!file.exists(counts_file)) {
@@ -99,6 +116,23 @@ ReadMapFile <- function(map_file, params = NULL, quote = "") {
   }
   colnames(map) <- strs
   list(map = map, strs = strs, map_pos = map_pos)
+}
+
+# This function processes the maps loaded using ReadMapFile
+# Association analysis requires a map object with a map
+# field that has the map split into cohorts and an rmap field
+# that has all the cohorts combined
+# Arguments:
+#       map = map object with cohorts as sparse matrix in
+#             object map$map
+#             This is the expected object from ReadMapFile
+#       params = data field with parameters
+CorrectMapForAssoc <- function(map, params) {
+  map$rmap <- map$map
+  map$map <- lapply(1:params$m, function(i)
+    map$rmap[seq(from = ((i - 1) * params$k + 1),
+                 length.out = params$k),])
+  map
 }
 
 LoadMapFile <- function(map_file, params = NULL, quote = "") {

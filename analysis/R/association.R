@@ -17,6 +17,13 @@
 #     in RAPPOR. This contains the functions relevant to estimating joint
 #     distributions.
 
+# Wrapper function to print strings only if verbose flag is passed in
+PrintIfVerbose <- function(string, flag = FALSE) {
+  if(flag == TRUE) {
+    print(string)
+  }
+}
+
 GetOtherProbs <- function(counts, map, marginal, params) {
   # Computes the marginal for the "other" category.
   #
@@ -44,7 +51,7 @@ GetOtherProbs <- function(counts, map, marginal, params) {
   # Counts to remove from each cohort.
   top_counts <- ceiling(marginal$proportion * N / params$m)
   sum_top <- sum(top_counts)
-  candidate_map <- lapply(map, function(x) x[, candidate_strings])
+  candidate_map <- lapply(map, function(x) x[, candidate_strings, drop = FALSE])
 
   # Counts set by known strings without noise considerations.
   if (length(marginal) > 0) {
@@ -63,6 +70,10 @@ GetOtherProbs <- function(counts, map, marginal, params) {
   pstar <- (1 - f / 2) * p + (f / 2) * q
   top_counts_cohort <- (sum_top - top_counts_cohort) * pstar +
       top_counts_cohort * qstar
+  
+  # Adjustment for basic rappor
+  if(nrow(top_counts_cohort) == 1) 
+    top_counts_cohort <- t(top_counts_cohort)
   top_counts_cohort <- cbind(sum_top, top_counts_cohort)
 
   # Counts set by the "other" category.
@@ -72,6 +83,9 @@ GetOtherProbs <- function(counts, map, marginal, params) {
   props_other[props_other > 1] <- 1
   props_other[is.nan(props_other)] <- 0
   props_other[is.infinite(props_other)] <- 0
+  # Adjustment for basic rappor
+  if(is.null(nrow(props_other)))
+    props_other <- t(props_other)
   as.list(as.data.frame(props_other))
 }
 
@@ -213,8 +227,17 @@ EM <- function(cond_prob, starting_pij = NULL, estimate_var = FALSE,
   if (nrow(pij[[1]]) > 0) {
     # Run EM
     for (i in 1:max_iter) {
+      if (i == 1) {
+        ptm_iter <- proc.time()
+      }
       pij[[i + 1]] <- UpdatePij(pij[[i]], cond_prob)
       dif <- max(abs(pij[[i + 1]] - pij[[i]]))
+      
+      # Timing information for debugging purposes
+      if (i == 1) {
+        PrintIfVerbose("ONE ITERATION", verbose)
+        PrintIfVerbose(proc.time() - ptm_iter, verbose)
+      }
       if (dif < epsilon) {
         break
       }
@@ -285,7 +308,8 @@ ComputeDistributionEM <- function(reports, report_cohorts,
                                   maps, ignore_other = FALSE,
                                   params,
                                   marginals = NULL,
-                                  estimate_var = FALSE) {
+                                  estimate_var = FALSE,
+                                  verbose = FALSE) {
   # Computes the distribution of num_variables variables, where
   #     num_variables is chosen by the client, using the EM algorithm.
   #
@@ -312,8 +336,10 @@ ComputeDistributionEM <- function(reports, report_cohorts,
   # Compute the counts for each variable and then do conditionals.
   joint_conditional = NULL
   found_strings <- list()
+  cd_for_reports <- list()
 
   for (j in (1:num_variables)) {
+    ptm <- proc.time()
     variable_report <- reports[[j]]
     variable_cohort <- report_cohorts[[j]]
     map <- maps[[j]]
@@ -321,8 +347,13 @@ ComputeDistributionEM <- function(reports, report_cohorts,
     # Compute the probability of the "other" category
     variable_counts <- NULL
     if (is.null(marginals)) {
-      variable_counts <- ComputeCounts(variable_report, variable_cohort, params)
-      marginal <- Decode(variable_counts, map$rmap, params, quiet = TRUE)$fit
+      ptm2 <- proc.time()
+      variable_counts <- ComputeCounts(variable_report, variable_cohort, params[[j]])
+      marginal <- Decode(variable_counts, map$rmap, params[[j]],
+                         quiet = TRUE)$fit
+      print(marginal)
+      PrintIfVerbose("TIME IN MARGINALS", verbose)
+      PrintIfVerbose(proc.time() - ptm2, verbose)
       if (nrow(marginal) == 0) {
         return (NULL)
       }
@@ -332,14 +363,14 @@ ComputeDistributionEM <- function(reports, report_cohorts,
     found_strings[[j]] <- marginal$string
 
     if (ignore_other) {
-      prob_other <- vector(mode = "list", length = params$m)
+      prob_other <- vector(mode = "list", length = params[[j]]$m)
     } else {
       if (is.null(variable_counts)) {
         variable_counts <- ComputeCounts(variable_report, variable_cohort,
-                                         params)
+                                         params[[j]])
       }
       prob_other <- GetOtherProbs(variable_counts, map$map, marginal,
-                                  params)
+                                  params[[j]])
       found_strings[[j]] <- c(found_strings[[j]], "Other")
     }
 
@@ -348,7 +379,7 @@ ComputeDistributionEM <- function(reports, report_cohorts,
       idx <- variable_cohort[i]
       rep <- GetCondProb(variable_report[[i]],
                          candidate_strings = rownames(marginal),
-                         params = params,
+                         params = params[[j]],
                          map$map[[idx]],
                          prob_other[[idx]])
       rep
@@ -356,14 +387,19 @@ ComputeDistributionEM <- function(reports, report_cohorts,
 
     # Update the joint conditional distribution of all variables
     joint_conditional <- UpdateJointConditional(cond_report_dist,
-                                                joint_conditional)
+                                              joint_conditional)
+    PrintIfVerbose("TIME IN COND_REPORT_DIST", verbose)
+    PrintIfVerbose(proc.time()-ptm, verbose)
   }
 
+  ptm <- proc.time()
   # Run expectation maximization to find joint distribution
   em <- EM(joint_conditional, epsilon = 10 ^ -6, verbose = FALSE,
            estimate_var = estimate_var)
+  PrintIfVerbose("TIME IN EM", verbose)
+  PrintIfVerbose(proc.time() - ptm, verbose)
   dimnames(em$est) <- found_strings
+
   # Return results in a usable format
   list(fit = em$est, sd = em$sd, em = em)
-
 }
