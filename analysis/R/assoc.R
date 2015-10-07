@@ -17,6 +17,9 @@
 # Reads map files, report files, and RAPPOR parameters to run
 # an EM algorithm to estimate joint distribution over two or more variables
 #
+# NOTE: Also has code for the 2 way algorithm but the code is still
+# experimental and not checked in completely.
+#
 # Usage:
 #       $ ./assoc.R --inp <JSON file>
 #
@@ -44,7 +47,8 @@ if(!interactive()) {
   opts <- parse_args(OptionParser(option_list = option_list))
 }
 
-source("analysis/R/decode2way.R")
+# Currently disabled. 2 Way algorithm will not run.
+# source("analysis/R/decode2way.R")
 source("analysis/R/encode.R")
 source("analysis/R/decode.R")
 source("analysis/R/simulation.R")
@@ -264,6 +268,7 @@ main <- function(opts) {
   if(inp$algo == "EM")
     EMAlg(inp)
   # Recommendation: Use EMAlg; TwoWayAlgBasic is still experimental
+  # and code is not completely checked in yet.
   if(inp$algo == "2Way")
     TwoWayAlgBasic(inp)
 }
