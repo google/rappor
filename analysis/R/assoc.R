@@ -27,7 +27,7 @@
 #        "counts" for 2 way marginal counts, individual marginal counts 
 #                 respectively
 #        "params" for params file with RAPPOR params
-#        "csv_out" for a file name into which results will be written
+#        "results" for a file name into which results will be written
 #                 as comma separated values
 #
 # Output: A table with joint distribution to stdout and csv file with results
