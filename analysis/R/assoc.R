@@ -91,7 +91,9 @@ EMAlgBasic <- function(inp) {
   tmp_reports_df <- tmp_reports_df[,-1]
   
   # TODO(pseudorandom): Do not assume var 2 is always boolean
-  # Fix which params$k is set to 1
+  # Fix which params$k is set to 1 based on which var is boolean
+  # params now is a tuple of params in the standard format as required by
+  # ComputeDistributionEM
   params = list(params, params)
   params[[2]]$k = 1
   
@@ -109,11 +111,11 @@ EMAlgBasic <- function(inp) {
   # Split ASCII strings into array of numerics (as required by assoc analysis)
   reports <- lapply(1:inp$numvars, function(i) {
     # apply the following function to each of reports[[1]] and reports[[2]]
-    # TODO(pseudorandom): Do not assume var 2 is always boolean
+    # TODO(pseudorandom): Do not assume var 2 is always boolean in [[1]]
     lapply(reports[[i]][[1]], function(x) {
       # function splits strings and converts them to numeric values
       # rev needed for endianness
-      rev(as.numeric(strsplit(x, split = "")[[1]]))
+      rev(as.integer(strsplit(x, split = "")[[1]]))
     })
   })
   
