@@ -154,11 +154,12 @@ class SimpleIrrRand(object):
     self.q_gen = _SimpleRandom(params.prob_q, num_bits, _rand=_rand)
 
 
-def cohort_to_bytes(cohort):
+def to_big_endian(i):
+  """Convert an integer to a 4 byte big endian string.  Used for hashing."""
   # https://docs.python.org/2/library/struct.html
   # - Big Endian (>) for consistent network byte order.
   # - L means 4 bytes when using >
-  return struct.pack('>L', cohort)
+  return struct.pack('>L', i)
 
 
 def get_bloom_bits(word, cohort, num_hashes, num_bloombits):
@@ -167,7 +168,7 @@ def get_bloom_bits(word, cohort, num_hashes, num_bloombits):
   In the real report, we bitwise-OR them together.  In hash candidates, we put
   them in separate entries in the "map" matrix.
   """
-  value = cohort_to_bytes(cohort) + word  # Cohort is 4 byte prefix.
+  value = to_big_endian(cohort) + word  # Cohort is 4 byte prefix.
   md5 = hashlib.md5(value)
 
   digest = md5.digest()
@@ -249,23 +250,16 @@ class Encoder(object):
     self.secret = secret  # associated: HMAC-SHA256
     self.irr_rand = irr_rand  # p and q used
 
-  def _internal_encode(self, word):
+  def _internal_encode_bits(self, bits):
     """Helper function for simulation / testing.
 
     Returns:
-      The PRR and the IRR.  The PRR should never be sent over the network.
+      The PRR and IRR.  The PRR should never be sent over the network.
     """
-    num_bits = self.params.num_bloombits
-    bloom_bits = get_bloom_bits(word, self.cohort, self.params.num_hashes,
-                                num_bits)
-
-    bloom = 0
-    for bit_to_set in bloom_bits:
-      bloom |= (1 << bit_to_set)
-
     # Compute Permanent Randomized Response (PRR).
     uniform, f_mask = get_prr_masks(
-        self.secret, word, self.params.prob_f, num_bits)
+        self.secret, to_big_endian(bits), self.params.prob_f,
+        self.params.num_bloombits)
 
     # Suppose bit i of the Bloom filter is B_i.  Then bit i of the PRR is
     # defined as:
@@ -282,7 +276,7 @@ class Encoder(object):
     # f, so we get B_i with probability 1-f.
     # - The remaining bits are 0, with remaining probability f/2.
 
-    prr = (bloom & ~f_mask) | (uniform & f_mask)
+    prr = (bits & ~f_mask) | (uniform & f_mask)
 
     #log('U %s / F %s', bit_string(uniform, num_bits),
     #    bit_string(f_mask, num_bits))
@@ -298,7 +292,36 @@ class Encoder(object):
 
     irr = (p_bits & ~prr) | (q_bits & prr)
 
-    return bloom, prr, irr  # IRR is the rappor
+    return prr, irr  # IRR is the rappor
+
+  def _internal_encode(self, word):
+    """Helper function for simulation / testing.
+
+    Returns:
+      The Bloom filter bits, PRR, and IRR.  The first two values should never
+      be sent over the network.
+    """
+    bloom_bits = get_bloom_bits(word, self.cohort, self.params.num_hashes,
+                                self.params.num_bloombits)
+
+    bloom = 0
+    for bit_to_set in bloom_bits:
+      bloom |= (1 << bit_to_set)
+
+    prr, irr = self._internal_encode_bits(bloom)
+    return bloom, prr, irr
+
+  def encode_bits(self, bits):
+    """Encode a string with RAPPOR.
+
+    Args:
+      bits: An integer representing bits to encode.
+
+    Returns:
+      An integer that is the IRR (Instantaneous Randomized Response).
+    """
+    _, irr = self._internal_encode_bits(bits)
+    return irr
 
   def encode(self, word):
     """Encode a string with RAPPOR.
@@ -307,7 +330,7 @@ class Encoder(object):
       word: the string that should be privately transmitted.
 
     Returns:
-      A number that is the IRR (Instantaneous Randomized Response).
+      An integer that is the IRR (Instantaneous Randomized Response).
     """
     _, _, irr = self._internal_encode(word)
     return irr

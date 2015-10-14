@@ -4,6 +4,57 @@
 # Decode() in decode.R.
 
 library(optparse)
+
+#
+# Command line parsing.  Do this first before loading libraries to catch errors
+# quickly.  Loading libraries in R is slow.
+#
+
+# For command line error checking.
+UsageError <- function(...) {
+  cat(sprintf(...))
+  cat('\n')
+  quit(status = 1)
+}
+
+option_list <- list(
+  # Inputs
+  make_option("--map", default="", help="Map file (required)"),
+  make_option("--counts", default="", help="Counts file (required)"),
+  make_option("--params", default="", help="Params file (required)"),
+  make_option("--output-dir", dest="output_dir", default=".",
+              help="Output directory (default .)"),
+
+  make_option("--correction", default="FDR", help="Correction method"),
+  make_option("--alpha", default=.05, help="Alpha level")
+)
+
+ParseOptions <- function() {
+  # NOTE: This API is bad; if you add positional_arguments, the return value
+  # changes!
+  parser <- OptionParser(option_list = option_list)
+  opts <- parse_args(parser)
+
+  if (opts$map == "") {
+    UsageError("--map is required.")
+  }
+  if (opts$counts == "") {
+    UsageError("--counts is required.")
+  }
+  if (opts$params == "") {
+    UsageError("--params is required.")
+  }
+  return(opts)
+}
+
+if (!interactive()) {
+  opts <- ParseOptions()
+}
+
+#
+# Load libraries and source our own code.
+#
+
 library(RJSONIO)
 
 # So we don't have to change pwd
@@ -20,31 +71,6 @@ source.rappor("analysis/R/alternative.R")
 
 options(stringsAsFactors = FALSE)
 
-# Do command line parsing first to catch errors.  Loading libraries in R is
-# slow.
-if (!interactive()) {
-  option_list <- list(
-    # Inputs
-    make_option("--map", default="", help="Map file (required)"),
-    make_option("--counts", default="", help="Counts file (required)"),
-    make_option("--params", default="", help="Params file (required)"),
-    make_option("--output-dir", dest="output_dir", default=".",
-                help="Output directory (default .)"),
-
-    make_option("--correction", default="FDR", help="Correction method"),
-    make_option("--alpha", default=.05, help="Alpha level")
-  )
-  # NOTE: This API is bad; if you add positional_arguments, the return value changes!
-  parser <- OptionParser(option_list = option_list)
-  opts <- parse_args(parser)
-}
-
-# For command line error checking.
-UsageError <- function(...) {
-  cat(sprintf(...))
-  cat('\n')
-  quit(status = 1)
-}
 
 # Handle the case of redundant cohorts, i.e. the counts file needs to be
 # further aggregated to obtain counts for the number of cohorts specified in
@@ -86,15 +112,6 @@ ValidateInput <- function(params, counts, map) {
 }
 
 main <- function(opts) {
-  if (opts$map == "") {
-    UsageError("--map is required.")
-  }
-  if (opts$counts == "") {
-    UsageError("--counts is required.")
-  }
-  if (opts$params == "") {
-    UsageError("--params is required.")
-  }
   Log("Loading inputs")
 
   # Run a single model of all inputs are specified.

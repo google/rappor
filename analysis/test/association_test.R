@@ -138,7 +138,8 @@ TestComputeDistributionEM <- function() {
   # Test 1: Delta function pmf
   joint_dist <- ComputeDistributionEM(sim$reports,
                                       sim$cohorts, sim$maps,
-                                      ignore_other = TRUE, params,
+                                      ignore_other = TRUE,
+                                      params = params,
                                       marginals = NULL,
                                       estimate_var = FALSE)
   # The recovered distribution should be close to the delta function.
@@ -150,7 +151,8 @@ TestComputeDistributionEM <- function() {
                                 list(sim$cohorts[[1]]),
                                 list(sim$maps[[1]]),
                                 ignore_other = TRUE,
-                                params, marginals = NULL,
+                                params = params,
+                                marginals = NULL,
                                 estimate_var = FALSE)
   checkTrue(abs(dist$fit["1"] - 0.5) < 0.01)
 
@@ -173,20 +175,19 @@ TestComputeDistributionEM <- function() {
                                 list(sim$cohorts[[1]]),
                                 list(small_map),
                                 ignore_other = FALSE,
-                                params,
+                                params = params,
                                 marginals = NULL,
                                 estimate_var = FALSE)
 
   # The recovered distribution should be uniform over 2 strings.
   checkTrue(abs(dist$fit[1] - 0.5) < 0.1)
 
-
   # Test 4: Test the variance is 1/N
   variable_opts <- list(deterministic = TRUE, num_strings = 1)
   sim <- Simulate(N, num_variables = 1, params, variable_opts)
   dist <- ComputeDistributionEM(sim$reports, sim$cohorts,
                                 sim$maps, ignore_other = TRUE,
-                                params, marginals = NULL,
+                                params = params, marginals = NULL,
                                 estimate_var = TRUE)
 
   checkEqualsNumeric(dist$em$var_cov[1, 1], 1 / N)
@@ -197,7 +198,7 @@ TestComputeDistributionEM <- function() {
   sim <- Simulate(N, num_variables = 2, params, variable_opts)
   dist <- ComputeDistributionEM(sim$reports, sim$cohorts,
                                 sim$maps, ignore_other = TRUE,
-                                params, marginals = NULL,
+                                params = params, marginals = NULL,
                                 estimate_var = FALSE)
 
   checkTrue(abs(dist$fit["1", "1"] - 0.5) < 0.15)
@@ -212,7 +213,7 @@ TestComputeDistributionEM <- function() {
   sim <- Simulate(N, num_variables = 2, params, variable_opts)
   dist <- ComputeDistributionEM(sim$reports, sim$cohorts,
                                 sim$maps, ignore_other = TRUE,
-                                params, marginals = NULL,
+                                params = params, marginals = NULL,
                                 estimate_var = FALSE)
 
   print_dist <- TRUE  # to print joint distribution, set to TRUE
@@ -240,3 +241,26 @@ TestComputeDistributionEM <- function() {
   checkTrue(dist$fit["3", "1"] < 0.02)
   checkTrue(dist$fit["3", "2"] < 0.02)
 }
+
+TestEM <- function() {
+  d = matrix(c(1,1,2,2,3,3), nrow=3, ncol=2)
+  d = d / sum(d)
+
+  e = matrix(c(3,3,2,2,1,1), nrow=3, ncol=2)
+  e = e / sum(e)
+
+  #f = matrix(c(0,2,2,2,2,2), nrow=3, ncol=2)
+  #f = f / sum(f)
+
+  cond_prob = list(d, e, d)  # 3 reports
+  print(cond_prob)
+
+  # Mechanical test of 4 iterations.  em$hist has 5 elements.
+  em <- EM(cond_prob, max_em_iters=4)
+  print(structure(em))
+
+  return(cond_prob)
+}
+
+#TestEM()
+

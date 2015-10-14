@@ -12,6 +12,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+library(parallel)  # mclapply
+
+source.rappor <- function(rel_path)  {
+  abs_path <- paste0(Sys.getenv("RAPPOR_REPO", ""), rel_path)
+  source(abs_path)
+}
+
+source.rappor("analysis/R/util.R")  # for Log
+source.rappor("analysis/R/decode.R")  # for ComputeCounts
+
 #
 # Tools used to estimate variable distributions of up to three variables
 #     in RAPPOR. This contains the functions relevant to estimating joint
@@ -21,41 +31,46 @@ GetOtherProbs <- function(counts, map, marginal, params) {
   # Computes the marginal for the "other" category.
   #
   # Args:
-  #   counts: mx(k+1) matrix with counts of each bit for each
-  #       cohort (m=#cohorts total, k=# bits in bloom filter), first row
+  #   counts: m x (k+1) matrix with counts of each bit for each
+  #       cohort (m=#cohorts total, k=# bits in bloom filter), first column
   #       stores the total counts
   #   map: list of matrices encoding locations of hashes for each string
   #       "other" category)
   #   marginal: object containing the estimated frequencies of known strings
   #       as well as the strings themselves, variance, etc.
-  #   params: System parameters
+  #   params: RAPPOR encoding parameters
   #
   # Returns:
-  #   Vector of probabilities that each bit was set by the "other" category
+  #   List of vectors of probabilities that each bit was set by the "other"
+  #   category.  The list is indexed by cohort.
 
   N <- sum(counts[, 1])
   f <- params$f
   q <- params$q
   p <- params$p
 
-  # List of known strings that were measured in the marginal.
-  candidate_strings <- marginal$string
-
-  # Counts to remove from each cohort.
+  # Counts of known strings (i.e. "top" strings) to remove from each cohort.
   top_counts <- ceiling(marginal$proportion * N / params$m)
   sum_top <- sum(top_counts)
-  candidate_map <- lapply(map, function(x) x[, candidate_strings])
+  # NOTE: drop = FALSE necessary if there is one candidate
+  candidate_map <- lapply(map, function(x) x[, marginal$string, drop = FALSE])
+
+  # If no strings were found, all nonzero counts were set by "other"
+  if (length(marginal) == 0) {
+    probs_other <- apply(counts, 1, function(cohort_row) {
+      cohort_row[-1] / cohort_row[1]
+    })
+    return(as.list(as.data.frame(probs_other)))
+  }
 
   # Counts set by known strings without noise considerations.
-  if (length(marginal) > 0) {
-    top_counts_cohort <- t(sapply(candidate_map, function(x) {
-      as.vector(as.matrix(x) %*% top_counts)
-    }))
-  } else {
-    # If no strings were found, all nonzero counts were set by "other"
-    props_other <- apply(counts, 1, function(x) x[-1] / x[1])
-    return(as.list(as.data.frame(props_other)))
-  }
+  top_counts_cohort <- sapply(candidate_map, function(x) {
+    as.vector(as.matrix(x) %*% top_counts)
+  })
+
+  # Protect against R's matrix/vector confusion.  This ensures
+  # top_counts_cohort is a matrix in the k=1 case.
+  dim(top_counts_cohort) <- c(params$m, params$k)
 
   # Counts set by top vals zero bits adjusting by p plus true bits
   # adjusting by q.
@@ -63,52 +78,53 @@ GetOtherProbs <- function(counts, map, marginal, params) {
   pstar <- (1 - f / 2) * p + (f / 2) * q
   top_counts_cohort <- (sum_top - top_counts_cohort) * pstar +
       top_counts_cohort * qstar
+
+  # Add the left hand sums to make it a m x (k+1) "counts" matrix
   top_counts_cohort <- cbind(sum_top, top_counts_cohort)
 
   # Counts set by the "other" category.
   reduced_counts <- counts - top_counts_cohort
   reduced_counts[reduced_counts < 0] <- 0
-  props_other <- apply(reduced_counts, 1, function(x) x[-1] / x[1])
-  props_other[props_other > 1] <- 1
-  props_other[is.nan(props_other)] <- 0
-  props_other[is.infinite(props_other)] <- 0
-  as.list(as.data.frame(props_other))
+  probs_other <- apply(reduced_counts, 1, function(cohort_row) {
+    cohort_row[-1] / cohort_row[1]
+  })
+
+  # Protect against R's matrix/vector confusion.
+  dim(probs_other) <- c(params$k, params$m)
+
+  probs_other[probs_other > 1] <- 1
+  probs_other[is.nan(probs_other)] <- 0
+  probs_other[is.infinite(probs_other)] <- 0
+
+  # Convert it from a k x m matrix to a list indexed by m cohorts.
+  # as.data.frame makes each cohort a column, which can be indexed by
+  # probs_other[[cohort]].
+  result <- as.list(as.data.frame(probs_other))
+
+  result
 }
 
-GetCondProb <- function(report, candidate_strings, params, map,
-                        prob_other = NULL) {
+GetCondProb <- function(report, pstar, qstar, bit_indices, prob_other = NULL) {
   # Given the observed bit array, estimate P(report | true value).
   # Probabilities are estimated for all truth values.
   #
   # Args:
   #   report: a single observed RAPPOR report (binary vector of length k)
-  #   candidate_strings: vector of strings in the dictionary (i.e. not the
-  #       "other" category)
   #   params: System parameters
-  #   map: list of matrices encoding locations of hashes for each string
+  #   bit_indices: list of integer vectors of length h, specifying which bits
+  #   are set
   #   prob_other: vector of length k, indicating how often each bit in the
   #       Bloom filter was set by a string in the "other" category
   #
   # Returns:
   #   Conditional probability of report given each of the strings in
   #       candidate_strings
-
-  p <- params$p
-  q <- params$q
-  f <- params$f
   ones <- sum(report)
   zeros <- length(report) - ones
-
-  qstar <- (1 - f / 2) * q + (f / 2) * p
-  pstar <- (1 - f / 2) * p + (f / 2) * q
   probs <- ifelse(report == 1, pstar, 1 - pstar)
 
-  # Find the bits set by the candidate strings
-  inds <- lapply(candidate_strings, function(x)
-                 which(map[, x]))
-
   # Find the likelihood of report given each candidate string
-  prob_obs_vals <- sapply(inds, function(x) {
+  prob_obs_vals <- sapply(bit_indices, function(x) {
     prod(c(probs[-x], ifelse(report[x] == 1, qstar, 1 - qstar)))
   })
 
@@ -147,11 +163,15 @@ UpdatePij <- function(pij, cond_prob) {
   # Returns:
   #   Updated pijs from em algorithm (maximization)
 
+  # NOTE: Not using mclapply here because we have a faster C++ implementation.
+  # mclapply spawns multiple processes, and each process can take up 3 GB+ or 5
+  # GB+ of memory.
   wcp <- lapply(cond_prob, function(x) {
     z <- x * pij
     z <- z / sum(z)
     z[is.nan(z)] <- 0
-    z })
+    z
+  })
   Reduce("+", wcp) / length(wcp)
 }
 
@@ -187,7 +207,7 @@ ComputeVar <- function(cond_prob, est) {
 }
 
 EM <- function(cond_prob, starting_pij = NULL, estimate_var = FALSE,
-               max_iter = 1000, epsilon = 10^-6, verbose = FALSE) {
+               max_em_iters = 1000, epsilon = 10^-6, verbose = FALSE) {
   # Performs estimation.
   #
   # Args:
@@ -195,7 +215,7 @@ EM <- function(cond_prob, starting_pij = NULL, estimate_var = FALSE,
   #   starting_pij: estimated pij's
   #   estimate_var: flags whether we should estimate the variance
   #       of our computed distribution
-  #   max_iter: maximum number of EM iterations
+  #   max_em_iters: maximum number of EM iterations
   #   epsilon: convergence parameter
   #   verbose: flags whether to display error data
   #
@@ -212,15 +232,13 @@ EM <- function(cond_prob, starting_pij = NULL, estimate_var = FALSE,
 
   if (nrow(pij[[1]]) > 0) {
     # Run EM
-    for (i in 1:max_iter) {
+    for (i in 1:max_em_iters) {
       pij[[i + 1]] <- UpdatePij(pij[[i]], cond_prob)
       dif <- max(abs(pij[[i + 1]] - pij[[i]]))
       if (dif < epsilon) {
         break
       }
-      if (verbose) {
-        cat(i, dif, "\n")
-      }
+      Log('EM iteration %d, dif = %e', i, dif)
     }
   }
   # Compute the variance of the estimate.
@@ -281,11 +299,15 @@ UpdateJointConditional <- function(cond_report_dist, joint_conditional = NULL) {
   }
 }
 
-ComputeDistributionEM <- function(reports, report_cohorts,
-                                  maps, ignore_other = FALSE,
-                                  params,
+ComputeDistributionEM <- function(reports, report_cohorts, maps,
+                                  ignore_other = FALSE,
+                                  params = NULL,
+                                  params_list = NULL,
                                   marginals = NULL,
-                                  estimate_var = FALSE) {
+                                  estimate_var = FALSE,
+                                  num_cores = 10,
+                                  em_iter_func = EM,
+                                  max_em_iters = 1000) {
   # Computes the distribution of num_variables variables, where
   #     num_variables is chosen by the client, using the EM algorithm.
   #
@@ -296,34 +318,59 @@ ComputeDistributionEM <- function(reports, report_cohorts,
   #       containing the cohort of jth report for ith variable.
   #   maps: A num_variables-element list containing the map for each variable
   #   ignore_other: A boolean describing whether to compute the "other" category
-  #   params: A list of parameters for the problem
+  #   params: RAPPOR encoding parameters.  If set, all variables are assumed to
+  #       be encoded with these parameters.
+  #   params_list: A list of RAPPOR encoding parameters (each of which are
+  #       lists).  If set, it must be the same length as 'reports' (one entry
+  #       per dimension)
   #   marginals: List of estimated marginals for each variable
   #   estimate_var: A flag telling whether to estimate the variance.
+  #   em_iter_func: Function that implements the iterative EM algorithm.
 
-
-  # Handle the case that the client wants to find the joint distribution of
-  #     too many variables.
+  # Handle the case that the client wants to find the joint distribution of too
+  # many variables.
   num_variables <- length(reports)
   if (num_variables > 4) {
-    cat("This is too many variables to compare, exiting now.")
-    return -1
+    stop("Not comparing more than 4 variables")
   }
+
+  if (is.null(params) && is.null(params_list)) {
+    stop("Either params or params_list must be passed")
+  }
+
+  Log('Computing joint conditional')
 
   # Compute the counts for each variable and then do conditionals.
   joint_conditional = NULL
   found_strings <- list()
 
   for (j in (1:num_variables)) {
-    variable_report <- reports[[j]]
-    variable_cohort <- report_cohorts[[j]]
-    map <- maps[[j]]
+    Log('Processing var %d', j)
+
+    var_report <- reports[[j]]
+    var_cohort <- report_cohorts[[j]]
+    var_map <- maps[[j]]
+    if (!is.null(params)) {
+      var_params <- params
+    } else {
+      var_params <- params_list[[j]]
+    }
 
     # Compute the probability of the "other" category
-    variable_counts <- NULL
+    var_counts <- NULL
     if (is.null(marginals)) {
-      variable_counts <- ComputeCounts(variable_report, variable_cohort, params)
-      marginal <- Decode(variable_counts, map$rmap, params, quiet = TRUE)$fit
+      Log('\tSumming bits to gets observed counts')
+      var_counts <- ComputeCounts(var_report, var_cohort, var_params)
+
+      Log('\tDecoding marginal')
+      marginal <- Decode(var_counts, var_map$rmap, var_params,
+                         quiet = TRUE)$fit
+      Log('\tMarginal for var %d has %d values:', j, nrow(marginal))
+      print(marginal[, c('estimate', 'proportion')])  # rownames are the string
+      cat('\n')
+
       if (nrow(marginal) == 0) {
+        Log('ERROR: Nothing decoded for variable %d', j)
         return (NULL)
       }
     } else {
@@ -332,38 +379,67 @@ ComputeDistributionEM <- function(reports, report_cohorts,
     found_strings[[j]] <- marginal$string
 
     if (ignore_other) {
-      prob_other <- vector(mode = "list", length = params$m)
+      prob_other <- vector(mode = "list", length = var_params$m)
     } else {
-      if (is.null(variable_counts)) {
-        variable_counts <- ComputeCounts(variable_report, variable_cohort,
-                                         params)
+      if (is.null(var_counts)) {
+        var_counts <- ComputeCounts(var_report, var_cohort, var_params)
       }
-      prob_other <- GetOtherProbs(variable_counts, map$map, marginal,
-                                  params)
+      prob_other <- GetOtherProbs(var_counts, var_map$map, marginal, var_params)
       found_strings[[j]] <- c(found_strings[[j]], "Other")
     }
 
-    # Get the joint conditional distribution
-    cond_report_dist <- lapply(seq(length(variable_report)), function(i) {
-      idx <- variable_cohort[i]
-      rep <- GetCondProb(variable_report[[i]],
-                         candidate_strings = rownames(marginal),
-                         params = params,
-                         map$map[[idx]],
-                         prob_other[[idx]])
-      rep
+    p <- var_params$p
+    q <- var_params$q
+    f <- var_params$f
+    pstar <- (1 - f / 2) * p + (f / 2) * q
+    qstar <- (1 - f / 2) * q + (f / 2) * p
+
+    bit_indices_by_cohort <- lapply(1:var_params$m, function(cohort) {
+      map_for_cohort <- var_map$map[[cohort]]
+      # Find the bits set by the candidate strings
+      bit_indices <- lapply(marginal$string, function(x) {
+        which(map_for_cohort[, x])
+      })
+      bit_indices
     })
+
+    Log('\tGetCondProb for each report (%d cores)', num_cores)
+
+    # Get the joint conditional distribution
+    cond_report_dist <- mclapply(seq(length(var_report)), function(i) {
+      cohort <- var_cohort[i]
+      #Log('Report %d, cohort %d', i, cohort)
+      bit_indices <- bit_indices_by_cohort[[cohort]]
+      GetCondProb(var_report[[i]], pstar, qstar, bit_indices,
+                  prob_other = prob_other[[cohort]])
+    }, mc.cores = num_cores)
+
+    Log('\tUpdateJointConditional')
 
     # Update the joint conditional distribution of all variables
     joint_conditional <- UpdateJointConditional(cond_report_dist,
                                                 joint_conditional)
   }
 
+  N <- length(joint_conditional)
+  dimensions <- dim(joint_conditional[[1]])
+  # e.g. 2 x 3
+  dimensions_str <- paste(dimensions, collapse = ' x ')
+  total_entries <- prod(c(N, dimensions))
+
+  Log('Starting EM with N = %d matrices of size %s (%d entries)',
+      N, dimensions_str, total_entries)
+
+  start_time <- proc.time()[['elapsed']]
+
   # Run expectation maximization to find joint distribution
-  em <- EM(joint_conditional, epsilon = 10 ^ -6, verbose = FALSE,
-           estimate_var = estimate_var)
+  em <- em_iter_func(joint_conditional, max_em_iters=max_em_iters,
+                     epsilon = 10 ^ -6, verbose = FALSE,
+                     estimate_var = estimate_var)
+
+  em_elapsed_time <- proc.time()[['elapsed']] - start_time
+
   dimnames(em$est) <- found_strings
   # Return results in a usable format
-  list(fit = em$est, sd = em$sd, em = em)
-
+  list(fit = em$est, sd = em$sd, em_elapsed_time = em_elapsed_time, em = em)
 }

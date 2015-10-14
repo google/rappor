@@ -51,41 +51,51 @@ EstimateBloomCounts <- function(params, obs_counts) {
   q <- params$q
   f <- params$f
   m <- params$m
+  k <- params$k
 
-  stopifnot(m == nrow(obs_counts), params$k + 1 == ncol(obs_counts))
+  stopifnot(m == nrow(obs_counts), k + 1 == ncol(obs_counts))
 
   p11 <- q * (1 - f/2) + p * f / 2  # probability of a true 1 reported as 1
   p01 <- p * (1 - f/2) + q * f / 2  # probability of a true 0 reported as 1
 
   p2 <- p11 - p01  # == (1 - f) * (q - p)
 
-  ests <- apply(obs_counts, 1, function(x) {
-      N <- x[1]  # sample size for the cohort
-      v <- x[-1]  # counts for individual bits
+  ests <- apply(obs_counts, 1, function(cohort_row) {
+      N <- cohort_row[1]  # sample size for the cohort -- first column is total
+      v <- cohort_row[-1] # counts for individual bits
       (v - p01 * N) / p2  # unbiased estimator for individual bits'
                           # true counts. It can be negative or
                           # exceed the total.
     })
 
+  # NOTE: When k == 1, rows of obs_counts have 2 entries.  Then cohort_row[-1]
+  # is a singleton vector, and apply() returns a *vector*.  When rows have 3
+  # entries, cohort_row[-1] is a vector of length 2 and apply() returns a
+  # *matrix*.
+  #
+  # Fix this by explicitly setting dimensions.  NOTE: It's k x m, not m x k.
+  dim(ests) <- c(k, m)
+
   total <- sum(obs_counts[,1])
 
-  variances <- apply(obs_counts, 1, function(x) {
-      N <- x[1]
-      v <- x[-1]
+  variances <- apply(obs_counts, 1, function(cohort_row) {
+      N <- cohort_row[1]
+      v <- cohort_row[-1]
       p_hats <- (v - p01 * N) / (N * p2)  # expectation of a true 1
       p_hats <- pmax(0, pmin(1, p_hats))  # clamp to [0,1]
       r <- p_hats * p11 + (1 - p_hats) * p01  # expectation of a reported 1
       N * r * (1 - r) / p2^2  # variance of the binomial
      })
 
+  dim(variances) <- c(k, m)
+
   # Transform counts from absolute values to fractional, removing bias due to
   #      variability of reporting between cohorts.
   ests <- apply(ests, 1, function(x) x / obs_counts[,1])
   stds <- apply(variances^.5, 1, function(x) x / obs_counts[,1])
 
-  # Some estimates may be set to infinity, e.g. if f=1. We want to
-  #     account for this possibility, and set the corresponding counts
-  #     to 0.
+  # Some estimates may be set to infinity, e.g. if f=1. We want to account for
+  # this possibility, and set the corresponding counts to 0.
   ests[abs(ests) == Inf] <- 0
 
   list(estimates = ests, stds = stds)

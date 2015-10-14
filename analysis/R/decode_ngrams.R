@@ -57,7 +57,7 @@ FindPairwiseCandidates <- function(report_data, N, ngram_params, params) {
     new_dist <- ComputeDistributionEM(report_subset,
                                       cohort_subset,
                                       maps, ignore_other = FALSE,
-                                      params, estimate_var = FALSE)
+                                      params = params, estimate_var = FALSE)
     new_dist
   }
 

@@ -73,6 +73,9 @@ def CreateOptionsParser():
   p.add_option(
       '-f', type='float', metavar='FLOAT', dest='prob_f', default=1,
       help='Probability f')
+  p.add_option(
+      '--assoc-testdata', type='int', dest='assoc_testdata', default=0,
+      help='Generate association testdata from true values on stdin.')
 
   choices = ['simple', 'fast']
   p.add_option(
@@ -83,39 +86,55 @@ def CreateOptionsParser():
   return p
 
 
-def main(argv):
-  (opts, argv) = CreateOptionsParser().parse_args(argv)
+def GenAssocTestdata(
+    params1, params2, irr_rand, assoc_testdata_count, csv_in, csv_out):
+  """Read true values from csv_in and output encoded values on csv_out.
 
-  # Copy flags into params
-  params = rappor.Params()
-  params.num_bloombits = opts.num_bits
-  params.num_hashes = opts.num_hashes
-  params.num_cohorts = opts.num_cohorts
-  params.prob_p = opts.prob_p
-  params.prob_q = opts.prob_q
-  params.prob_f = opts.prob_f
+  Replicate assoc_testdata_count times.  First value is a string, second is a
+  bool.  TODO: Generalize this.
+  """
+  rows = []
+  for i, (true_value1, true_value2) in enumerate(csv_in):
+    if i == 0:
+      v1_name = true_value1
+      v2_name = true_value2
+      continue  # skip header row
 
-  if opts.random_mode == 'simple':
-    irr_rand = rappor.SimpleIrrRand(params)
-  elif opts.random_mode == 'fast':
-    if fastrand:
-      log('Using fastrand extension')
-      # NOTE: This doesn't take 'rand'.  It's seeded in C with srand().
-      irr_rand = fastrand.FastIrrRand(params)
-    else:
-      log('Warning: fastrand module not importable; see README for build '
-          'instructions.  Falling back to simple randomness.')
-      irr_rand = rappor.SimpleIrrRand(params)
-  else:
-    raise AssertionError
-  # Other possible implementations:
-  # - random.SystemRandom (probably uses /dev/urandom on Linux)
-  # - HMAC-SHA256 with another secret?  This could match C++ byte for byte.
-  #   - or srand(0) might do it.
+    rows.append((true_value1, true_value2))
 
-  csv_in = csv.reader(sys.stdin)
-  csv_out = csv.writer(sys.stdout)
+  # Use the same column names
+  header = ('client', 'cohort', v1_name, v2_name)
+  csv_out.writerow(header)
 
+  n = assoc_testdata_count
+  report_index = 0
+  for i in xrange(n):
+    for v1, v2 in rows:
+      client_str = 'c%d' % report_index
+      cohort = report_index % params1.num_cohorts
+
+      string_encoder = rappor.Encoder(params1, cohort, client_str, irr_rand)
+      bool_encoder = rappor.Encoder(params2, cohort, client_str, irr_rand)
+
+      # Real users should call e.encode().  For testing purposes, we also want
+      # the PRR.
+      irr1 = string_encoder.encode(v1)
+
+      # TODO: Convert to bool and encode with basic RAPPOR
+      v2_int = int(v2)
+      #print v2_int
+      irr2 = bool_encoder.encode_bits(v2_int)
+
+      irr1_str = rappor.bit_string(irr1, params1.num_bloombits)
+      irr2_str = rappor.bit_string(irr2, params2.num_bloombits)
+
+      csv_out.writerow((client_str, cohort, irr1_str, irr2_str))
+
+      report_index += 1
+
+
+def RapporClientSim(params, irr_rand, csv_in, csv_out):
+  """Read true values from csv_in and output encoded values on csv_out."""
   header = ('client', 'cohort', 'bloom', 'prr', 'irr')
   csv_out.writerow(header)
 
@@ -154,6 +173,64 @@ def main(argv):
 
     out_row = (client_str, cohort_str, bloom_str, prr_str, irr_str)
     csv_out.writerow(out_row)
+
+
+def main(argv):
+  (opts, argv) = CreateOptionsParser().parse_args(argv)
+
+  # Copy flags into params
+  params = rappor.Params()
+  params.num_bloombits = opts.num_bits
+  params.num_hashes = opts.num_hashes
+  params.num_cohorts = opts.num_cohorts
+  params.prob_p = opts.prob_p
+  params.prob_q = opts.prob_q
+  params.prob_f = opts.prob_f
+
+  if opts.random_mode == 'simple':
+    irr_rand = rappor.SimpleIrrRand(params)
+  elif opts.random_mode == 'fast':
+    if fastrand:
+      log('Using fastrand extension')
+      # NOTE: This doesn't take 'rand'.  It's seeded in C with srand().
+      irr_rand = fastrand.FastIrrRand(params)
+    else:
+      log('Warning: fastrand module not importable; see README for build '
+          'instructions.  Falling back to simple randomness.')
+      irr_rand = rappor.SimpleIrrRand(params)
+  else:
+    raise AssertionError
+  # Other possible implementations:
+  # - random.SystemRandom (probably uses /dev/urandom on Linux)
+  # - HMAC-SHA256 with another secret?  This could match C++ byte for byte.
+  #   - or srand(0) might do it.
+
+  csv_in = csv.reader(sys.stdin)
+  csv_out = csv.writer(sys.stdout)
+
+  if opts.assoc_testdata:
+    # Copy flags into params
+    params1 = rappor.Params()
+    params1.num_bloombits = opts.num_bits
+    params1.num_hashes = opts.num_hashes
+    params1.num_cohorts = opts.num_cohorts
+    params1.prob_p = opts.prob_p
+    params1.prob_q = opts.prob_q
+    params1.prob_f = opts.prob_f
+
+    # Second one is boolean
+    params2 = rappor.Params()
+    params2.num_bloombits = 1  # 1 bit for boolean
+    params2.num_hashes = opts.num_hashes
+    params2.num_cohorts = opts.num_cohorts
+    params2.prob_p = opts.prob_p
+    params2.prob_q = opts.prob_q
+    params2.prob_f = opts.prob_f
+
+    GenAssocTestdata(
+        params1, params2, irr_rand, opts.assoc_testdata, csv_in, csv_out)
+  else:
+    RapporClientSim(params, irr_rand, csv_in, csv_out)
 
 
 if __name__ == "__main__":
