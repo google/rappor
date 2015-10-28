@@ -190,7 +190,7 @@ class ColumnSubgraph {
 
     adj_list_[part][e.left].push_back(e.right);
   }
-  const void GetColumn(int part, vector<Edge>* out) const {
+  void GetColumn(int part, vector<Edge>* out) const {
     const Adjacency& a = adj_list_[part];
     for (auto& kv : a) {
       for (auto& right : kv.second) {
