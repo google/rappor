@@ -17,6 +17,8 @@
 #     in RAPPOR. This contains the functions relevant to estimating joint
 #     distributions.
 
+library(parallel)  # mclapply
+
 # Wrapper function to print strings only if verbose flag is passed in
 PrintIfVerbose <- function(string, flag = FALSE) {
   if(flag == TRUE) {
@@ -89,15 +91,14 @@ GetOtherProbs <- function(counts, map, marginal, params) {
   as.list(as.data.frame(props_other))
 }
 
-GetCondProb <- function(report, candidate_strings, params, map,
-                        prob_other = NULL) {
+GetCondProb <- function(report, pstar, qstar, bit_indices, prob_other = NULL) {
   # Given the observed bit array, estimate P(report | true value).
   # Probabilities are estimated for all truth values.
   #
   # Args:
   #   report: a single observed RAPPOR report (binary vector of length k)
-  #   candidate_strings: vector of strings in the dictionary (i.e. not the
-  #       "other" category)
+  #   bit_indices: list of integer vectors of length h, specifying which bits
+  #   are set
   #   params: System parameters
   #   map: list of matrices encoding locations of hashes for each string
   #   prob_other: vector of length k, indicating how often each bit in the
@@ -107,22 +108,13 @@ GetCondProb <- function(report, candidate_strings, params, map,
   #   Conditional probability of report given each of the strings in
   #       candidate_strings
 
-  p <- params$p
-  q <- params$q
-  f <- params$f
   ones <- sum(report)
   zeros <- length(report) - ones
 
-  qstar <- (1 - f / 2) * q + (f / 2) * p
-  pstar <- (1 - f / 2) * p + (f / 2) * q
   probs <- ifelse(report == 1, pstar, 1 - pstar)
 
-  # Find the bits set by the candidate strings
-  inds <- lapply(candidate_strings, function(x)
-                 which(map[, x]))
-
   # Find the likelihood of report given each candidate string
-  prob_obs_vals <- sapply(inds, function(x) {
+  prob_obs_vals <- sapply(bit_indices, function(x) {
     prod(c(probs[-x], ifelse(report[x] == 1, qstar, 1 - qstar)))
   })
 
@@ -161,6 +153,7 @@ UpdatePij <- function(pij, cond_prob) {
   # Returns:
   #   Updated pijs from em algorithm (maximization)
 
+  # TODO: use mclapply, since it goes over all reports
   wcp <- lapply(cond_prob, function(x) {
     z <- x * pij
     z <- z / sum(z)
@@ -227,6 +220,9 @@ EM <- function(cond_prob, starting_pij = NULL, estimate_var = FALSE,
   if (nrow(pij[[1]]) > 0) {
     # Run EM
     for (i in 1:max_iter) {
+      if(i %% 100 == 0) {
+        cat(sprintf("EM iteration %d\n", i))
+      }
       if (i == 1) {
         ptm_iter <- proc.time()
       }
@@ -374,16 +370,37 @@ ComputeDistributionEM <- function(reports, report_cohorts,
       found_strings[[j]] <- c(found_strings[[j]], "Other")
     }
 
+    p <- params[[j]]$p
+    q <- params[[j]]$q
+    f <- params[[j]]$f
+
+    pstar <- (1 - f/2) * p + (f / 2) * q
+    qstar <- (1 - f/2) * q + (f / 2) * p
+    candidate_strings <- rownames(marginal)
+
+    bit_indices_by_cohort <- lapply(1:params[[j]]$m, function(cohort) {
+        map_for_cohort <- map$map[[cohort]]
+        # Find the bits set by the candidate strings
+        bit_indices <- lapply(candidate_strings, function(x) {
+          which(map_for_cohort[, x])})
+        bit_indices
+      })
+
+    num_cores <- 10
+
+    cat("Computing conditional probabilities\n")
     # Get the joint conditional distribution
-    cond_report_dist <- lapply(seq(length(variable_report)), function(i) {
+    cond_report_dist <- mclapply(seq(length(variable_report)), function(i) {
+      if (i %% 100000 == 0) {
+        cat(sprintf("Processed %d reports ...\n", i))
+      }
       idx <- variable_cohort[i]
+      bit_indices <- bit_indices_by_cohort[[idx]]
       rep <- GetCondProb(variable_report[[i]],
-                         candidate_strings = rownames(marginal),
-                         params = params[[j]],
-                         map$map[[idx]],
+                         pstar, qstar, bit_indices,
                          prob_other[[idx]])
       rep
-    })
+    }, mc.cores = num_cores)
 
     # Update the joint conditional distribution of all variables
     joint_conditional <- UpdateJointConditional(cond_report_dist,

@@ -58,12 +58,15 @@ source("analysis/R/association.R")
 EMAlgBasic <- function(inp) {
   ptm <- proc.time()
   params <- ReadParameterFile(inp$params)
+  cat("Finished loading parameters.\n")
   # Ensure sufficient maps as required by number of vars
   stopifnot(inp$numvars == length(inp$maps))
   # Correct map from ReadMapFile() for assoc analysis
   map <- lapply(inp$maps, function(o)
     CorrectMapForAssoc(LoadMapFile(o, params = params),
                        params = params))
+
+  cat("Finished parsing map(s).\n")
   
   # For Basic rappor, we need to setup a map file manually for var 2
   # The map file has 2 components: 
@@ -118,6 +121,8 @@ EMAlgBasic <- function(inp) {
       rev(as.integer(strsplit(x, split = "")[[1]]))
     })
   })
+
+  cat("Finished parsing reports.\n")
   
   # ignore_other = FALSE because in doing association with Basic RAPPOR, we're
   # going to use the Other category to estimate no. of reports where the bit

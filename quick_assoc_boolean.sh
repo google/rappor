@@ -3,7 +3,7 @@
 # Quick script to wrap assoc.R for boolean.
 #
 # Usage:
-#   ./quick_assoc_boolean.sh <dir name>
+#   ./quick_assoc_boolean.sh <dir name> [<reports file name>]
 #
 # For directory name $dir, quick_assoc_boolean.sh expects the following files:
 #   $dir/map.csv -- map file
@@ -47,10 +47,11 @@ _run-input() {
     \"time\":           false,
     \"maps\":           [\"$1/${MAP_SUFFIX}.csv\",\
                        \"$1/${MAP_SUFFIX}.csv\"],\
-    \"reports\":        \"$1/reports.csv\",\
+    \"reports\":        \"$1/$2\",\
     \"params\":         \"$1/params.csv\",\
     \"numvars\":        2,\
     \"verbose\":        \"false\",
+    \"results\":        \"${2}.results.txt\",
     \"algo\":           \"EM\"}"  # Replace "EM" with "2Way" for new alg
   # Uncomment when kinks in 2way algorithm are ironed out
   #    \"counts\":         [\"$1/${COUNT_SUFFIX}_2way.csv\",\
@@ -70,7 +71,8 @@ main() {
 reports, and params file (parameters for both vars resp.)."
   else
     dir=$1
-    _run-input $dir
+    reports_file_name=${2:-"reports.csv"}
+    _run-input $dir $reports_file_name
   fi
 }
 
