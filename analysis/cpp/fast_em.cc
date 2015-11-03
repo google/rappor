@@ -80,7 +80,7 @@ static bool ReadListOfMatrices(
   }
 
   // Now read dynamic data
-  uint32_t vec_length = num_entries * entry_size;
+  size_t vec_length = num_entries * entry_size;
 
   vector<double>& v = *v_out;
   v.resize(vec_length);

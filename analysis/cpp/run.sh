@@ -8,15 +8,7 @@ set -o pipefail
 set -o errexit
 
 # Call gcc with the flags we like.
-
-# -O3: Optimize yet more. -O3 turns on all optimizations specified by -O2 and
-# also turns on the -finline-functions, -funswitch-loops,
-# -fpredictive-commoning, -fgcse-after-reload, -ftree-loop-vectorize,
-# -ftree-loop-distribute-patterns, -ftree-slp-vectorize, -fvect-cost-model,
-# -ftree-partial-pre and -fipa-cp-clone options.
-#
-# NOTE: This matters a lot for fast_em!  (More than 5x speedup over
-# unoptimized)
+# NOTE: -O3 does a lot for fast_em.  (More than 5x speedup over unoptimized)
 
 cpp-compiler() {
   g++ -Wall -Wextra -O3 "$@"

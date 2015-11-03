@@ -61,16 +61,18 @@
 }
 
 ConstructFastEM <- function(em_executable, tmp_dir) {
-  # TODO:
-  # - check that number of dimensions is 2
-  # - Serialize joint_conditional.  This is the outer product thingy.
-  #   - Or maybe you can do an array of cond_report_dist, and then do outer
-  #   product in C++
 
   return(function(joint_conditional, max_em_iters = 1000,
                   epsilon = 10 ^ -6, verbose = FALSE,
                   estimate_var = FALSE) {
-    entry_size <- prod(dim(joint_conditional[[1]]))
+    matrix_dims <- dim(joint_conditional[[1]])
+    # Check that number of dimensions is 2.
+    if (length(matrix_dims) != 2) {
+      Log('FATAL: Expected 2 dimensions, got %d', length(matrix_dims))
+      stop()
+    }
+
+    entry_size <- prod(matrix_dims)
     Log('entry size: %d', entry_size)
 
     .SanityChecks(joint_conditional)
@@ -93,7 +95,7 @@ ConstructFastEM <- function(em_executable, tmp_dir) {
     pij <- readBin(con = output_path, what = "double", n = entry_size)
 
     # Adjust dimensions
-    dim(pij) <- dim(joint_conditional[[1]])
+    dim(pij) <- matrix_dims
 
     Log("PIJ read from C++:")
     print(pij)

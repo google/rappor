@@ -109,12 +109,13 @@ GetCondProb <- function(report, pstar, qstar, bit_indices, prob_other = NULL) {
   # Probabilities are estimated for all truth values.
   #
   # Args:
-  #   report: a single observed RAPPOR report (binary vector of length k)
-  #   params: System parameters
-  #   bit_indices: list of integer vectors of length h, specifying which bits
-  #   are set
+  #   report: A single observed RAPPOR report (binary vector of length k).
+  #   params: RAPPOR parameters.
+  #   bit_indices: list with one entry for each candidate.  Each entry is an
+  #     integer vector of length h, specifying which bits are set for the
+  #     candidate in the report's cohort.
   #   prob_other: vector of length k, indicating how often each bit in the
-  #       Bloom filter was set by a string in the "other" category
+  #     Bloom filter was set by a string in the "other" category.
   #
   # Returns:
   #   Conditional probability of report given each of the strings in
@@ -320,9 +321,9 @@ ComputeDistributionEM <- function(reports, report_cohorts, maps,
   #   ignore_other: A boolean describing whether to compute the "other" category
   #   params: RAPPOR encoding parameters.  If set, all variables are assumed to
   #       be encoded with these parameters.
-  #   params_list: A list of RAPPOR encoding parameters (each of which are
-  #       lists).  If set, it must be the same length as 'reports' (one entry
-  #       per dimension)
+  #   params_list: A list of num_variables elements, each of which is the
+  #       RAPPOR encoding parameters for a variable (a list itself).  If set,
+  #       it must be the same length as 'reports'.
   #   marginals: List of estimated marginals for each variable
   #   estimate_var: A flag telling whether to estimate the variance.
   #   em_iter_func: Function that implements the iterative EM algorithm.
@@ -330,9 +331,6 @@ ComputeDistributionEM <- function(reports, report_cohorts, maps,
   # Handle the case that the client wants to find the joint distribution of too
   # many variables.
   num_variables <- length(reports)
-  if (num_variables > 4) {
-    stop("Not comparing more than 4 variables")
-  }
 
   if (is.null(params) && is.null(params_list)) {
     stop("Either params or params_list must be passed")
