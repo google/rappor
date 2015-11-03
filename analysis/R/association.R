@@ -27,7 +27,8 @@ source.rappor("analysis/R/decode.R")  # for ComputeCounts
 #     in RAPPOR. This contains the functions relevant to estimating joint
 #     distributions.
 
-GetOtherProbs <- function(counts, map_by_cohort, marginal, params) {
+GetOtherProbs <- function(counts, map_by_cohort, marginal, params, pstar,
+                          qstar) {
   # Computes the marginal for the "other" category.
   #
   # Args:
@@ -45,9 +46,6 @@ GetOtherProbs <- function(counts, map_by_cohort, marginal, params) {
   #   category.  The list is indexed by cohort.
 
   N <- sum(counts[, 1])
-  f <- params$f
-  q <- params$q
-  p <- params$p
 
   # Counts of known strings to remove from each cohort.
   known_counts <- ceiling(marginal$proportion * N / params$m)
@@ -78,8 +76,6 @@ GetOtherProbs <- function(counts, map_by_cohort, marginal, params) {
 
   # Counts set by known vals zero bits adjusting by p plus true bits
   # adjusting by q.
-  qstar <- (1 - f / 2) * q + (f / 2) * p
-  pstar <- (1 - f / 2) * p + (f / 2) * q
   known_counts_by_cohort <- (sum_known - known_counts_by_cohort) * pstar +
                             known_counts_by_cohort * qstar
 
@@ -380,21 +376,22 @@ ComputeDistributionEM <- function(reports, report_cohorts, maps,
     }
     found_strings[[j]] <- marginal$string
 
+    p <- var_params$p
+    q <- var_params$q
+    f <- var_params$f
+    pstar <- (1 - f / 2) * p + (f / 2) * q
+    qstar <- (1 - f / 2) * q + (f / 2) * p
+
     if (ignore_other) {
       prob_other <- vector(mode = "list", length = var_params$m)
     } else {
       if (is.null(var_counts)) {
         var_counts <- ComputeCounts(var_report, var_cohort, var_params)
       }
-      prob_other <- GetOtherProbs(var_counts, var_map$map_by_cohort, marginal, var_params)
+      prob_other <- GetOtherProbs(var_counts, var_map$map_by_cohort, marginal,
+                                  var_params, pstar, qstar)
       found_strings[[j]] <- c(found_strings[[j]], "Other")
     }
-
-    p <- var_params$p
-    q <- var_params$q
-    f <- var_params$f
-    pstar <- (1 - f / 2) * p + (f / 2) * q
-    qstar <- (1 - f / 2) * q + (f / 2) * p
 
     bit_indices_by_cohort <- lapply(1:var_params$m, function(cohort) {
       map_for_cohort <- var_map$map_by_cohort[[cohort]]
