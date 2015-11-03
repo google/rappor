@@ -27,15 +27,15 @@ source.rappor("analysis/R/decode.R")  # for ComputeCounts
 #     in RAPPOR. This contains the functions relevant to estimating joint
 #     distributions.
 
-GetOtherProbs <- function(counts, map, marginal, params) {
+GetOtherProbs <- function(counts, map_by_cohort, marginal, params) {
   # Computes the marginal for the "other" category.
   #
   # Args:
   #   counts: m x (k+1) matrix with counts of each bit for each
   #       cohort (m=#cohorts total, k=# bits in bloom filter), first column
   #       stores the total counts
-  #   map: list of matrices encoding locations of hashes for each string
-  #       "other" category)
+  #   map_by_cohort: list of matrices encoding locations of hashes for each
+  #       string "other" category)
   #   marginal: object containing the estimated frequencies of known strings
   #       as well as the strings themselves, variance, etc.
   #   params: RAPPOR encoding parameters
@@ -52,8 +52,12 @@ GetOtherProbs <- function(counts, map, marginal, params) {
   # Counts of known strings (i.e. "top" strings) to remove from each cohort.
   top_counts <- ceiling(marginal$proportion * N / params$m)
   sum_top <- sum(top_counts)
+
+  # Select only the strings we care about from each cohort.
   # NOTE: drop = FALSE necessary if there is one candidate
-  candidate_map <- lapply(map, function(x) x[, marginal$string, drop = FALSE])
+  candidate_map <- lapply(map_by_cohort, function(map_for_cohort) {
+    map_for_cohort[, marginal$string, drop = FALSE]
+  })
 
   # If no strings were found, all nonzero counts were set by "other"
   if (length(marginal) == 0) {
@@ -64,8 +68,8 @@ GetOtherProbs <- function(counts, map, marginal, params) {
   }
 
   # Counts set by known strings without noise considerations.
-  top_counts_cohort <- sapply(candidate_map, function(x) {
-    as.vector(as.matrix(x) %*% top_counts)
+  top_counts_cohort <- sapply(candidate_map, function(map_for_cohort) {
+    as.vector(as.matrix(map_for_cohort) %*% top_counts)
   })
 
   # Protect against R's matrix/vector confusion.  This ensures
@@ -361,7 +365,7 @@ ComputeDistributionEM <- function(reports, report_cohorts, maps,
       var_counts <- ComputeCounts(var_report, var_cohort, var_params)
 
       Log('\tDecoding marginal')
-      marginal <- Decode(var_counts, var_map$rmap, var_params,
+      marginal <- Decode(var_counts, var_map$all_cohorts_map, var_params,
                          quiet = TRUE)$fit
       Log('\tMarginal for var %d has %d values:', j, nrow(marginal))
       print(marginal[, c('estimate', 'proportion')])  # rownames are the string
@@ -382,7 +386,7 @@ ComputeDistributionEM <- function(reports, report_cohorts, maps,
       if (is.null(var_counts)) {
         var_counts <- ComputeCounts(var_report, var_cohort, var_params)
       }
-      prob_other <- GetOtherProbs(var_counts, var_map$map, marginal, var_params)
+      prob_other <- GetOtherProbs(var_counts, var_map$map_by_cohort, marginal, var_params)
       found_strings[[j]] <- c(found_strings[[j]], "Other")
     }
 
@@ -393,7 +397,7 @@ ComputeDistributionEM <- function(reports, report_cohorts, maps,
     qstar <- (1 - f / 2) * q + (f / 2) * p
 
     bit_indices_by_cohort <- lapply(1:var_params$m, function(cohort) {
-      map_for_cohort <- var_map$map[[cohort]]
+      map_for_cohort <- var_map$map_by_cohort[[cohort]]
       # Find the bits set by the candidate strings
       bit_indices <- lapply(marginal$string, function(x) {
         which(map_for_cohort[, x])

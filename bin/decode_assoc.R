@@ -133,53 +133,38 @@ source.rappor("analysis/R/util.R")
 options(stringsAsFactors = FALSE)
 options(max.print = 100)  # So our structure() debug calls look better
 
-#
-# Copied from Ananth's change.
-#
-# TODO: call it assoc_map everywhere, rename $rmap and $map fields!
-# 
-# - assoc_map$all_cohorts
-# - assoc_map$by_cohort
-#
-# Then the vector can be assoc_map_list
-
-# This function processes the maps loaded using ReadMapFile Association
-# analysis requires a map object with a map field that has the map split into
-# cohorts and an rmap field that has all the cohorts combined
+# Processes the maps loaded using ReadMapFile and turns it into something that
+# association.R can use.  Namely, we want a map per cohort.
 #
 # Arguments:
-#       map = map object with cohorts as sparse matrix in
-#             object map$map
-#             This is the expected object from ReadMapFile
-#       params = data field with parameters
-CorrectMapForAssoc <- function(map, params, num_cores) {
-  # should be map_all or something
-  map$rmap <- map$map
+#   map: map object as parsed by ReadMapFile (i.e. has map$map member)
+#   k: report width in bits
+CreateAssocStringMap <- function(map, params) {
+  all_cohorts_map <- map$map
 
-  # should be $map_by_cohort
-  map$map <- mclapply(1:params$m, function(i) {
-    map$rmap[seq(from = ((i - 1) * params$k + 1),
-                 length.out = params$k),]
-  }, mc.cores = num_cores)  # TODO: use opts$num_cores
-  map
+  k <- params$k
+  map_by_cohort <- lapply(1:params$m, function(cohort) {
+    row_indices <- seq(from = ((cohort - 1) * k + 1), length.out = k)
+    all_cohorts_map[row_indices, ]
+  })
+
+  list(all_cohorts_map = all_cohorts_map, map_by_cohort = map_by_cohort)
 }
 
 # Hack to create a map for booleans.  We should use basic RAPPOR instead.
 CreateBoolMap <- function(params) {
   names <- c("FALSE", "TRUE")
-  by_cohort <- lapply(1:params$m, function(z) {
+  map_by_cohort <- lapply(1:params$m, function(unused_cohort) {
     # The (1,1) cell is false and the (1,2) cell is true.
     m <- sparseMatrix(c(1), c(2), dims = c(1, 2))
     colnames(m) <- names
     m
   })
 
-  all_cohorts <- sparseMatrix(1:params$m, rep(2, params$m))
-  colnames(all_cohorts) <- names
+  all_cohorts_map <- sparseMatrix(1:params$m, rep(2, params$m))
+  colnames(all_cohorts_map) <- names
 
-  # Make the strs stand out?
-  #list(map = by_cohort, rmap = all_cohorts, strs = c("fa", "tr"))
-  list(map = by_cohort, rmap = all_cohorts)
+  list(map_by_cohort = map_by_cohort, all_cohorts_map = all_cohorts_map)
 }
 
 # Run a test of the EM executable
@@ -234,6 +219,7 @@ main <- function(opts) {
   var1_type <- schema1$var_type
   var2_type <- schema2$var_type
 
+  # Right now we're assuming that --var1 is a string and --var2 is a boolean.
   # TODO: Remove these limitations.
   if (var1_type != "string") {
     UsageError("Variable 1 should be a string (%s is of type %s)", opts$var1,
@@ -303,15 +289,13 @@ main <- function(opts) {
 
   params_list <- list(bool_params, string_params)
 
-  Log('CorrectMapForAssoc (%d cores)', opts$num_cores)
-  # give it $rmap, etc.
-  string_map <- CorrectMapForAssoc(map, params, opts$num_cores)
+  Log('CreateAssocStringMap')
+  string_map <- CreateAssocStringMap(map, params)
 
   Log('CreateBoolMap')
   bool_map <- CreateBoolMap(params)
 
   map_list <- list(bool_map, string_map)
-  #print(structure(map_list))
 
   string_var <- reports[[opts$var1]]
   bool_var <- reports[[opts$var2]]
