@@ -143,9 +143,10 @@ CreateAssocStringMap <- function(map, params) {
   all_cohorts_map <- map$map
 
   k <- params$k
-  map_by_cohort <- lapply(1:params$m, function(cohort) {
-    row_indices <- seq(from = ((cohort - 1) * k + 1), length.out = k)
-    all_cohorts_map[row_indices, ]
+  map_by_cohort <- lapply(0 : (params$m-1), function(cohort) {
+    begin <- cohort * k
+    end <- (cohort + 1) * k
+    all_cohorts_map[(begin+1) : end, ]
   })
 
   list(all_cohorts_map = all_cohorts_map, map_by_cohort = map_by_cohort)
