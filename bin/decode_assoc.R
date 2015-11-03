@@ -263,8 +263,9 @@ main <- function(opts) {
   reports <- read.csv(opts$reports, colClasses=c("character"), as.is = TRUE)
 
   N <- nrow(reports)
-  Log("Read %d reports", N)
+  Log("Read %d reports.  Preview:", N)
   print(head(reports))
+  cat('\n')
 
   # Sample reports if specified.
   if (opts$reports_sample_size != -1) {
@@ -277,7 +278,7 @@ main <- function(opts) {
     }
   }
 
-  num_vars <- 2  # hard-coded for now
+  num_vars <- 2  # hard-coded for now, since there is --var1 and --var2.
 
   # Convert strings to integers
   cohorts <- as.integer(reports$cohort)
@@ -292,10 +293,6 @@ main <- function(opts) {
   # NOTE: Basic RAPPOR doesn't need cohorts.
   cohorts_list <- rep(list(cohorts), num_vars)
 
-  #print('COHORTS')
-  #print(structure(cohorts_list))
-  #print(length(cohorts_list))
-
   # i.e. create a list of length 2, with identical cohorts.
   string_params <- params
 
@@ -306,15 +303,9 @@ main <- function(opts) {
 
   params_list <- list(bool_params, string_params)
 
-  #print(structure(params_list))
-  #print(length(cohorts_list))
-
   Log('CorrectMapForAssoc (%d cores)', opts$num_cores)
   # give it $rmap, etc.
   string_map <- CorrectMapForAssoc(map, params, opts$num_cores)
-
-  #Log('String map:')
-  #print(structure(string_map))
 
   Log('CreateBoolMap')
   bool_map <- CreateBoolMap(params)
@@ -325,15 +316,15 @@ main <- function(opts) {
   string_var <- reports[[opts$var1]]
   bool_var <- reports[[opts$var2]]
 
-  Log('String Var')
+  Log('Preview of string var:')
   print(head(table(string_var)))
   cat('\n')
 
-  Log('Bool Var')
+  Log('Preview of bool var:')
   print(head(table(bool_var)))
   cat('\n')
 
-  # Split ASCII strings into array of numerics (as required by assoc analysis)
+  # Split ASCII strings into array of numerics (as required by association.R)
 
   Log('Splitting string reports (%d cores)', opts$num_cores)
   string_reports <- mclapply(string_var, function(x) {
@@ -349,7 +340,6 @@ main <- function(opts) {
   }, mc.cores = opts$num_cores)
 
   reports_list <- list(bool_reports, string_reports)
-  #print(structure(reports_list))
 
   Log('Association for %d vars', length(reports_list))
 
@@ -402,18 +392,6 @@ main <- function(opts) {
    
   Log('DONE decode-assoc')
 }
-
-# reports: Simulate()   EncodeAll()         sim$reports 
-#  uses mclapply() and adds noise
-#
-# cohorts: Simulate()   SamplePopulations() truth$cohorts 
-#  lapply()
-#
-# maps: CreateMap() in simulation.R
-#   list(map, rmap, map_pos)
-# params: Is this a list or not?  Uses vector-filling I guess.
-
-# See TestComputeDistributionEM in association_test.R
 
 if (!interactive()) {
   main(opts)
