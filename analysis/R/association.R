@@ -49,9 +49,9 @@ GetOtherProbs <- function(counts, map_by_cohort, marginal, params) {
   q <- params$q
   p <- params$p
 
-  # Counts of known strings (i.e. "top" strings) to remove from each cohort.
-  top_counts <- ceiling(marginal$proportion * N / params$m)
-  sum_top <- sum(top_counts)
+  # Counts of known strings to remove from each cohort.
+  known_counts <- ceiling(marginal$proportion * N / params$m)
+  sum_known <- sum(known_counts)
 
   # Select only the strings we care about from each cohort.
   # NOTE: drop = FALSE necessary if there is one candidate
@@ -68,26 +68,26 @@ GetOtherProbs <- function(counts, map_by_cohort, marginal, params) {
   }
 
   # Counts set by known strings without noise considerations.
-  top_counts_cohort <- sapply(candidate_map, function(map_for_cohort) {
-    as.vector(as.matrix(map_for_cohort) %*% top_counts)
+  known_counts_by_cohort <- sapply(candidate_map, function(map_for_cohort) {
+    as.vector(as.matrix(map_for_cohort) %*% known_counts)
   })
 
   # Protect against R's matrix/vector confusion.  This ensures
-  # top_counts_cohort is a matrix in the k=1 case.
-  dim(top_counts_cohort) <- c(params$m, params$k)
+  # known_counts_by_cohort is a matrix in the k=1 case.
+  dim(known_counts_by_cohort) <- c(params$m, params$k)
 
-  # Counts set by top vals zero bits adjusting by p plus true bits
+  # Counts set by known vals zero bits adjusting by p plus true bits
   # adjusting by q.
   qstar <- (1 - f / 2) * q + (f / 2) * p
   pstar <- (1 - f / 2) * p + (f / 2) * q
-  top_counts_cohort <- (sum_top - top_counts_cohort) * pstar +
-      top_counts_cohort * qstar
+  known_counts_by_cohort <- (sum_known - known_counts_by_cohort) * pstar +
+                            known_counts_by_cohort * qstar
 
   # Add the left hand sums to make it a m x (k+1) "counts" matrix
-  top_counts_cohort <- cbind(sum_top, top_counts_cohort)
+  known_counts_by_cohort <- cbind(sum_known, known_counts_by_cohort)
 
   # Counts set by the "other" category.
-  reduced_counts <- counts - top_counts_cohort
+  reduced_counts <- counts - known_counts_by_cohort
   reduced_counts[reduced_counts < 0] <- 0
   probs_other <- apply(reduced_counts, 1, function(cohort_row) {
     cohort_row[-1] / cohort_row[1]
