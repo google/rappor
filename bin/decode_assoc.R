@@ -68,13 +68,7 @@ option_list <- list(
              of EM."),
     make_option(
         "--tmp-dir", dest="tmp_dir", default="/tmp",
-        help="Use this tmp dir to communicate with the EM executable"),
-
-    make_option(
-        "--test-em-executable", dest="test_em_executable", default=FALSE,
-        action="store_true",
-        help="Just run a test of the EM executable (i.e. to make sure it
-              exists, etc.)")
+        help="Use this tmp dir to communicate with the EM executable")
 )
 
 ParseOptions <- function() {
@@ -82,10 +76,6 @@ ParseOptions <- function() {
   # changes!
   parser <- OptionParser(option_list = option_list)
   opts <- parse_args(parser)
-
-  if (opts$test_em_executable) {  # only test validity in non-test mode
-    return(opts)
-  }
 
   if (opts$metric_name == "") {
     UsageError("--metric-name is required.")
@@ -152,9 +142,10 @@ CreateAssocStringMap <- function(map, params) {
   list(all_cohorts_map = all_cohorts_map, map_by_cohort = map_by_cohort)
 }
 
-# Hack to create a map for booleans.  We should use basic RAPPOR instead.
-CreateBoolMap <- function(params) {
+# Hack to create a map for booleans.  We should use closed-form formulas instead.
+CreateAssocBoolMap <- function(params) {
   names <- c("FALSE", "TRUE")
+
   map_by_cohort <- lapply(1:params$m, function(unused_cohort) {
     # The (1,1) cell is false and the (1,2) cell is true.
     m <- sparseMatrix(c(1), c(2), dims = c(1, 2))
@@ -168,29 +159,7 @@ CreateBoolMap <- function(params) {
   list(map_by_cohort = map_by_cohort, all_cohorts_map = all_cohorts_map)
 }
 
-# Run a test of the EM executable
-TestEmExecutable <- function(opts) {
-  d = matrix(c(1,1,2,2,3,3), nrow=3, ncol=2)
-  d = d / sum(d)
-
-  e = matrix(c(3,3,2,2,1,1), nrow=3, ncol=2)
-  e = e / sum(e)
-
-  cond_prob = list(d, e, d)  # 3 reports
-  print(cond_prob)
-
-  em_iter_func = ConstructFastEM(opts$em_executable, opts$tmp_dir)
-
-  em_iter_func(cond_prob, max_em_iters=4)
-}
-
 main <- function(opts) {
-  if (opts$test_em_executable) {
-    TestEmExecutable(opts)
-    Log('Done testing EM executable')
-    return()
-  }
-
   Log("decode-assoc")
 
   schema <- read.csv(opts$schema)
@@ -231,19 +200,17 @@ main <- function(opts) {
                var2_type)
   }
 
-  if (var1_type == "string") {
-    if (opts$map1 == "") {
-      UsageError("--map1 must be provided when --var1 is a string (var = %s)",
-                 opts$var1)
-    }
-    # NOTE: We restore the default quote, which for some reason LoadMapFile
-    # overrides.
-    t <- system.time( LoadMapFile(opts$map1, quote = "\"'") )
-    Log("Loading map file took %.1f seconds", t[['elapsed']])
-    # for 100k map file: 31 seconds to load map and write cache; 2.2 seconds to
-    # read cache
-    # LoadMapFile has the side effect of putting 'map' in the global enviroment.
+  if (opts$map1 == "") {
+    UsageError("--map1 must be provided when --var1 is a string (var = %s)",
+               opts$var1)
   }
+  # NOTE: We restore the default quote, which for some reason LoadMapFile
+  # overrides.
+  t <- system.time( LoadMapFile(opts$map1, quote = "\"'") )
+  Log("Loading map file took %.1f seconds", t[['elapsed']])
+  # for 100k map file: 31 seconds to load map and write cache; 2.2 seconds to
+  # read cache
+  # LoadMapFile has the side effect of putting 'map' in the global enviroment.
 
   # Important: first column is cohort (integer); the rest are variables, which
   # are ASCII bit strings.
@@ -293,8 +260,8 @@ main <- function(opts) {
   Log('CreateAssocStringMap')
   string_map <- CreateAssocStringMap(map, params)
 
-  Log('CreateBoolMap')
-  bool_map <- CreateBoolMap(params)
+  Log('CreateAssocBoolMap')
+  bool_map <- CreateAssocBoolMap(params)
 
   map_list <- list(bool_map, string_map)
 
@@ -330,7 +297,7 @@ main <- function(opts) {
 
   if (opts$em_executable != "") {
     Log('Will shell out to %s for native EM implementation', opts$em_executable)
-    em_iter_func = ConstructFastEM(opts$em_executable, opts$tmp_dir)
+    em_iter_func <- ConstructFastEM(opts$em_executable, opts$tmp_dir)
   } else {
     Log('Will use R implementation of EM (slow)')
     em_iter_func <- EM
@@ -340,10 +307,10 @@ main <- function(opts) {
                                      ignore_other = FALSE,
                                      params_list = params_list,
                                      marginals = NULL,
-                                    estimate_var = FALSE,
-                                    num_cores = opts$num_cores,
-                                    em_iter_func = em_iter_func,
-                                    max_em_iters = opts$max_em_iters)
+                                     estimate_var = FALSE,
+                                     num_cores = opts$num_cores,
+                                     em_iter_func = em_iter_func,
+                                     max_em_iters = opts$max_em_iters)
   Log("Association results:")
   fit <- em_result$fit
   print(fit)

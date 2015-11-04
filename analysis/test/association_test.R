@@ -19,6 +19,8 @@ source("analysis/R/encode.R")
 source("analysis/R/decode.R")
 source("analysis/R/simulation.R")
 source("analysis/R/association.R")
+source("analysis/R/fast_em.R")
+source("analysis/R/util.R")
 
 SamplePopulations <- function(N, num_variables = 1, params,
                               variable_opts) {
@@ -242,25 +244,53 @@ TestComputeDistributionEM <- function() {
   checkTrue(dist$fit["3", "2"] < 0.02)
 }
 
-TestEM <- function() {
+MakeCondProb <- function() {
   d = matrix(c(1,1,2,2,3,3), nrow=3, ncol=2)
   d = d / sum(d)
 
   e = matrix(c(3,3,2,2,1,1), nrow=3, ncol=2)
   e = e / sum(e)
 
-  #f = matrix(c(0,2,2,2,2,2), nrow=3, ncol=2)
-  #f = f / sum(f)
-
-  cond_prob = list(d, e, d)  # 3 reports
-  print(cond_prob)
-
-  # Mechanical test of 4 iterations.  em$hist has 5 elements.
-  em <- EM(cond_prob, max_em_iters=4)
-  print(structure(em))
-
-  return(cond_prob)
+  list(d, e, d)  # 3 reports
 }
 
-#TestEM()
+# Test the slow version in R.
+RunEmFunction <- function(cond_prob, max_em_iters) {
+  cond_prob <- MakeCondProb()
+
+  # Mechanical test of 4 iterations.  em$hist has 5 elements.
+  result <- EM(cond_prob, max_em_iters=max_em_iters)
+  result$est
+}
+
+# Run a test of the EM executable
+RunEmExecutable <- function(cond_prob, max_em_iters) {
+  print(cond_prob)
+
+  # Assume we're relative
+  em_executable <- file.path(getwd(), "analysis/cpp/_tmp/fast_em")
+  if (!file.exists(em_executable)) {
+    stop(sprintf("EM executable %s doesn't exist (build it?)", em_executable))
+  }
+  em_iter_func <- ConstructFastEM(em_executable, "/tmp")
+
+  result <- em_iter_func(cond_prob, max_em_iters=max_em_iters)
+  result$est
+}
+
+TestTwoImplementations <- function() {
+  cond_prob <- MakeCondProb()
+  max_em_iters <- 10
+  fit1 <- RunEmFunction(cond_prob, max_em_iters)
+  fit2 <- RunEmExecutable(cond_prob, max_em_iters)
+
+  difference <- abs(fit1 - fit2)
+  print(difference)
+  Log("EM implementation difference after %d iterations: %e", max_em_iters, sum(difference))
+
+  # After 10 iterations they should be almost indistinguishable.
+  checkTrue(sum(difference) < 1e-10)
+}
+
+TestTwoImplementations()
 

@@ -152,13 +152,4 @@ decode-assoc-both() {
   banner "Wrote $log"
 }
 
-# Run decode-assoc in a mode that only tests the EM step (i.e. it doesn't run the
-# conditional step)
-em-executable() {
-  build-em-executable
-  time ./decode-assoc \
-    --test-em-executable \
-    --em-executable $EM_EXECUTABLE
-}
-
 "$@"
