@@ -79,7 +79,7 @@ EncodeAll <- function(x, cohorts, map, params, num_cores = 1) {
   candidates <- colnames(map[[1]])
   if (!all(x %in% candidates)) {
     stop("Some strings are not in the map. set(X) - set(candidates): ",
-         paste(setdiff(unique(x), candidates), collapse="_"),"\n")
+         paste(setdiff(unique(x), candidates), collapse=" "), "\n")
   }
   bfs <- mapply(function(x, y) y[, x], x, map[cohorts], SIMPLIFY = FALSE,
                 USE.NAMES = FALSE)
