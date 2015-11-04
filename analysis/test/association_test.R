@@ -95,7 +95,7 @@ Simulate <- function(N, num_variables, params, variable_opts = NULL,
     maps <- lapply(1:num_variables, function(x) map)
     # Build the reports
     report <- EncodeAll(truth$variables[[1]], truth$cohorts[[1]],
-                        map$map, params)
+                        map$map_by_cohort, params)
     reports <- lapply(1:num_variables, function(x) report)
   } else {
     # Build the maps
@@ -105,7 +105,7 @@ Simulate <- function(N, num_variables, params, variable_opts = NULL,
     # Build the reports
     reports <- lapply(1:num_variables, function(x)
                       EncodeAll(truth$variables[[x]], truth$cohorts[[x]],
-                                maps[[x]]$map, params))
+                                maps[[x]]$map_by_cohort, params))
   }
 
   list(reports = reports, cohorts = truth$cohorts,
@@ -163,13 +163,13 @@ TestComputeDistributionEM <- function() {
   small_map <- map
 
   for (i in 1:params$m) {
-    locs <- which(map$map[[i]][, 1])
-    small_map$map[[i]] <- sparseMatrix(locs, rep(1, length(locs)),
-                                       dims = c(params$k, 1))
-    locs <- which(map$rmap[, 1])
-    colnames(small_map$map[[i]]) <- sim$strs[1]
+    locs <- which(map$map_by_cohort[[i]][, 1])
+    small_map$map_by_cohort[[i]] <- sparseMatrix(locs, rep(1, length(locs)),
+                                                 dims = c(params$k, 1))
+    locs <- which(map$all_cohorts_map[, 1])
+    colnames(small_map$map_by_cohort[[i]]) <- sim$strs[1]
   }
-  small_map$rmap <- do.call("rBind", small_map$map)
+  small_map$all_cohorts_map <- do.call("rBind", small_map$map_by_cohort)
 
   dist <- ComputeDistributionEM(list(sim$reports[[1]]),
                                 list(sim$cohorts[[1]]),

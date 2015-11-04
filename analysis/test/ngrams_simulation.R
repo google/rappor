@@ -132,32 +132,33 @@ UpdateMapWithCandidates <- function(str_candidates, sim, params) {
   m <- params$m
 
   # First add the real candidates to the map
-  valid_cands <- intersect(str_candidates, colnames(sim$full_map$map[[1]]))
+  valid_cands <- intersect(str_candidates, colnames(sim$full_map$map_by_cohort[[1]]))
   updated_map <- sim$full_map
-  updated_map$map <- lapply(1:m, function(i)
-                            sim$full_map$map[[i]][, valid_cands])
+  updated_map$map_by_cohort <- lapply(1:m, function(i) {
+    sim$full_map$map_by_cohort[[i]][, valid_cands]
+  })
 
   # Now add the false positives (we can just draw random strings for
   #     these since they didn't appear in the original dataset anyway)
-  new_cands <- setdiff(str_candidates, colnames(sim$full_map$map[[1]]))
+  new_cands <- setdiff(str_candidates, colnames(sim$full_map$map_by_cohort[[1]]))
   M <- length(new_cands)
   if (M > 0) {
     for (i in 1:m) {
       ones <- sample(1:k, M * h, replace = TRUE)
       cols <- rep(1:M, each = h)
       strs <- c(sort(valid_cands), new_cands)
-      updated_map$map[[i]] <-
-          do.call(cBind, list(updated_map$map[[i]],
+      updated_map$map_by_cohort[[i]] <-
+          do.call(cBind, list(updated_map$map_by_cohort[[i]],
                               sparseMatrix(ones, cols, dims = c(k, M))))
-      colnames(updated_map$map[[i]]) <- strs
+      colnames(updated_map$map_by_cohort[[i]]) <- strs
     }
   }
-  if (class(updated_map$map[[1]]) == "logical") {
-    updated_map$rmap <- unlist(updated_map$map)
-    updated_map$rmap <- Matrix(updated_map$rmap, sparse = TRUE)
-    colnames(updated_map$rmap) <- c(valid_cands, new_cands)
+  if (class(updated_map$map_by_cohort[[1]]) == "logical") {
+    updated_map$all_cohorts_map <- unlist(updated_map$map_by_cohort)
+    updated_map$all_cohorts_map <- Matrix(updated_map$all_cohorts_map, sparse = TRUE)
+    colnames(updated_map$all_cohorts_map) <- c(valid_cands, new_cands)
   } else {
-    updated_map$rmap <- do.call("rBind", updated_map$map)
+    updated_map$all_cohorts_map <- do.call("rBind", updated_map$map_by_cohort)
   }
   updated_map
 }
@@ -206,12 +207,12 @@ SimulateNGrams <- function(N, ngram_params, str_len, num_strs = 10,
     # Generate the ngram reports
     lapply(1:ngram_params$num_ngrams_collected, function(x) {
       EncodeAll(sapply(inds[[k]], function(j) ngram[[j]]$ngrams[x]),
-                cohorts[inds[[k]]], map$map, params)})
+                cohorts[inds[[k]]], map$map_by_cohort, params)})
   })
   cat("Encoded the ngrams.\n")
   # Now generate the full string reports
   full_map <- CreateMap(sort(unique(strs)), params, FALSE)
-  full_reports <- EncodeAll(strs, cohorts, full_map$map, params)
+  full_reports <- EncodeAll(strs, cohorts, full_map$map_by_cohort, params)
 
   list(reports = reports, cohorts = cohorts, ngram = ngram, map = map,
        strs = strs, pairings = pairings, inds = inds, cands = cands,
@@ -259,9 +260,9 @@ EstimateDictionaryTrial <- function(N, str_len, num_strs,
   # Compute the marginal for this new set of strings
   variable_counts <- ComputeCounts(sim$full_reports, sim$cohorts, params)
   # Our dictionary estimate
-  marginal <- Decode(variable_counts, updated_map$rmap, params)$fit
+  marginal <- Decode(variable_counts, updated_map$all_cohorts_map, params)$fit
   # Estimate given full dictionary knowledge
-  marginal_full <- Decode(variable_counts, sim$full_map$rmap, params)$fit
+  marginal_full <- Decode(variable_counts, sim$full_map$all_cohorts_map, params)$fit
   # The true (sampled) data distribution
   truth <- sort(table(sim$strs)) / N
 

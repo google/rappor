@@ -85,7 +85,7 @@ TestEstimateDictionary <- function() {
   if (num_strs == 1) {
     checkTrue(res$found_candidates == sort(unique(sim$strs)))
   } else {
-    checkTrue (all.equal(res$found_candidates, sort(unique(sim$strs))))
+    checkTrue(all.equal(res$found_candidates, sort(unique(sim$strs))))
   }
 }
 

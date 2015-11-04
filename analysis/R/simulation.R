@@ -76,9 +76,10 @@ EncodeAll <- function(x, cohorts, map, params, num_cores = 1) {
   qstar <- (1 - f / 2) * q + (f / 2) * p
   pstar <- (1 - f / 2) * p + (f / 2) * q
 
-  if (!all(x %in% colnames(map[[1]]))) {
-    stop("Some strings are not in the map: ",
-         paste(setdiff(unique(x), colnames(map[[1]])), collapse="_"),"\n")
+  candidates <- colnames(map[[1]])
+  if (!all(x %in% candidates)) {
+    stop("Some strings are not in the map. set(X) - set(candidates): ",
+         paste(setdiff(unique(x), candidates), collapse="_"),"\n")
   }
   bfs <- mapply(function(x, y) y[, x], x, map[cohorts], SIMPLIFY = FALSE,
                 USE.NAMES = FALSE)
@@ -116,7 +117,7 @@ CreateMap <- function(strs, params, generate_pos = TRUE, basic = FALSE) {
   #    basic: Tells whether to use basic RAPPOR (only works if h=1).
 
   M <- length(strs)
-  map <- list()
+  map_by_cohort <- list()
   k <- params$k
   h <- params$h
   m <- params$m
@@ -128,13 +129,13 @@ CreateMap <- function(strs, params, generate_pos = TRUE, basic = FALSE) {
       ones <- sample(1:k, M * h, replace = TRUE)
     }
     cols <- rep(1:M, each = h)
-    map[[i]] <- sparseMatrix(ones, cols, dims = c(k, M))
-    colnames(map[[i]]) <- strs
+    map_by_cohort[[i]] <- sparseMatrix(ones, cols, dims = c(k, M))
+    colnames(map_by_cohort[[i]]) <- strs
   }
 
-  rmap <- do.call("rBind", map)
+  all_cohorts_map <- do.call("rBind", map_by_cohort)
   if (generate_pos) {
-    map_pos <- t(apply(rmap, 2, function(x) {
+    map_pos <- t(apply(all_cohorts_map, 2, function(x) {
       ind <- which(x == 1)
       n <- length(ind)
       if (n < h * m) {
@@ -146,7 +147,8 @@ CreateMap <- function(strs, params, generate_pos = TRUE, basic = FALSE) {
     map_pos <- NULL
   }
 
-  list(map = map, rmap = rmap, map_pos = map_pos)
+  list(map_by_cohort = map_by_cohort, all_cohorts_map = all_cohorts_map,
+       map_pos = map_pos)
 }
 
 GetSample <- function(N, strs, probs) {
@@ -232,16 +234,16 @@ GenerateSamples <- function(N = 10^5, params, pop_params, alpha = .05,
   probs <- GetSampleProbs(pop_params)
   samp <- GetSample(N, strs, probs)
   map <- CreateMap(strs, params)
-  truth <- GetTrueBits(samp, map$map, params)
+  truth <- GetTrueBits(samp, map$map_by_cohort, params)
   rappors <- GetNoisyBits(truth, params)
 
   strs_apprx <- strs
-  map_apprx <- map$rmap
+  map_apprx <- map$all_cohorts_map
   # Remove % of strings to simulate missing variables.
   if (prop_missing > 0) {
     ind <- which(probs > 0)
     removed <- sample(ind, ceiling(prop_missing * length(ind)))
-    map_apprx <- map$rmap[, -removed]
+    map_apprx <- map$all_cohorts_map[, -removed]
     strs_apprx <- strs[-removed]
   }
 
