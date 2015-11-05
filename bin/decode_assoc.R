@@ -181,7 +181,13 @@ ResultMatrixToDataFrame <- function(m, string_var_name, bool_var_name) {
 
   dimnames(m) <- dim_names
   # http://stackoverflow.com/questions/15885111/create-data-frame-from-a-matrix-in-r
-  as.data.frame(as.table(m))
+  fit_df <- as.data.frame(as.table(m))
+
+  # The as.table conversion give syou a Freq column.  Call it "proportion" to
+  # be consistent with single variable analysis.
+  colnames(fit_df)[colnames(fit_df) == "Freq"] <- "proportion" 
+
+  fit_df
 }
 
 main <- function(opts) {
