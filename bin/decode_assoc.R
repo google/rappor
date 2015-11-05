@@ -49,6 +49,11 @@ option_list <- list(
         "--output-dir", dest="output_dir", default=".",
         help="Output directory (default .)"),
 
+    make_option(
+        "--create-bool-map", dest="create_bool_map", default=FALSE,
+        action="store_true",
+        help="Hack to use string RAPPOR to analyze boolean variables."),
+
     # Options that speed it up
     make_option(
         "--reports-sample-size", dest="reports_sample_size", default=-1,
@@ -107,7 +112,7 @@ if (!interactive()) {
 # Load libraries and source our own code.
 #
 
-library(RJSONIO)
+library(RJSONIO)  # toJSON()
 
 # So we don't have to change pwd
 source.rappor <- function(rel_path)  {
@@ -157,6 +162,26 @@ CreateAssocBoolMap <- function(params) {
   colnames(all_cohorts_map) <- names
 
   list(map_by_cohort = map_by_cohort, all_cohorts_map = all_cohorts_map)
+}
+
+ResultMatrixToDataFrame <- function(m, string_var_name, bool_var_name) {
+  # Args:
+  #   m: A 2D matrix as output by ComputeDistributionEM, e.g.
+  #          bing.com yahoo.com google.com       Other
+  #   TRUE  0.2718526 0.1873424 0.19637704 0.003208933
+  #   Other 0.1404581 0.1091826 0.08958427 0.001994163
+  # Returns:
+  #   A flattened data frame, e.g.
+
+  dim_names <- list()
+  # First dimension is bool.  TODO: Remove this once we're not using
+  # --create-bool-map.
+  dim_names[[bool_var_name]] <- c('TRUE', 'FALSE')
+  dim_names[[string_var_name]] <- dimnames(m)[[2]]
+
+  dimnames(m) <- dim_names
+  # http://stackoverflow.com/questions/15885111/create-data-frame-from-a-matrix-in-r
+  as.data.frame(as.table(m))
 }
 
 main <- function(opts) {
@@ -250,6 +275,12 @@ main <- function(opts) {
   # i.e. create a list of length 2, with identical cohorts.
   string_params <- params
 
+  # TODO: We should use the closed-form formulas rather than calling the
+  # solver, and not require this flag.
+  if (!opts$create_bool_map) {
+    stop("ERROR: pass --create-bool-map to analyze booleans.")
+  }
+
   bool_params <- params
   # HACK: Make this the boolean.  The Decode() step uses k.  (Note that R makes
   # a copy here)
@@ -311,19 +342,21 @@ main <- function(opts) {
                                      num_cores = opts$num_cores,
                                      em_iter_func = em_iter_func,
                                      max_em_iters = opts$max_em_iters)
-  Log("Association results:")
+
+  # NOTE: It would be nicer if reports_list, cohorts_list, etc. were indexed by
+  # names like 'domain' rather than numbers, and the result em_result$fit
+  # matrix had corresponding named dimensions.  Instead we call
+  # ResultMatrixToDataFrame to do this.
+
   fit <- em_result$fit
-  print(fit)
+  fit_df <- ResultMatrixToDataFrame(fit, opts$var1, opts$var2)
 
-  pretty <- apply(fit * 100, 1, function(row) sprintf("%.1f%%", row))
-  Log("Percentages:")
-  print(pretty)
-
-  fit_df <- as.data.frame(fit)
+  Log("Association results:")
   print(fit_df)
+  cat('\n')
 
   results_csv_path <- file.path(opts$output_dir, 'assoc-results.csv')
-  write.csv(fit_df, file = results_csv_path)
+  write.csv(fit_df, file = results_csv_path, row.names = FALSE)
   Log("Wrote %s", results_csv_path)
 
   # Measure elapsed time as close to the end as possible

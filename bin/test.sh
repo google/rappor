@@ -118,10 +118,13 @@ decode-assoc() {
     --var1 domain \
     --var2 flag..HTTPS \
     --map1 _tmp/domain_map.csv \
+    --create-bool-map \
     --max-em-iters 10 \
     --num-cores 2 \
     --output-dir _tmp \
     "$@"
+
+  head _tmp/assoc-*
 }
 
 build-em-executable() {
