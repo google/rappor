@@ -139,21 +139,6 @@ GetCondProb <- function(report, pstar, qstar, bit_indices, prob_other = NULL) {
   }
 }
 
-GetJointConditionalProb <- function(cond_x, cond_y) {
-  # Given the conditional probability functions for x and y, compute the
-  #     joint conditional distribution P(X',Y'|X,Y)
-  #
-  # Args:
-  #   cond_x: conditional distribution of x (vector)
-  #   cond_y: conditional distribution of y (vector)
-  #
-  # Returns:
-  #   Joint conditional distribution (i.e. outer product of
-  #      distributions.
-
-  mapply("outer", cond_x, cond_y, SIMPLIFY = FALSE)
-}
-
 UpdatePij <- function(pij, cond_prob) {
   # Update the probability matrix based on the EM algorithm.
   #
@@ -174,19 +159,6 @@ UpdatePij <- function(pij, cond_prob) {
     z
   })
   Reduce("+", wcp) / length(wcp)
-}
-
-NLL <- function(pij, cond_prob) {
-  # Update the probability matrix based on the EM algorithm.
-  #
-  # Args:
-  #   pij: conditional distribution of x (vector)
-  #   cond_prob: conditional distribution computed previously
-  #
-  # Returns:
-  #   Updated pijs from em algorithm (expectation)
-
-  sum(sapply(cond_prob, function(x) -log(sum(x * pij))))
 }
 
 ComputeVar <- function(cond_prob, est) {
