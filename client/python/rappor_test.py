@@ -69,8 +69,8 @@ class RapporParamsTest(unittest.TestCase):
       masks = rappor.get_prr_masks('secret', word, 0.5, num_bits)
       print 'masks', masks
 
-  def testCohortToBytes(self):
-    b = rappor.cohort_to_bytes(1)
+  def testToBigEndian(self):
+    b = rappor.to_big_endian(1)
     print repr(b)
     self.assertEqual(4, len(b))
 
@@ -90,7 +90,7 @@ class RapporParamsTest(unittest.TestCase):
 
     irr = e.encode("abc")
 
-    self.assertEquals(56301, irr)  # given MockRandom, this is what we get
+    self.assertEquals(64493, irr)  # given MockRandom, this is what we get
 
 
 class MockRandom(object):
