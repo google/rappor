@@ -120,8 +120,10 @@ Directory Structure
     tests/               # system tests
       compare_dist.R     # test helper for single variable analysis
       gen_true_values.R  # generate test input
+      make_summary.py    # generate an HTML report for the regtest
       rappor_sim.py      # RAPPOR client simulation
       regtest_spec.py    # specification of test cases
+      ...
     build.sh             # build scripts (docs, C extension, etc.)
     demo.sh              # quick demonstration
     regtest.sh           # end-to-end reg test
