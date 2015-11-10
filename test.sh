@@ -76,8 +76,8 @@ all() {
 #
 
 python-lint() {
-  # E111: indent not a multiple of 4.  We are following the Google/Chrome style
-  # and using 2 space indents.
+  # E111: indent not a multiple of 4.  We are following the Google/Chrome
+  # style and using 2 space indents.
   if pep8 --ignore=E111 "$@"; then
     echo
     echo 'LINT PASSED'

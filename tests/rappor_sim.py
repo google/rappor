@@ -86,8 +86,8 @@ def CreateOptionsParser():
   return p
 
 
-def GenAssocTestdata(
-    params1, params2, irr_rand, assoc_testdata_count, csv_in, csv_out):
+def GenAssocTestdata(params1, params2, irr_rand, assoc_testdata_count,
+                     csv_in, csv_out):
   """Read true values from csv_in and output encoded values on csv_out.
 
   Replicate assoc_testdata_count times.  First value is a string, second is a
