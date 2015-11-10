@@ -133,7 +133,7 @@ _setup-one-case() {
 
   local true_map_path=$case_dir/case_true_map.csv
 
-  analysis/tools/hash_candidates.py \
+  bin/hash_candidates.py \
     $params_path \
     < $case_dir/case_unique_values.txt \
     > $true_map_path
@@ -147,7 +147,7 @@ _setup-one-case() {
 
   # banner "Hashing candidates to get 'map'"
 
-  analysis/tools/hash_candidates.py \
+  bin/hash_candidates.py \
     $params_path \
     < $case_dir/case_candidates.txt \
     > $case_dir/case_map.csv
@@ -250,7 +250,7 @@ _run-one-instance() {
 
       banner "Summing RAPPOR IRR bits to get 'counts'"
 
-      analysis/tools/sum_bits.py \
+      bin/sum_bits.py \
         $case_dir/case_params.csv \
         < $instance_dir/case_reports.csv \
         > $instance_dir/case_counts.csv
