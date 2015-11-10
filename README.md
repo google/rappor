@@ -103,30 +103,31 @@ thus should **not** be used in production.
 Directory Structure
 -------------------
 
-    client/             # client libraries
-      python/
-        rappor.py
-        rappor_test.py  # Unit tests go next to the implementation.
-      cpp/              # placeholder
     analysis/
-      R/                # R code for analysis
-      tools/            # command line tools for analysis
-    apps/               # web apps to help you use RAPPOR
-    tests/              # system tests
-      gen_sim_input.py  # generate test input data
-      rappor_sim.py     # run simulation
-      run.sh            # driver for unit tests, lint
-    doc/
-    build.sh            # build docs, C extension
-    demo.sh             # run demo
-    run.sh              # misc automation
-
-<!--
-TODO: add apps?
-
-    apps/
-      # Shiny apps for demo.  Depends on the analysis code.
--->
+      R/                 # R code for analysis
+      cpp/               # Fast reimplementations of certain analysis
+                         # algorithms.
+    apps/                # web apps to help you use RAPPOR (using Shiny)
+    bin/                 # Command line tools for analysis.
+    client/              # Client libraries
+      python/            # Python client library
+        rappor.py
+        ...
+      cpp/               # C++ client library
+        encoder.cc
+        ...
+    doc/                 # Documentation
+    tests/               # system tests
+      compare_dist.R     # test helper for single variable analysis
+      gen_true_values.R  # generate test input
+      rappor_sim.py      # RAPPOR client simulation
+      regtest_spec.py    # specification of test cases
+    build.sh             # build scripts (docs, C extension, etc.)
+    demo.sh              # quick demonstration
+    regtest.sh           # end-to-end reg test
+    run.sh               # misc automation
+    setup.sh             # install dependencies (for Linux)
+    test.sh              # run unit tests
 
 Documentation
 -------------
