@@ -1,0 +1,7 @@
+#!/bin/bash
+#
+# Shell wrapper around hash_candidates.py.
+
+readonly THIS_DIR=$(dirname $0)
+
+PYTHONPATH=$THIS_DIR/../client/python $THIS_DIR/hash_candidates.py "$@"
