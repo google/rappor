@@ -32,7 +32,7 @@ source("analysis/R/decode.R")
 source("analysis/R/simulation.R")
 source("analysis/R/association.R")
 source("analysis/R/decode_ngrams.R")
-source("analysis/test/ngrams_simulation.R")
+source("analysis/R/ngrams_simulation.R")
 alphabet <- letters
 options(warn = -1)
 
