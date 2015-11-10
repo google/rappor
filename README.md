@@ -106,8 +106,8 @@ Directory Structure
     analysis/
       R/                 # R code for analysis
       cpp/               # Fast reimplementations of certain analysis
-                         # algorithms.
-    apps/                # web apps to help you use RAPPOR (using Shiny)
+                         #   algorithms
+    apps/                # Web apps to help you use RAPPOR (using Shiny)
     bin/                 # Command line tools for analysis.
     client/              # Client libraries
       python/            # Python client library
@@ -117,19 +117,20 @@ Directory Structure
         encoder.cc
         ...
     doc/                 # Documentation
-    tests/               # system tests
-      compare_dist.R     # test helper for single variable analysis
-      gen_true_values.R  # generate test input
-      make_summary.py    # generate an HTML report for the regtest
+    tests/               # Tools for regression tests
+      compare_dist.R     # Test helper for single variable analysis
+      gen_true_values.R  # Generate test input
+      make_summary.py    # Generate an HTML report for the regtest
       rappor_sim.py      # RAPPOR client simulation
-      regtest_spec.py    # specification of test cases
+      regtest_spec.py    # Specification of test cases
       ...
-    build.sh             # build scripts (docs, C extension, etc.)
-    demo.sh              # quick demonstration
-    regtest.sh           # end-to-end reg test
-    run.sh               # misc automation
-    setup.sh             # install dependencies (for Linux)
-    test.sh              # run unit tests
+    build.sh             # Build scripts (docs, C extension, etc.)
+    demo.sh              # Quick demonstration
+    regtest.sh           # End-to-end regression tests, including client
+                         #  libraries and analysis
+    run.sh               # Misc automation
+    setup.sh             # Install dependencies (for Linux)
+    test.sh              # Test runner
 
 Documentation
 -------------
