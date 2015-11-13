@@ -58,7 +58,7 @@ ReadCountsFile <- function(counts_file, params = NULL) {
   counts
 }
 
-ReadMapFile <- function(map_file, params = NULL, quote = "") {
+ReadMapFile <- function(map_file, params = NULL) {
   # Read in the map file which is in the following format (two hash functions):
   # str1, h11, h12, h21 + k, h22 + k, h31 + 2k, h32 + 2k ...
   # str2, ...
@@ -66,8 +66,7 @@ ReadMapFile <- function(map_file, params = NULL, quote = "") {
   #    map: a sparse representation of set bits for each candidate string.
   #    strs: a vector of all candidate strings.
 
-  map_pos <- read.csv(gfile(map_file), header = FALSE, as.is = TRUE,
-                      quote = quote)
+  map_pos <- read.csv(gfile(map_file), header = FALSE, as.is = TRUE)
   strs <- map_pos[, 1]
   strs[strs == ""] <- "Empty"
 
@@ -101,7 +100,7 @@ ReadMapFile <- function(map_file, params = NULL, quote = "") {
   list(map = map, strs = strs, map_pos = map_pos)
 }
 
-LoadMapFile <- function(map_file, params = NULL, quote = "") {
+LoadMapFile <- function(map_file, params = NULL) {
   # Reads the map file and creates an R binary .rda. If the .rda file already
   # exists, just loads that file. NOTE: It assumes the map file is
   # immutable.
@@ -114,7 +113,7 @@ LoadMapFile <- function(map_file, params = NULL, quote = "") {
 
   if (!file.exists(rda_file)) {
     cat("Parsing", map_file, "...\n")
-    map <- ReadMapFile(map_file, params = params, quote = quote)
+    map <- ReadMapFile(map_file, params = params)
     cat("Saving", map_file, "as an rda file for faster access.\n")
     save(map, file = file.path(tempdir(), basename(rda_file)))
     file.copy(file.path(tempdir(), basename(rda_file)), rda_file,

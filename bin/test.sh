@@ -47,8 +47,6 @@ decode-assoc-help() {
 write-assoc-testdata() {
   mkdir -p _tmp
 
-  export PYTHONPATH=$RAPPOR_SRC/client/python
-
   cat >_tmp/true_values.csv <<EOF 
 domain,flag..HTTPS
 google.com,1
@@ -71,7 +69,8 @@ EOF
   # 7 items in the input.  7000 items is enough.
   local assoc_testdata_count=1000
 
-  ../tests/rappor_sim.py \
+  PYTHONPATH=../client/python \
+    ../tests/rappor_sim.py \
     --assoc-testdata $assoc_testdata_count \
     --num-bits $num_bits \
     --num-hashes $num_hashes \
@@ -94,14 +93,16 @@ k,h,m,p,q,f
 $num_bits,$num_hashes,$num_cohorts,$prob_p,$prob_q,$prob_f
 EOF
 
+  # Add a string with a double quote to test quoting behavior
   cat >_tmp/domain_candidates.csv <<EOF
 google.com
 yahoo.com
 bing.com
+q"q
 EOF
 
   # Hash candidates to create map.
-  ../analysis/tools/hash_candidates.py _tmp/m_params.csv \
+  ./hash-candidates _tmp/m_params.csv \
     < _tmp/domain_candidates.csv \
     > _tmp/domain_map.csv
     

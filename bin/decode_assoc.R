@@ -235,9 +235,7 @@ main <- function(opts) {
     UsageError("--map1 must be provided when --var1 is a string (var = %s)",
                opts$var1)
   }
-  # NOTE: We restore the default quote, which for some reason LoadMapFile
-  # overrides.
-  t <- system.time( LoadMapFile(opts$map1, quote = "\"'") )
+  t <- system.time( LoadMapFile(opts$map1) )
   Log("Loading map file took %.1f seconds", t[['elapsed']])
   # for 100k map file: 31 seconds to load map and write cache; 2.2 seconds to
   # read cache

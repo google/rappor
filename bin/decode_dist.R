@@ -123,9 +123,7 @@ main <- function(opts) {
 
   counts <- AdjustCounts(counts, params)
 
-  # NOTE: We restore the default quote, which for some reason LoadMapFile
-  # overrides.
-  LoadMapFile(opts$map, quote = "\"'")
+  LoadMapFile(opts$map)
 
   val <- ValidateInput(params, counts, map$map)  # NOTE: using global map
   if (val != "valid") {
