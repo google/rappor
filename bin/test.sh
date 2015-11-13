@@ -123,6 +123,7 @@ decode-assoc() {
     --max-em-iters 10 \
     --num-cores 2 \
     --output-dir _tmp \
+    --tmp-dir _tmp \
     "$@"
 
   head _tmp/assoc-*
