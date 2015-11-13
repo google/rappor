@@ -147,6 +147,8 @@ main <- function(opts) {
   results_csv_path <- file.path(opts$output_dir, 'results.csv')
   write.csv(res$fit, file = results_csv_path, row.names = FALSE)
 
+  res$metrics$total_elapsed_time <- proc.time()[['elapsed']]
+
   # Write summary as JSON (scalar values).
   metrics_json_path <- file.path(opts$output_dir, 'metrics.json')
   m <- toJSON(res$metrics)
