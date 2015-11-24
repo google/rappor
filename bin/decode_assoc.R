@@ -252,8 +252,7 @@ main <- function(opts) {
   # are ASCII bit strings.
   reports <- read.csv(opts$reports, colClasses=c("character"), as.is = TRUE)
 
-  N <- nrow(reports)
-  Log("Read %d reports.  Preview:", N)
+  Log("Read %d reports.  Preview:", nrow(reports))
   print(head(reports))
   cat('\n')
 
@@ -272,6 +271,12 @@ main <- function(opts) {
     } else {
       stop("Found bad rows and --remove-bad-rows wasn't passed")
     }
+  }
+
+  N <- nrow(reports)
+
+  if (N == 0) {
+    stop("No reports to analyze")
   }
 
   # Sample reports if specified.

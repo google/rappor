@@ -82,10 +82,18 @@ EOF
     > _tmp/reports.csv
 
   # Output two bad rows: each row is missing one of the columns.
-  cat _tmp/reports.csv - >_tmp/reports_missing_values.csv <<EOF
+  cat >_tmp/bad_rows.txt <<EOF
 c0,0,10101010,
 c0,0,,0
 EOF
+
+  # Make CSV file with the header
+  cat - _tmp/bad_rows.txt > _tmp/bad_rows.csv <<EOF
+client,cohort,domain,flag..HTTPS
+EOF
+
+  # Make reports file with bad rows
+  cat _tmp/reports.csv _tmp/bad_rows.txt > _tmp/reports_bad_rows.csv
 
   # Define a string variable and a boolean varaible.
   cat >_tmp/schema.csv <<EOF 
@@ -138,8 +146,16 @@ decode-assoc() {
 
 decode-assoc-bad-rows() {
   # Later flags override earlier ones
+
+  # Reports + bad rows
   decode-assoc \
-    --reports _tmp/reports_missing_values.csv \
+    --reports _tmp/reports_bad_rows.csv \
+    --remove-bad-rows \
+    "$@"
+
+  # ONLY bad rows
+  decode-assoc \
+    --reports _tmp/bad_rows.csv \
     --remove-bad-rows \
     "$@"
 }
