@@ -112,6 +112,10 @@ ValidateInput <- function(params, counts, map) {
 }
 
 main <- function(opts) {
+  Log("decode-dist")
+  Log("argv:")
+  print(commandArgs(TRUE))
+
   Log("Loading inputs")
 
   # Run a single model of all inputs are specified.

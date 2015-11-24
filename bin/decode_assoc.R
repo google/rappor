@@ -192,6 +192,8 @@ ResultMatrixToDataFrame <- function(m, string_var_name, bool_var_name) {
 
 main <- function(opts) {
   Log("decode-assoc")
+  Log("argv:")
+  print(commandArgs(TRUE))
 
   schema <- read.csv(opts$schema)
   Log("Read %d vars from schema", nrow(schema))
