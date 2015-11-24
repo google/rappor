@@ -53,6 +53,11 @@ option_list <- list(
         "--create-bool-map", dest="create_bool_map", default=FALSE,
         action="store_true",
         help="Hack to use string RAPPOR to analyze boolean variables."),
+    make_option(
+        "--remove-bad-rows", dest="remove_bad_rows", default=FALSE,
+        action="store_true",
+        help="Whether we should remove rows where any value is missing (by 
+             default, the program aborts with an error)"),
 
     # Options that speed it up
     make_option(
@@ -251,6 +256,23 @@ main <- function(opts) {
   Log("Read %d reports.  Preview:", N)
   print(head(reports))
   cat('\n')
+
+  # Filter bad reports first
+  is_empty1 <- reports[[opts$var1]] == ""
+  is_empty2 <- reports[[opts$var2]] == ""
+  Log('Found %d blank values in %s', sum(is_empty1), opts$var1)
+  Log('Found %d blank values in %s', sum(is_empty2), opts$var2)
+
+  is_empty <- is_empty1 | is_empty2 # boolean vectors
+  Log('%d bad rows', sum(is_empty))
+  if (sum(is_empty1) > 0) {
+    if (opts$remove_bad_rows) {
+      reports <- reports[!is_empty, ]
+      Log('Removed %d rows, giving %d rows', sum(is_empty), nrow(reports))
+    } else {
+      stop("Found bad rows and --remove-bad-rows wasn't passed")
+    }
+  }
 
   # Sample reports if specified.
   if (opts$reports_sample_size != -1) {

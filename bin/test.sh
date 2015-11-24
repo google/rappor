@@ -81,6 +81,12 @@ EOF
     < _tmp/true_values.csv \
     > _tmp/reports.csv
 
+  # Output two bad rows: each row is missing one of the columns.
+  cat _tmp/reports.csv - >_tmp/reports_missing_values.csv <<EOF
+c0,0,10101010,
+c0,0,,0
+EOF
+
   # Define a string variable and a boolean varaible.
   cat >_tmp/schema.csv <<EOF 
 metric, var, var_type, params
@@ -106,6 +112,7 @@ EOF
     < _tmp/domain_candidates.csv \
     > _tmp/domain_map.csv
     
+
   banner "Wrote testdata in _tmp"
 }
 
@@ -127,6 +134,14 @@ decode-assoc() {
     "$@"
 
   head _tmp/assoc-*
+}
+
+decode-assoc-bad-rows() {
+  # Later flags override earlier ones
+  decode-assoc \
+    --reports _tmp/reports_missing_values.csv \
+    --remove-bad-rows \
+    "$@"
 }
 
 build-em-executable() {
