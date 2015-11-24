@@ -265,7 +265,7 @@ main <- function(opts) {
 
   is_empty <- is_empty1 | is_empty2 # boolean vectors
   Log('%d bad rows', sum(is_empty))
-  if (sum(is_empty1) > 0) {
+  if (sum(is_empty) > 0) {
     if (opts$remove_bad_rows) {
       reports <- reports[!is_empty, ]
       Log('Removed %d rows, giving %d rows', sum(is_empty), nrow(reports))
