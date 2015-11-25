@@ -295,6 +295,8 @@ Decode <- function(counts, map, params, alpha = 0.05,
   filter_bits <- as.vector(
     t(matrix(1:nrow(map), nrow = m, byrow = TRUE)[filter_cohorts,]))
 
+  map_filtered <- map[filter_bits, , drop = FALSE]
+
   es <- EstimateBloomCounts(params, counts)
 
   estimates_stds_filtered <-
@@ -312,8 +314,7 @@ Decode <- function(counts, map, params, alpha = 0.05,
       e <- estimates_stds_filtered
 
     coefs_all <- rbind(coefs_all,
-                       FitDistribution(e, map[filter_bits, , drop = FALSE],
-                                       quiet))
+                       FitDistribution(e, map_filtered,  quiet))
   }
 
   coefs_ssd <- N * apply(coefs_all, 2, sd)  # compute sample standard deviations
@@ -325,11 +326,18 @@ Decode <- function(counts, map, params, alpha = 0.05,
 
   mod <- list(coefs = coefs_ave[reported], stds = coefs_ssd[reported])
 
+  coefs_ave_zeroed <- coefs_ave
+  coefs_ave_zeroed[-reported] <- 0
+
+  residual <- map_filtered %*% coefs_ave_zeroed / N -
+    as.vector(t(estimates_stds_filtered$estimates))
+
+
   if (correction == "Bonferroni") {
     alpha <- alpha / S
   }
 
-  inf <- PerformInference(map[filter_bits, reported, drop = FALSE],
+  inf <- PerformInference(map_filtered[, reported, drop = FALSE],
                           as.vector(t(estimates_stds_filtered$estimates)),
                           N, mod, params, alpha,
                           correction)
@@ -385,7 +393,6 @@ Decode <- function(counts, map, params, alpha = 0.05,
                        values = c(k, h, m, p, q, f, N, alpha))
 
   # This is a list of decode stats in a better format than 'summary'.
-  # TODO: Delete summary.
   metrics <- list(sample_size = N,
                   allocated_mass = allocated_mass,
                   num_detected = num_detected,
@@ -394,6 +401,7 @@ Decode <- function(counts, map, params, alpha = 0.05,
 
   list(fit = fit, summary = res_summary, privacy = privacy, params = params,
        lasso = NULL, ests = as.vector(t(estimates_stds_filtered$estimates)),
+       residual = as.vector(residual),
        counts = counts[, -1], resid = NULL, metrics = metrics)
 }
 

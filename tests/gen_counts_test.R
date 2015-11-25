@@ -51,7 +51,7 @@ TestGenerateCounts <- function() {
   noise1 <- list(p = .5, q = .5, f = 0)  # truly random IRRs
   counts1 <- GenerateCounts(c(report_params, noise1), map, partition, v)
 
-  for(i in 2:4)
+  for(i in 2:5)
     for(j in 1:2)
       pvalues <- c(pvalues,
                    chisq.test(c(counts1[j,1] - counts1[j,i], counts1[j,i]),
@@ -64,14 +64,13 @@ TestGenerateCounts <- function() {
 
   counts2 <- counts2 / v
 
-  for(i in 2:4)
+  for(i in 2:5)
     for(j in 1:2)
       pvalues <- c(pvalues,
                    chisq.test(c(counts2[j,1] - counts2[j,i], counts2[j,i]),
                               p = c(.5, .5))$p.value)
 
-  checkTrue(min(pvalues) > 1E-9 && max(pvalues) < 1 - 1E-9,
-            "Chi-squared test failed")
+  checkTrue(min(pvalues) > 1E-9,  "Chi-squared test failed")
 }
 
 TestRandomPartition <- function() {
@@ -99,7 +98,7 @@ TestRandomPartition <- function() {
 
   # Apply the chi squared test and fail if p.value is too high or too low.
   # Probability of failure is 2 * 1E-9, which should never happen.
-  checkTrue((p.value > 1E-9) && (p.value <  1 - 1E-9))
+  checkTrue(p.value > 1E-9)
 }
 
 TestAll <- function(){
