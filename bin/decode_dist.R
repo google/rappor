@@ -165,7 +165,7 @@ main <- function(opts) {
   metrics_json_path <- file.path(opts$output_dir, 'metrics.json')
   m <- toJSON(res$metrics)
   writeLines(m, con = metrics_json_path)
-  Log("Wrote %s and %s", results_csv_path, metrics_json_path)
+  Log("Wrote %s, %s, and %s", results_csv_path, results_png_path, metrics_json_path)
 
   # TODO:
   # - These are in an 2 column 'parameters' and 'values' format.  Should these
