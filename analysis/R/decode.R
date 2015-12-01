@@ -292,8 +292,7 @@ Decode <- function(counts, map, params, alpha = 0.05,
   filter_cohorts <- which(counts[, 1] != 0)  # exclude cohorts with zero reports
 
   # stretch cohorts to bits
-  filter_bits <- as.vector(
-    t(matrix(1:nrow(map), nrow = m, byrow = TRUE)[filter_cohorts,]))
+  filter_bits <- as.vector(matrix(1:nrow(map), ncol = m)[,filter_cohorts, drop = FALSE])
 
   map_filtered <- map[filter_bits, , drop = FALSE]
 
@@ -329,9 +328,8 @@ Decode <- function(counts, map, params, alpha = 0.05,
   coefs_ave_zeroed <- coefs_ave
   coefs_ave_zeroed[-reported] <- 0
 
-  residual <- map_filtered %*% coefs_ave_zeroed / N -
-    as.vector(t(estimates_stds_filtered$estimates))
-
+  residual <- as.vector(t(estimates_stds_filtered$estimates)) -
+    map_filtered %*% coefs_ave_zeroed / N
 
   if (correction == "Bonferroni") {
     alpha <- alpha / S
@@ -400,8 +398,7 @@ Decode <- function(counts, map, params, alpha = 0.05,
                   missing_var = missing_var)
 
   list(fit = fit, summary = res_summary, privacy = privacy, params = params,
-       lasso = NULL, ests = as.vector(t(estimates_stds_filtered$estimates)),
-       residual = as.vector(residual),
+       lasso = NULL, residual = as.vector(residual),
        counts = counts[, -1], resid = NULL, metrics = metrics)
 }
 

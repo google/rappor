@@ -153,10 +153,10 @@ main <- function(opts) {
   results_png_path <- file.path(opts$output_dir, 'residual.png')
   png(results_png_path)
   breaks <- pretty(res$residual, n = 200)
-  step <- breaks[2] - breaks[1]  # distance between bins
   histogram <- hist(res$residual, breaks, plot = FALSE)
   histogram$counts <- histogram$counts / sum(histogram$counts)  # convert the histogram to frequencies
-  plot(histogram, main = "Histogram of the residual")
+  plot(histogram, main = "Histogram of the residual",
+       xlab = sprintf("Residual (observed - explained, %d x %d values)", params$m, params$k))
   dev.off()
 
   res$metrics$total_elapsed_time <- proc.time()[['elapsed']]
