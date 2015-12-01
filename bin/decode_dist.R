@@ -149,13 +149,23 @@ main <- function(opts) {
   results_csv_path <- file.path(opts$output_dir, 'results.csv')
   write.csv(res$fit, file = results_csv_path, row.names = FALSE)
 
+  # Write residual histograph as a png.
+  results_png_path <- file.path(opts$output_dir, 'residual.png')
+  png(results_png_path)
+  breaks <- pretty(res$residual, n = 200)
+  histogram <- hist(res$residual, breaks, plot = FALSE)
+  histogram$counts <- histogram$counts / sum(histogram$counts)  # convert the histogram to frequencies
+  plot(histogram, main = "Histogram of the residual",
+       xlab = sprintf("Residual (observed - explained, %d x %d values)", params$m, params$k))
+  dev.off()
+
   res$metrics$total_elapsed_time <- proc.time()[['elapsed']]
 
   # Write summary as JSON (scalar values).
   metrics_json_path <- file.path(opts$output_dir, 'metrics.json')
   m <- toJSON(res$metrics)
   writeLines(m, con = metrics_json_path)
-  Log("Wrote %s and %s", results_csv_path, metrics_json_path)
+  Log("Wrote %s, %s, and %s", results_csv_path, results_png_path, metrics_json_path)
 
   # TODO:
   # - These are in an 2 column 'parameters' and 'values' format.  Should these
