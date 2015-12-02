@@ -15,7 +15,6 @@
 #
 # Read parameter, counts and map files.
 
-gfile <- function(str) { str }  # NOTE: gfile will be identity function in open source version
 library(Matrix)
 
 ReadParameterFile <- function(params_file) {
@@ -23,7 +22,7 @@ ReadParameterFile <- function(params_file) {
   # k, h, m, p, q, f
   # 128, 2, 8, 0.5, 0.75, 0.75
 
-  params <- as.list(read.csv(gfile(params_file)))
+  params <- as.list(read.csv(params_file))
   if (length(params) != 6) {
     stop("There should be exactly 6 columns in the parameter file.")
   }
@@ -38,7 +37,7 @@ ReadCountsFile <- function(counts_file, params = NULL) {
   if (!file.exists(counts_file)) {
     return(NULL)
   }
-  counts <- read.csv(gfile(counts_file), header = FALSE)
+  counts <- read.csv(counts_file, header = FALSE)
 
   if (!is.null(params)) {
     if (nrow(counts) != params$m) {
@@ -66,7 +65,7 @@ ReadMapFile <- function(map_file, params = NULL) {
   #    map: a sparse representation of set bits for each candidate string.
   #    strs: a vector of all candidate strings.
 
-  map_pos <- read.csv(gfile(map_file), header = FALSE, as.is = TRUE)
+  map_pos <- read.csv(map_file, header = FALSE, as.is = TRUE)
   strs <- map_pos[, 1]
   strs[strs == ""] <- "Empty"
 
@@ -119,6 +118,6 @@ LoadMapFile <- function(map_file, params = NULL) {
     file.copy(file.path(tempdir(), basename(rda_file)), rda_file,
               overwrite = TRUE)
   }
-  load(gfile(rda_file), .GlobalEnv)
+  load(rda_file, .GlobalEnv)
   return(map)
 }
