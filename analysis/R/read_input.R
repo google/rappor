@@ -120,7 +120,8 @@ LoadMapFile <- function(map_file, params = NULL) {
   if (!file.exists(rda_path)) {
     Log("Reading %s", map_file)
     map <- ReadMapFile(map_file, params = params)
-    Log("Saving %s as an rda file for faster access.", rda_path)
+
+    Log("Saving %s as an rda file for faster access", map_file)
     save(map, file = tmp_path)
     file.rename(tmp_path, rda_path)
   }
