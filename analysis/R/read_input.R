@@ -17,6 +17,14 @@
 
 library(Matrix)
 
+source.rappor <- function(rel_path)  {
+  abs_path <- paste0(Sys.getenv("RAPPOR_REPO", ""), rel_path)
+  source(abs_path)
+}
+
+source.rappor("analysis/R/util.R")  # for Log
+
+
 ReadParameterFile <- function(params_file) {
   # Read parameter file. Format:
   # k, h, m, p, q, f
@@ -110,12 +118,13 @@ LoadMapFile <- function(map_file, params = NULL) {
 
   # First save to a temp file, and then atomically rename to the destination.
   if (!file.exists(rda_path)) {
-    cat("Parsing", map_file, "...\n")
+    Log("Reading %s", map_file)
     map <- ReadMapFile(map_file, params = params)
-    cat("Saving", map_file, "as an rda file for faster access.\n")
+    Log("Saving %s as an rda file for faster access.", rda_path)
     save(map, file = tmp_path)
     file.rename(tmp_path, rda_path)
   }
+  Log("Loading %s", rda_path)
   load(rda_path, .GlobalEnv)
   return(map)
 }
