@@ -366,21 +366,21 @@ main <- function(opts) {
     em_iter_func <- EM
   }
 
-  em_result <- ComputeDistributionEM(reports_list, cohorts_list, map_list,
-                                     ignore_other = FALSE,
-                                     params_list = params_list,
-                                     marginals = NULL,
-                                     estimate_var = FALSE,
-                                     num_cores = opts$num_cores,
-                                     em_iter_func = em_iter_func,
-                                     max_em_iters = opts$max_em_iters)
+  assoc_result <- ComputeDistributionEM(reports_list, cohorts_list, map_list,
+                                        ignore_other = FALSE,
+                                        params_list = params_list,
+                                        marginals = NULL,
+                                        estimate_var = FALSE,
+                                        num_cores = opts$num_cores,
+                                        em_iter_func = em_iter_func,
+                                        max_em_iters = opts$max_em_iters)
 
   # NOTE: It would be nicer if reports_list, cohorts_list, etc. were indexed by
-  # names like 'domain' rather than numbers, and the result em_result$fit
+  # names like 'domain' rather than numbers, and the result assoc_result$fit
   # matrix had corresponding named dimensions.  Instead we call
   # ResultMatrixToDataFrame to do this.
 
-  fit <- em_result$fit
+  fit <- assoc_result$fit
   fit_df <- ResultMatrixToDataFrame(fit, opts$var1, opts$var2)
 
   Log("Association results:")
@@ -401,7 +401,8 @@ main <- function(opts) {
                   # should sum to near 1.0
                   sum_estimates = sum(fit),
                   total_elapsed_time = total_elapsed_time,
-                  em_elapsed_time = em_result$em_elapsed_time)
+                  em_elapsed_time = assoc_result$em_elapsed_time,
+                  num_em_iters = assoc_result$num_em_iters)
 
   metrics_json_path <- file.path(opts$output_dir, 'assoc-metrics.json')
   writeLines(toJSON(metrics), con = metrics_json_path)

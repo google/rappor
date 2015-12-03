@@ -125,7 +125,7 @@ void PrintPij(const vector<double>& pij) {
 
 // EM algorithm to iteratively estimate parameters.
 
-static void ExpectationMaximization(
+static int ExpectationMaximization(
     uint32_t num_entries, uint32_t entry_size, const vector<double>& cond_prob,
     int max_em_iters, double epsilon, vector<double>* pij_out) {
   // Start out with uniform distribution.
@@ -135,14 +135,13 @@ static void ExpectationMaximization(
     pij[i] = init;
   }
   log("Initialized %d entries with %f", pij.size(), init);
-  PrintPij(pij);
 
   vector<double> prev_pij(entry_size, 0.0);  // pij on previous iteration
 
-  log("Starting %d EM iterations", max_em_iters);
+  log("Starting up to %d EM iterations", max_em_iters);
 
-  for (int em_iter = 0; em_iter < max_em_iters; ++em_iter) {
-    log("fast_em iteration %d", em_iter);
+  int em_iter = 0;  // visible after loop
+  for (; em_iter < max_em_iters; ++em_iter) {
     //
     // lapply() step.
     //
@@ -179,7 +178,7 @@ static void ExpectationMaximization(
       new_pij[i] /= num_entries;
     }
 
-    PrintPij(new_pij);
+    //PrintPij(new_pij);
 
     //
     // Check for termination
@@ -194,7 +193,7 @@ static void ExpectationMaximization(
 
     pij = new_pij;  // copy
 
-    log("max_dif: %e", em_iter, max_dif);
+    log("fast EM iteration %d, dif = %e", em_iter, max_dif);
 
     if (max_dif < epsilon) {
       log("Early EM termination: %e < %e", max_dif, epsilon);
@@ -203,13 +202,35 @@ static void ExpectationMaximization(
   }
 
   *pij_out = pij;
+  // If we reached iteration index 10, then there were 10 iterations: the last
+  // one terminated the loop.
+  return em_iter;
+}
+
+bool WriteTag(const char* tag, FILE* f_out) {
+  assert(strlen(tag) == 3);  // write 3 byte tags with NUL byte
+  return fwrite(tag, 1, 4, f_out) == 4;
 }
 
 // Write the probabilities as a flat list of doubles.  The caller knows what
 // the dimensions are.
-bool WriteMatrix(const vector<double>& pij, FILE* f_out) {
+bool WriteResult(const vector<double>& pij, uint32_t num_em_iters,
+                 FILE* f_out) {
+  if (!WriteTag("emi", f_out)) {
+    return false;
+  }
+  if (fwrite(&num_em_iters, sizeof num_em_iters, 1, f_out) != 1) {
+    return false;
+  }
+
+  if (!WriteTag("pij", f_out)) {
+    return false;
+  }
   size_t n = pij.size();
-  return fwrite(&pij[0], sizeof pij[0], n, f_out) == n;
+  if (fwrite(&pij[0], sizeof pij[0], n, f_out) != n) {
+    return false;
+  }
+  return true;
 }
 
 // Like atoi, but with basic (not exhaustive) error checking.
@@ -276,19 +297,15 @@ int main(int argc, char **argv) {
   log("epsilon: %f", epsilon);
 
   vector<double> pij(num_entries);
-  ExpectationMaximization(
+  int num_em_iters = ExpectationMaximization(
       num_entries, entry_size, cond_prob, max_em_iters, epsilon, &pij);
 
-  for (size_t i = 0; i < entry_size; ++i) {
-    log("result pij[%d] = %e", i, pij[i]);
-  }
-
-  if (!WriteMatrix(pij, f_out)) {
+  if (!WriteResult(pij, num_em_iters, f_out)) {
     log("Error writing result matrix");
     return 1;
   }
   fclose(f_out);
 
-  log("Done");
+  log("fast EM done");
   return 0;
 }
