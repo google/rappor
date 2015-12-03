@@ -264,11 +264,9 @@ RunEmFunction <- function(cond_prob, max_em_iters) {
 }
 
 # Run a test of the EM executable
-RunEmExecutable <- function(cond_prob, max_em_iters) {
+RunEmExecutable <- function(em_executable, cond_prob, max_em_iters) {
   print(cond_prob)
 
-  # Assume we're relative
-  em_executable <- file.path(getwd(), "analysis/cpp/_tmp/fast_em")
   if (!file.exists(em_executable)) {
     stop(sprintf("EM executable %s doesn't exist (build it?)", em_executable))
   }
@@ -278,19 +276,36 @@ RunEmExecutable <- function(cond_prob, max_em_iters) {
   result$est
 }
 
-TestTwoImplementations <- function() {
+TestCppImplementation <- function() {
   cond_prob <- MakeCondProb()
   max_em_iters <- 10
   fit1 <- RunEmFunction(cond_prob, max_em_iters)
-  fit2 <- RunEmExecutable(cond_prob, max_em_iters)
 
-  difference <- abs(fit1 - fit2)
-  print(difference)
-  Log("EM implementation difference after %d iterations: %e", max_em_iters, sum(difference))
+  # Assume we're in the repo root
+  em_cpp <- file.path(getwd(), "analysis/cpp/_tmp/fast_em")
+  fit2 <- RunEmExecutable(em_cpp, cond_prob, max_em_iters)
+
+  cpp_diff <- abs(fit1 - fit2)
+  print(cpp_diff)
+  Log("C++ implementation difference after %d iterations: %e", max_em_iters,
+      sum(cpp_diff))
 
   # After 10 iterations they should be almost indistinguishable.
-  checkTrue(sum(difference) < 1e-10)
+  checkTrue(sum(cpp_diff) < 1e-10)
 }
 
-TestTwoImplementations()
+TestTensorFlowImplementation <- function() {
+  cond_prob <- MakeCondProb()
+  max_em_iters <- 10
+  fit1 <- RunEmFunction(cond_prob, max_em_iters)
 
+  em_tf <- file.path(getwd(), "analysis/tensorflow/fast_em.sh")
+  fit2 <- RunEmExecutable(em_tf, cond_prob, max_em_iters)
+
+  tf_diff <- abs(fit1 - fit2)
+  print(tf_diff)
+  Log("TensorFlow implementation difference after %d iterations: %e",
+      max_em_iters, sum(tf_diff))
+
+  checkTrue(sum(tf_diff) < 1e-10)
+}

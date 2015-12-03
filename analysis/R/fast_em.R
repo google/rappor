@@ -35,29 +35,60 @@
   writeBin(flattened, con = f)
 }
 
-# Display some stats before sending it over to C++.
+.ExpectTag <- function(f, tag) {
+  # Read a single NUL-terminated character string.
+  actual <- readBin(con = f, what = "char", n = 1)
+
+  # Assert that we got what was expected.
+  if (length(actual) != 1) {
+    stop(sprintf("Failed to read a tag '%s'", tag))
+  }
+  if (actual != tag) {
+    stop(sprintf("Expected '%s', got '%s'", tag, actual))
+  }
+}
+
+.ReadResult <- function (f, entry_size, matrix_dims) {
+  .ExpectTag(f, "emi")
+  # NOTE: assuming R integers are 4 bytes (uint32_t)
+  num_em_iters <- readBin(con = f, what = "int", n = 1)
+
+  .ExpectTag(f, "pij")
+  pij <- readBin(con = f, what = "double", n = entry_size)
+
+  # Adjust dimensions
+  dim(pij) <- matrix_dims
+
+  Log("Number of EM iterations: %d", num_em_iters)
+  Log("PIJ read from external implementation:")
+  print(pij)
+   
+  # est, sd, var_cov, hist
+  list(est = pij, num_em_iters = num_em_iters)
+}
+
 .SanityChecks <- function(joint_conditional) {
-    # Sanity checks
+  # Display some stats before sending it over to C++.
 
-    inf_counts <- lapply(joint_conditional, function(m) {
-      sum(m == Inf)
-    })
-    total_inf <- sum(as.numeric(inf_counts))
+  inf_counts <- lapply(joint_conditional, function(m) {
+    sum(m == Inf)
+  })
+  total_inf <- sum(as.numeric(inf_counts))
 
-    nan_counts <- lapply(joint_conditional, function(m) {
-      sum(is.nan(m))
-    })
-    total_nan <- sum(as.numeric(nan_counts))
+  nan_counts <- lapply(joint_conditional, function(m) {
+    sum(is.nan(m))
+  })
+  total_nan <- sum(as.numeric(nan_counts))
 
-    zero_counts <- lapply(joint_conditional, function(m) {
-      sum(m == 0.0)
-    })
-    total_zero <- sum(as.numeric(zero_counts))
+  zero_counts <- lapply(joint_conditional, function(m) {
+    sum(m == 0.0)
+  })
+  total_zero <- sum(as.numeric(zero_counts))
 
-    #sum(joint_conditional[joint_conditional == Inf, ])
-    Log('total inf: %s', total_inf)
-    Log('total nan: %s', total_nan)
-    Log('total zero: %s', total_zero)
+  #sum(joint_conditional[joint_conditional == Inf, ])
+  Log('total inf: %s', total_inf)
+  Log('total nan: %s', total_nan)
+  Log('total zero: %s', total_zero)
 }
 
 ConstructFastEM <- function(em_executable, tmp_dir) {
@@ -88,19 +119,19 @@ ConstructFastEM <- function(em_executable, tmp_dir) {
 
     cmd <- sprintf("%s %s %s %s", em_executable, input_path, output_path,
                    max_em_iters)
+
     Log("Shell command: %s", cmd)
-    system(cmd)
+    exit_code <- system(cmd)
+
     Log("Done running shell command")
+    if (exit_code != 0) {
+      stop(sprintf("Command failed with code %d", exit_code))
+    }
 
-    pij <- readBin(con = output_path, what = "double", n = entry_size)
+    f <- file(output_path, 'rb')
+    result <- .ReadResult(f, entry_size, matrix_dims)
+    close(f)
 
-    # Adjust dimensions
-    dim(pij) <- matrix_dims
-
-    Log("PIJ read from C++:")
-    print(pij)
-     
-    # est, sd, var_cov, hist
-    list(est = pij)
+    result
   })
 }

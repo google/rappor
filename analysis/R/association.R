@@ -203,6 +203,7 @@ EM <- function(cond_prob, starting_pij = NULL, estimate_var = FALSE,
     pij[[1]] <- starting_pij
   }
 
+  i <- 0  # visible outside loop
   if (nrow(pij[[1]]) > 0) {
     # Run EM
     for (i in 1:max_em_iters) {
@@ -226,7 +227,7 @@ EM <- function(cond_prob, starting_pij = NULL, estimate_var = FALSE,
     inform <- NULL
     sd <- NULL
   }
-  list(est = est, sd = sd, var_cov = var_cov, hist = pij)
+  list(est = est, sd = sd, var_cov = var_cov, hist = pij, num_em_iters = i)
 }
 
 TestIndependence <- function(est, inform) {
@@ -412,5 +413,11 @@ ComputeDistributionEM <- function(reports, report_cohorts, maps,
 
   dimnames(em$est) <- found_strings
   # Return results in a usable format
-  list(fit = em$est, sd = em$sd, em_elapsed_time = em_elapsed_time, em = em)
+  list(fit = em$est,
+       sd = em$sd,
+       em_elapsed_time = em_elapsed_time,
+       num_em_iters = em$num_em_iters,
+       # This last field is implementation-specific; it can be used for
+       # interactive debugging.
+       em = em)
 }

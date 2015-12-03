@@ -12,7 +12,7 @@ set -o errexit
 
 readonly THIS_DIR=$(dirname $0)
 readonly RAPPOR_SRC=$(cd $THIS_DIR/.. && pwd)
-readonly EM_EXECUTABLE=$RAPPOR_SRC/analysis/cpp/_tmp/fast_em
+readonly EM_CPP_EXECUTABLE=$RAPPOR_SRC/analysis/cpp/_tmp/fast_em
 
 source $RAPPOR_SRC/util.sh
 
@@ -126,6 +126,9 @@ EOF
 
 # Run the R version of association.
 decode-assoc() {
+  local output_dir=$1
+  shift
+
   time ./decode-assoc \
     --metric-name m \
     --schema _tmp/schema.csv \
@@ -137,24 +140,33 @@ decode-assoc() {
     --create-bool-map \
     --max-em-iters 10 \
     --num-cores 2 \
-    --output-dir _tmp \
-    --tmp-dir _tmp \
+    --output-dir $output_dir \
+    --tmp-dir $output_dir \
     "$@"
 
-  head _tmp/assoc-*
+  head $output_dir/assoc-*
+}
+
+decode-assoc-R() {
+  local output_dir=_tmp/R
+  mkdir -p $output_dir
+  decode-assoc $output_dir
 }
 
 decode-assoc-bad-rows() {
+  local output_dir=_tmp/bad
+  mkdir -p $output_dir
+
   # Later flags override earlier ones
 
   # Reports + bad rows
-  decode-assoc \
+  decode-assoc $output_dir \
     --reports _tmp/reports_bad_rows.csv \
     --remove-bad-rows \
     "$@"
 
   # ONLY bad rows
-  decode-assoc \
+  decode-assoc $output_dir \
     --reports _tmp/bad_rows.csv \
     --remove-bad-rows \
     "$@"
@@ -167,25 +179,31 @@ build-em-executable() {
 }
 
 decode-assoc-cpp() {
+  local output_dir=_tmp/cpp
+  mkdir -p $output_dir
+
   build-em-executable
-  decode-assoc --em-executable "$EM_EXECUTABLE"
+
+  decode-assoc $output_dir \
+    --em-executable "$EM_CPP_EXECUTABLE" "$@"
 }
 
-# TODO: Compare these results somehow?  Or just eyeball them.
-decode-assoc-both() {
-  write-assoc-testdata
+decode-assoc-cpp-converge() {
+  # With the data we have, this converges and exits before 1000 iterations.
+  decode-assoc-cpp --max-em-iters 1000
+}
 
-  local log=_tmp/em-slow.log
+decode-assoc-tensorflow() {
+  local output_dir=_tmp/tensorflow
+  mkdir -p $output_dir
 
-  banner "Running slow association with R EM implementation"
-  decode-assoc | tee $log
-  banner "Wrote $log"
+  decode-assoc $output_dir \
+    --em-executable $RAPPOR_SRC/analysis/tensorflow/fast_em.sh "$@"
+}
 
-  local log=_tmp/em-fast.log
-
-  banner "Running slow association with C++ EM implementation"
-  decode-assoc-cpp | tee $log
-  banner "Wrote $log"
+# TODO: Make this exit early.
+decode-assoc-tensorflow-converge() {
+  decode-assoc-tensorflow --max-em-iters 1000
 }
 
 "$@"

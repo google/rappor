@@ -15,7 +15,8 @@ example.
 ### decode-assoc
 
 Decode a joint distribution between 2 variables ("association analysis").  See
-`test.sh decode-assoc` in this dir for an example.
+`test.sh decode-assoc-R` or `test.sh decode-assoc-cpp` in this dir for an
+example.
 
 Currently it only supports associating strings vs. booleans.
 
