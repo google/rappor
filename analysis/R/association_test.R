@@ -276,7 +276,7 @@ RunEmExecutable <- function(em_executable, cond_prob, max_em_iters) {
   result$est
 }
 
-TestImplementations <- function() {
+TestCppImplementation <- function() {
   cond_prob <- MakeCondProb()
   max_em_iters <- 10
   fit1 <- RunEmFunction(cond_prob, max_em_iters)
@@ -292,16 +292,20 @@ TestImplementations <- function() {
 
   # After 10 iterations they should be almost indistinguishable.
   checkTrue(sum(cpp_diff) < 1e-10)
+}
+
+TestTensorFlowImplementation <- function() {
+  cond_prob <- MakeCondProb()
+  max_em_iters <- 10
+  fit1 <- RunEmFunction(cond_prob, max_em_iters)
 
   em_tf <- file.path(getwd(), "analysis/tensorflow/fast_em.sh")
-  fit3 <- RunEmExecutable(em_tf, cond_prob, max_em_iters)
-  tf_diff <- abs(fit1 - fit3)
+  fit2 <- RunEmExecutable(em_tf, cond_prob, max_em_iters)
+
+  tf_diff <- abs(fit1 - fit2)
   print(tf_diff)
   Log("TensorFlow implementation difference after %d iterations: %e",
       max_em_iters, sum(tf_diff))
 
   checkTrue(sum(tf_diff) < 1e-10)
 }
-
-#TestImplementations()
-
