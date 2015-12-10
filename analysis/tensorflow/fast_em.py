@@ -3,7 +3,7 @@
 fast_em.py: Tensorflow implementation of expectation maximization for RAPPOR
 association analysis.
 
-TODO: 
+TODO:
   - Use TensorFlow ops for reading input (so that reading input can be
     distributed)
   - Reduce the number of ops (currently proportional to the number of reports).
