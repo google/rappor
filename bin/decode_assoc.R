@@ -379,7 +379,7 @@ main <- function(opts) {
                                         max_em_iters = opts$max_em_iters)
 
   # This happens if the marginal can't be decoded.
-  if (is.null(em_result)) {
+  if (is.null(assoc_result)) {
     stop("ComputeDistributionEM failed.")
   }
 
