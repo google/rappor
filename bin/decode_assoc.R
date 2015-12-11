@@ -275,7 +275,10 @@ main <- function(opts) {
   N <- nrow(reports)
 
   if (N == 0) {
-    stop("No reports to analyze")
+    # Use an arbitrary error code when there is nothing to analyze, so we can
+    # distinguish this from more serious failures.
+    Log("No reports to analyze.  Exiting with code 9.")
+    quit(status = 9)
   }
 
   # Sample reports if specified.
@@ -374,6 +377,11 @@ main <- function(opts) {
                                      num_cores = opts$num_cores,
                                      em_iter_func = em_iter_func,
                                      max_em_iters = opts$max_em_iters)
+
+  # This happens if the marginal can't be decoded.
+  if (is.null(em_result)) {
+    stop("ComputeDistributionEM failed.")
+  }
 
   # NOTE: It would be nicer if reports_list, cohorts_list, etc. were indexed by
   # names like 'domain' rather than numbers, and the result em_result$fit
