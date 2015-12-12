@@ -100,7 +100,7 @@ EOF
   cat _tmp/reports.csv _tmp/bad_rows.txt > _tmp/reports_bad_rows.csv
 
   # Define a string variable and a boolean varaible.
-  cat >_tmp/schema.csv <<EOF 
+  cat >_tmp/rappor-vars.csv <<EOF 
 metric, var, var_type, params
 m,domain,string,m_params
 m,flag..HTTPS,boolean,m_params
@@ -132,7 +132,7 @@ EOF
 decode-assoc() {
   time ./decode-assoc \
     --metric-name m \
-    --schema _tmp/schema.csv \
+    --schema _tmp/rappor-vars.csv \
     --reports _tmp/reports.csv \
     --params-dir _tmp \
     --var1 domain \

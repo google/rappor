@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>RAPPOR Results Overview</title>
+
+    <link rel="stylesheet" type="text/css" href="static/table-sort.css" />
+    <script type="text/javascript" src="static/table-lib.js"></script>
+
+    <link rel="stylesheet" type="text/css" href="static/ui.css" />
+    <script type="text/javascript" src="static/ui.js"></script>
+  </head>
+
+  <body onload="initOverview(gUrlHash, gTableStates, kStatusElem);"
+        onhashchange="onHashChange(gUrlHash, gTableStates, kStatusElem);">
+    <p id="status"></p>
+
+    <p style="text-align: right">
+      <a href="../../assoc-live/latest/assoc-overview.html">Association analysis</a> (latest)
+    </p>
+
+    <p style="text-align: right">
+      <a href="../home.html">Home</a> /
+      <b>Overview</b> /
+      <a href="histograms.html">Histograms</a>
+    </p>
+
+    <h1>RAPPOR Results Overview</h1>
+
+    <table id="overview">
+    </table>
+
+    <p>
+      Underlying data: <a href="cooked/overview.csv">overview.csv</a>
+    </p>
+
+    <h2>Metric Descriptions</h2>
+
+    <!-- Filled in by JS -->
+    <table id="metricMetadata">
+      <thead>
+        <tr>
+          <td>Metric Name</td>
+          <td>Owners</td>
+          <td>Description</td>
+        </tr>
+      </thead>
+      <tbody>
+      </tbody>
+    </table>
+
+    <!-- page globals -->
+    <script type="text/javascript">
+      var gUrlHash = new UrlHash(location.hash);
+      var gTableStates = {};
+      var kStatusElem = document.getElementById('status');
+    </script>
+
+  </body>
+</html>

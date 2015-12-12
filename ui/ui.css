@@ -1,0 +1,53 @@
+/* Center the plots */
+.dy {
+  margin: 0 auto;
+  width: 50em;
+}
+
+/* main metric */
+#proportionsDy {
+  width: 1000px;
+  height: 600px;
+}
+
+#num-reports-dy {
+  width: 1000px;
+  height: 300px;
+}
+
+#mass-dy {
+  width: 1000px;
+  height: 300px;
+}
+
+#metricDesc {
+  font-style: italic;
+}
+
+body {
+  /*margin: 0 auto;*/
+  /*text-align: left;*/
+}
+
+h1 {
+  text-align: center;
+}
+
+h2 {
+  text-align: center;
+}
+
+p {
+  text-align: center;
+}
+
+/* R NA values */
+.na {
+  color: darkred;
+}
+
+#status {
+  text-align: center;
+  font-size: x-large;
+  color: darkred;
+}

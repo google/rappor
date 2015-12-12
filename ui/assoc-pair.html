@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title></title>  <!-- filled in by JS -->
+
+    <script type="text/javascript" src="static/dygraph-combined.js"></script>
+
+    <link rel="stylesheet" type="text/css" href="static/table-sort.css" />
+    <script type="text/javascript" src="static/table-lib.js"></script>
+
+    <link rel="stylesheet" type="text/css" href="static/ui.css" />
+    <script type="text/javascript" src="static/ui.js"></script>
+  </head>
+
+  <body onload="initAssocPair(gUrlHash, gTableStates, kStatusElem, globals);"
+        onhashchange="onHashChange(gUrlHash, gTableStates, kStatusElem);">
+    <p id="status"></p>
+
+    <p style="text-align: right">
+      <a href="../home.html">Home</a> /
+      <a href="assoc-overview.html">Association Overview</a>
+    </p>
+
+    <h1 id="pageTitle"></h1>  <!-- filled in by JS -->
+
+    <p id="metricDesc"></p>  <!-- filled in by JS -->
+
+    <h2>Task Status</h2>
+
+    <table id="status_table">
+    </table>
+
+    <p>
+      <!-- link depends on fragment; filled in by JS -->
+      Underlying data: <a id="underlying-status" href=""></a>
+    </p>
+
+    <!-- page globals -->
+    <script type="text/javascript">
+      var globals = {proportionsDygraph: null};
+      var gUrlHash = new UrlHash(location.hash);
+      var gTableStates = {};
+      var kStatusElem = document.getElementById('status');
+    </script>
+
+  </body>
+</html>
