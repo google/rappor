@@ -60,6 +60,9 @@ EstimateBloomCounts <- function(params, obs_counts) {
 
   p2 <- p11 - p01  # == (1 - f) * (q - p)
 
+  # When m = 1, obs_counts does not have the right dimensions. Fixing this.
+  dim(obs_counts) <- c(m, k + 1)
+
   ests <- apply(obs_counts, 1, function(cohort_row) {
       N <- cohort_row[1]  # sample size for the cohort -- first column is total
       v <- cohort_row[-1] # counts for individual bits
@@ -288,6 +291,44 @@ Decode <- function(counts, map, params, alpha = 0.05,
   S <- ncol(map)  # total number of candidates
 
   N <- sum(counts[, 1])
+  if (k == 1) {
+    # Heuristic for boolean var.
+    # TODO(pseudorandom): incorporate this into larger plan of handling Basic
+    # RAPPOR
+    params$m = 1
+
+    # Sums across cohorts.
+    summed_counts = colSums(counts)
+
+    # With params$m = 1, EstimateBloomCounts computes Basic RAPPOR estimates
+    # given counts summed across the cohorts.
+    es <- EstimateBloomCounts(params, summed_counts)
+
+    fit = as.data.frame(matrix(ncol = 7, nrow = 1))
+    colnames(fit) = c("string", "estimate", "std_error", "proportion",
+                 "prop_std_error", "prop_low_95", "prop_high_95")
+
+    # TODO(pseudorandom): Should eventually output a fit dataframe that has
+    # both TRUE and FALSE estimates. Currently only producing est for TRUE
+    # because association uses the Other algorithm to produce an estimate for
+    # FALSE.
+
+    fit$string <- c("TRUE")
+    fit$estimate <- c(es$estimates[[1]] * N)
+    fit$std_error <- c(es$stds[[1]] * N)
+    fit$proportion <- c(es$estimates[[1]])
+    fit$prop_std_error <- c(es$stds[[1]])
+
+    low_95 <- fit$proportion - 1.96 * fit$prop_std_error
+    high_95 <- fit$proportion + 1.96 * fit$prop_std_error
+
+    fit$prop_low_95 = pmax(low_95, 0.0)
+    fit$prop_high_95 = pmin(high_95, 1.0)
+    fit <- fit[, c("string", "estimate", "std_error", "proportion",
+                 "prop_std_error", "prop_low_95", "prop_high_95")]
+    rownames(fit) = fit$string
+    return(list(fit = fit))
+  }
 
   filter_cohorts <- which(counts[, 1] != 0)  # exclude cohorts with zero reports
 
