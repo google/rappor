@@ -188,10 +188,17 @@ CheckDecodeHelper <- function(params, map, pdf, num_clients,
   decoded_partition <- setNames(decoded$fit$estimate, decoded$fit$string)
 
   checkTrue(L1Distance(decoded_partition, partition) < total^.5 * tolerance_l1,
-            "L1 distance is too large")
+            sprintf("L1 distance is too large: \
+                    L1Distance = %f, total^0.5 * tolerance_l1 = %f",
+                    L1Distance(decoded_partition, partition),
+                    total^0.5 * tolerance_l1))
 
   checkTrue(LInfDistance(decoded_partition, partition) <
-              max(partition)^.5 * tolerance_linf, "L_inf distance is too large")
+              max(partition)^.5 * tolerance_linf,
+              sprintf("L_inf distance is too large: \
+                      L1Distance = %f, max(partition)^0.5 * tolerance_linf = %f",
+                      L1Distance(decoded_partition, partition),
+                      max(partition)^0.5 * tolerance_linf))
 
   list(estimates = decoded_partition,
        stds = setNames(decoded$fit$std_error, decoded$fit$string))
@@ -242,6 +249,9 @@ TestDecode <- function() {
   # match the ground truth. Must be close enough though.
   noise0 <- list(p = 0, q = 1, f = 0)  # no noise whatsoever
 
+  # Args are: message str, test function, # repetitions,
+  #           params, map, true pdf, # clients,
+  #           tolerances
   CheckDecodeAveAndStds("Testing Decode (1/5)", CheckDecodeHelper, 100,
                         c(report4x2, noise0), map0, distribution0, 100,
                         tolerance_l1 = 5,
@@ -291,11 +301,43 @@ TestDecode <- function() {
                         c(report8x32, noise1), map2, distribution2, 10^6,
                         tolerance_l1 = values * 3,
                         tolerance_linf = 80)
+
+}
+
+TestDecodeBool <- function() {
+  # Testing Boolean Decode
+  values <- 2
+  # 1 bit; rest of the params don't matter
+  # setting up map_bool to be consistent with the Decode API and for
+  # GenerateCounts()
+  report_bool <- list(k = 1, m = 128, h = 2)
+  map_bool <- matrix(c(0, 1), nrow = 128 * 1, ncol = values, byrow = TRUE)
+
+  colnames(map_bool) <- c("FALSE", "TRUE")
+  distribution_bool <- ComputePdf("zipf1.5", values)
+  names(distribution_bool) <- colnames(map_bool)
+  noise2 <- list(p = 0.25, q = 0.75, f = 0.5)
+
+  # tolerance_l1 set to four standard deviations to avoid any flakiness in
+  # tests
+  CheckDecodeAveAndStds("Testing .DecodeBoolean (1/2)", CheckDecodeHelper, 100,
+                        c(report_bool, noise2), map_bool, distribution_bool,
+                        10^6,
+                        tolerance_l1 = 4 * values,
+                        tolerance_linf = 80)
+
+  noise1 <- list(p = .4, q = .6, f = .5)  # substantial noise, 7 stddevs error
+  CheckDecodeAveAndStds("Testing .DecodeBoolean (2/2)", CheckDecodeHelper, 100,
+                        c(report_bool, noise1), map_bool, distribution_bool,
+                        10^6,
+                        tolerance_l1 = 7 * values,
+                        tolerance_linf = 80)
 }
 
 RunAll <- function() {
   TestEstimateBloomCounts()
   TestDecode()
+  TestDecodeBool()
 }
 
 RunAll()

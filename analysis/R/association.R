@@ -326,7 +326,6 @@ ComputeDistributionEM <- function(reports, report_cohorts, maps,
       var_params <- params_list[[j]]
     }
 
-    # Compute the probability of the "other" category
     var_counts <- NULL
     if (is.null(marginals)) {
       Log('\tSumming bits to gets observed counts')
@@ -353,10 +352,14 @@ ComputeDistributionEM <- function(reports, report_cohorts, maps,
     f <- var_params$f
     pstar <- (1 - f / 2) * p + (f / 2) * q
     qstar <- (1 - f / 2) * q + (f / 2) * p
+    k <- var_params$k
 
-    if (ignore_other) {
+    # Ignore other probability if either ignore_other is set or k == 1
+    # (Boolean RAPPOR)
+    if (ignore_other || (k == 1)) {
       prob_other <- vector(mode = "list", length = var_params$m)
     } else {
+      # Compute the probability of the "other" category
       if (is.null(var_counts)) {
         var_counts <- ComputeCounts(var_report, var_cohort, var_params)
       }

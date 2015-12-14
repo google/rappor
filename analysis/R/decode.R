@@ -279,6 +279,51 @@ Resample <- function(e) {
   list(estimates = estimates, stds = stds)
 }
 
+# Private function
+# Decode for Boolean RAPPOR inputs
+# Returns a list with attribute fit only. (Inference and other aspects
+# currently not incorporated because they're unnecessary for association.)
+.DecodeBoolean <- function(counts, params, num_reports) {
+  # Set number of cohorts to 1
+  params$m = 1
+  # Sums across cohorts.
+  summed_counts = colSums(counts)
+
+  # With params$m = 1, EstimateBloomCounts computes Boolean RAPPOR estimates
+  # given counts summed across the cohorts.
+  es <- EstimateBloomCounts(params, summed_counts)
+
+  fit = as.data.frame(matrix(ncol = 7, nrow = 2))
+  colnames(fit) = c("string", "estimate", "std_error", "proportion",
+               "prop_std_error", "prop_low_95", "prop_high_95")
+
+  # TODO(pseudorandom): Should eventually output a fit dataframe that has
+  # both TRUE and FALSE estimates. Currently only producing est for TRUE
+  # because association uses the Other algorithm to produce an estimate for
+  # FALSE.
+
+  fit$string <- c("TRUE", "FALSE")
+  fit$estimate <- c(es$estimates[[1]] * num_reports,
+                    num_reports - es$estimates[[1]] * num_reports)
+  # Std dev remains the same
+  fit$std_error <- c(es$stds[[1]] * num_reports,
+                     es$stds[[1]] * num_reports)
+  fit$proportion <- c(es$estimates[[1]],
+                      1 - es$estimates[[1]])
+  fit$prop_std_error <- c(es$stds[[1]],
+                          es$stds[[1]])
+
+  low_95 <- fit$proportion - 1.96 * fit$prop_std_error
+  high_95 <- fit$proportion + 1.96 * fit$prop_std_error
+
+  fit$prop_low_95 = pmax(low_95, 0.0)
+  fit$prop_high_95 = pmin(high_95, 1.0)
+  fit <- fit[, c("string", "estimate", "std_error", "proportion",
+               "prop_std_error", "prop_low_95", "prop_high_95")]
+  rownames(fit) = fit$string
+  return(list(fit = fit))
+}
+
 Decode <- function(counts, map, params, alpha = 0.05,
                    correction = c("Bonferroni"), quiet = FALSE, ...) {
   k <- params$k
@@ -293,41 +338,10 @@ Decode <- function(counts, map, params, alpha = 0.05,
   N <- sum(counts[, 1])
   if (k == 1) {
     # Heuristic for boolean var.
-    # TODO(pseudorandom): incorporate this into larger plan of handling Basic
-    # RAPPOR
+    # TODO(pseudorandom): incorporate this into larger plan of handling
+    # Boolean RAPPOR
     params$m = 1
-
-    # Sums across cohorts.
-    summed_counts = colSums(counts)
-
-    # With params$m = 1, EstimateBloomCounts computes Basic RAPPOR estimates
-    # given counts summed across the cohorts.
-    es <- EstimateBloomCounts(params, summed_counts)
-
-    fit = as.data.frame(matrix(ncol = 7, nrow = 1))
-    colnames(fit) = c("string", "estimate", "std_error", "proportion",
-                 "prop_std_error", "prop_low_95", "prop_high_95")
-
-    # TODO(pseudorandom): Should eventually output a fit dataframe that has
-    # both TRUE and FALSE estimates. Currently only producing est for TRUE
-    # because association uses the Other algorithm to produce an estimate for
-    # FALSE.
-
-    fit$string <- c("TRUE")
-    fit$estimate <- c(es$estimates[[1]] * N)
-    fit$std_error <- c(es$stds[[1]] * N)
-    fit$proportion <- c(es$estimates[[1]])
-    fit$prop_std_error <- c(es$stds[[1]])
-
-    low_95 <- fit$proportion - 1.96 * fit$prop_std_error
-    high_95 <- fit$proportion + 1.96 * fit$prop_std_error
-
-    fit$prop_low_95 = pmax(low_95, 0.0)
-    fit$prop_high_95 = pmin(high_95, 1.0)
-    fit <- fit[, c("string", "estimate", "std_error", "proportion",
-                 "prop_std_error", "prop_low_95", "prop_high_95")]
-    rownames(fit) = fit$string
-    return(list(fit = fit))
+    return(.DecodeBoolean(counts, params, N))
   }
 
   filter_cohorts <- which(counts[, 1] != 0)  # exclude cohorts with zero reports
