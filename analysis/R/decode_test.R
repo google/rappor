@@ -320,24 +320,33 @@ TestDecodeBool <- function() {
 
   # tolerance_l1 set to four standard deviations to avoid any flakiness in
   # tests
-  CheckDecodeAveAndStds("Testing .DecodeBoolean (1/2)", CheckDecodeHelper, 100,
+  CheckDecodeAveAndStds("Testing .DecodeBoolean (1/3)", CheckDecodeHelper, 100,
                         c(report_bool, noise2), map_bool, distribution_bool,
                         10^6,
                         tolerance_l1 = 4 * values,
                         tolerance_linf = 80)
 
-  noise1 <- list(p = .4, q = .6, f = .5)  # substantial noise, 7 stddevs error
-  CheckDecodeAveAndStds("Testing .DecodeBoolean (2/2)", CheckDecodeHelper, 100,
+  noise1 <- list(p = .4, q = .6, f = .5)  # substantial noise => 7 stddevs error
+  CheckDecodeAveAndStds("Testing .DecodeBoolean (2/3)", CheckDecodeHelper, 100,
                         c(report_bool, noise1), map_bool, distribution_bool,
                         10^6,
                         tolerance_l1 = 7 * values,
                         tolerance_linf = 80)
+
+  distribution_near_zero <- c(0.999, 0.001)
+  names(distribution_near_zero) <- colnames(map_bool)
+
+  CheckDecodeAveAndStds("Testing .DecodeBoolean (3/3)", CheckDecodeHelper, 100,
+                        c(report_bool, noise2), map_bool,
+                        distribution_near_zero, 10^6,
+                        tolerance_l1 = 4 * values,
+                        tolerance_linf = 80)
 }
 
 RunAll <- function() {
-  TestEstimateBloomCounts()
-  TestDecode()
   TestDecodeBool()
+  # TestEstimateBloomCounts()
+  # TestDecode()
 }
 
 RunAll()
