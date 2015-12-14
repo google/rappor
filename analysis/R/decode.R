@@ -297,11 +297,6 @@ Resample <- function(e) {
   colnames(fit) = c("string", "estimate", "std_error", "proportion",
                "prop_std_error", "prop_low_95", "prop_high_95")
 
-  # TODO(pseudorandom): Should eventually output a fit dataframe that has
-  # both TRUE and FALSE estimates. Currently only producing est for TRUE
-  # because association uses the Other algorithm to produce an estimate for
-  # FALSE.
-
   fit$string <- c("TRUE", "FALSE")
   fit$estimate <- c(es$estimates[[1]] * num_reports,
                     num_reports - es$estimates[[1]] * num_reports)
@@ -338,8 +333,6 @@ Decode <- function(counts, map, params, alpha = 0.05,
   N <- sum(counts[, 1])
   if (k == 1) {
     # Heuristic for boolean var.
-    # TODO(pseudorandom): incorporate this into larger plan of handling
-    # Boolean RAPPOR
     params$m = 1
     return(.DecodeBoolean(counts, params, N))
   }
