@@ -344,9 +344,9 @@ TestDecodeBool <- function() {
 }
 
 RunAll <- function() {
+  TestEstimateBloomCounts()
+  TestDecode()
   TestDecodeBool()
-  # TestEstimateBloomCounts()
-  # TestDecode()
 }
 
 RunAll()
