@@ -284,38 +284,31 @@ Resample <- function(e) {
 # Returns a list with attribute fit only. (Inference and other aspects
 # currently not incorporated because they're unnecessary for association.)
 .DecodeBoolean <- function(counts, params, num_reports) {
-  # Set number of cohorts to 1
-  params$m = 1
-  # Sums across cohorts.
-  summed_counts = colSums(counts)
+  # Boolean variables are reported without cohorts and to estimate counts,
+  # first sum up counts across all cohorts and then run EstimateBloomCounts
+  # with the number of cohorts set to 1.
+  params$m <- 1  # set number of cohorts to 1
+  summed_counts <- colSums(counts)  # sum counts across cohorts
+  es <- EstimateBloomCounts(params, summed_counts)  # estimate boolean counts
 
-  # With params$m = 1, EstimateBloomCounts computes Boolean RAPPOR estimates
-  # given counts summed across the cohorts.
-  es <- EstimateBloomCounts(params, summed_counts)
+  est <- es$estimates[[1]]
+  std <- es$stds[[1]]
 
-  fit = as.data.frame(matrix(ncol = 7, nrow = 2))
-  colnames(fit) = c("string", "estimate", "std_error", "proportion",
-               "prop_std_error", "prop_low_95", "prop_high_95")
-
-  fit$string <- c("TRUE", "FALSE")
-  fit$estimate <- c(es$estimates[[1]] * num_reports,
-                    num_reports - es$estimates[[1]] * num_reports)
-  # Std dev remains the same
-  fit$std_error <- c(es$stds[[1]] * num_reports,
-                     es$stds[[1]] * num_reports)
-  fit$proportion <- c(es$estimates[[1]],
-                      1 - es$estimates[[1]])
-  fit$prop_std_error <- c(es$stds[[1]],
-                          es$stds[[1]])
+  fit <- data.frame(
+           string         = c("TRUE", "FALSE"),
+           estimate       = c(est * num_reports,
+                              num_reports - est * num_reports),
+           std_error      = c(std * num_reports, std * num_reports),
+           proportion     = c(est, 1 - est),
+           prop_std_error = c(std, std))
 
   low_95 <- fit$proportion - 1.96 * fit$prop_std_error
   high_95 <- fit$proportion + 1.96 * fit$prop_std_error
 
-  fit$prop_low_95 = pmax(low_95, 0.0)
-  fit$prop_high_95 = pmin(high_95, 1.0)
-  fit <- fit[, c("string", "estimate", "std_error", "proportion",
-               "prop_std_error", "prop_low_95", "prop_high_95")]
-  rownames(fit) = fit$string
+  fit$prop_low_95 <- pmax(low_95, 0.0)
+  fit$prop_high_95 <- pmin(high_95, 1.0)
+  rownames(fit) <- fit$string
+
   return(list(fit = fit))
 }
 
@@ -332,8 +325,6 @@ Decode <- function(counts, map, params, alpha = 0.05,
 
   N <- sum(counts[, 1])
   if (k == 1) {
-    # Heuristic for boolean var.
-    params$m = 1
     return(.DecodeBoolean(counts, params, N))
   }
 

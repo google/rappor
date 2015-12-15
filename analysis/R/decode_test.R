@@ -234,7 +234,7 @@ TestDecode <- function() {
 
   # TOY TESTS: three values, 2 cohorts, 4 bits each
 
-  report4x2 <- list(k = 4, m = 2, h = 2)  # 2 cohorts, 4 bits each
+  params_4x2 <- list(k = 4, m = 2, h = 2)  # 2 cohorts, 4 bits each
   map0 <- Matrix(0, nrow = 8, ncol = 3, sparse = TRUE)  # 3 possible values
   map0[1,] <- c(1, 0, 0)
   map0[2,] <- c(0, 1, 0)
@@ -253,93 +253,95 @@ TestDecode <- function() {
   #           params, map, true pdf, # clients,
   #           tolerances
   CheckDecodeAveAndStds("Testing Decode (1/5)", CheckDecodeHelper, 100,
-                        c(report4x2, noise0), map0, distribution0, 100,
+                        c(params_4x2, noise0), map0, distribution0, 100,
                         tolerance_l1 = 5,
                         tolerance_linf = 3)
 
   noise1 <- list(p = .4, q = .6, f = .5)  # substantial noise, very few reports
   CheckDecodeAveAndStds("Testing Decode (2/5)", CheckDecodeHelper, 100,
-                        c(report4x2, noise1), map0, distribution0, 100,
+                        c(params_4x2, noise1), map0, distribution0, 100,
                         tolerance_l1 = 20,
                         tolerance_linf = 20)
 
   # substantial noise, many reports
   CheckDecodeAveAndStds("Testing Decode (3/5)", CheckDecodeHelper, 100,
-                        c(report4x2, noise1), map0, distribution0, 100000,
+                        c(params_4x2, noise1), map0, distribution0, 100000,
                         tolerance_l1 = 50,
                         tolerance_linf = 40)
 
   # MEDIUM TEST: 100 values, 32 cohorts, 8 bits each, 10^6 reports
-  values <- 100
+  num_values <- 100
 
-  report8x32 <- list(k = 8, m = 32, h = 2)  # 32 cohorts, 8 bits each
+  params_8x32 <- list(k = 8, m = 32, h = 2)  # 32 cohorts, 8 bits each
 
-  map1 <- matrix(rbinom(32 * 8 * values, 1, .25), nrow = 32 * 8, ncol = values)
+  map1 <- matrix(rbinom(32 * 8 * num_values, 1, .25), nrow = 32 * 8, ncol =
+                 num_values)
 
-  colnames(map1) <- sprintf("v%d", 1:values)
+  colnames(map1) <- sprintf("v%d", 1:num_values)
 
-  distribution1 <- ComputePdf("zipf1", values)
+  distribution1 <- ComputePdf("zipf1", num_values)
   names(distribution1) <- colnames(map1)
   CheckDecodeAveAndStds("Testing Decode (4/5)", CheckDecodeHelper, 100,
-                        c(report8x32, noise1), map1, distribution1, 10^6,
-                        tolerance_l1 = values * 3,
+                        c(params_8x32, noise1), map1, distribution1, 10^6,
+                        tolerance_l1 = num_values * 3,
                         tolerance_linf = 100)
 
   # Testing LASSO: 500 values, 32 cohorts, 8 bits each, 10^6 reports
-  values <- 500
+  num_values <- 500
 
-  report8x32 <- list(k = 8, m = 32, h = 2)  # 32 cohorts, 8 bits each
+  params_8x32 <- list(k = 8, m = 32, h = 2)  # 32 cohorts, 8 bits each
 
-  map2 <- matrix(rbinom(32 * 8 * values, 1, .25), nrow = 32 * 8, ncol = values)
+  map2 <- matrix(rbinom(32 * 8 * num_values, 1, .25), nrow = 32 * 8, ncol =
+                 num_values)
 
-  colnames(map2) <- sprintf("v%d", 1:values)
+  colnames(map2) <- sprintf("v%d", 1:num_values)
 
-  distribution2 <- ComputePdf("zipf1.5", values)
+  distribution2 <- ComputePdf("zipf1.5", num_values)
   names(distribution2) <- colnames(map2)
 
   CheckDecodeAveAndStds("Testing Decode (5/5)", CheckDecodeHelper, 1,
-                        c(report8x32, noise1), map2, distribution2, 10^6,
-                        tolerance_l1 = values * 3,
+                        c(params_8x32, noise1), map2, distribution2, 10^6,
+                        tolerance_l1 = num_values * 3,
                         tolerance_linf = 80)
 
 }
 
 TestDecodeBool <- function() {
   # Testing Boolean Decode
-  values <- 2
+  num_values <- 2
   # 1 bit; rest of the params don't matter
+  params_bool <- list(k = 1, m = 128, h = 2)
   # setting up map_bool to be consistent with the Decode API and for
   # GenerateCounts()
-  report_bool <- list(k = 1, m = 128, h = 2)
-  map_bool <- matrix(c(0, 1), nrow = 128 * 1, ncol = values, byrow = TRUE)
+  map_bool <- matrix(c(0, 1), nrow = 128 * 1, ncol = num_values, byrow = TRUE)
 
   colnames(map_bool) <- c("FALSE", "TRUE")
-  distribution_bool <- ComputePdf("zipf1.5", values)
+  distribution_bool <- ComputePdf("zipf1.5", num_values)
   names(distribution_bool) <- colnames(map_bool)
   noise2 <- list(p = 0.25, q = 0.75, f = 0.5)
 
   # tolerance_l1 set to four standard deviations to avoid any flakiness in
   # tests
   CheckDecodeAveAndStds("Testing .DecodeBoolean (1/3)", CheckDecodeHelper, 100,
-                        c(report_bool, noise2), map_bool, distribution_bool,
+                        c(params_bool, noise2), map_bool, distribution_bool,
                         10^6,
-                        tolerance_l1 = 4 * values,
+                        tolerance_l1 = 4 * num_values,
                         tolerance_linf = 80)
 
   noise1 <- list(p = .4, q = .6, f = .5)  # substantial noise => 7 stddevs error
   CheckDecodeAveAndStds("Testing .DecodeBoolean (2/3)", CheckDecodeHelper, 100,
-                        c(report_bool, noise1), map_bool, distribution_bool,
+                        c(params_bool, noise1), map_bool, distribution_bool,
                         10^6,
-                        tolerance_l1 = 7 * values,
+                        tolerance_l1 = 7 * num_values,
                         tolerance_linf = 80)
 
   distribution_near_zero <- c(0.999, 0.001)
   names(distribution_near_zero) <- colnames(map_bool)
 
   CheckDecodeAveAndStds("Testing .DecodeBoolean (3/3)", CheckDecodeHelper, 100,
-                        c(report_bool, noise2), map_bool,
+                        c(params_bool, noise2), map_bool,
                         distribution_near_zero, 10^6,
-                        tolerance_l1 = 4 * values,
+                        tolerance_l1 = 4 * num_values,
                         tolerance_linf = 80)
 }
 

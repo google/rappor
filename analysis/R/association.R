@@ -356,7 +356,7 @@ ComputeDistributionEM <- function(reports, report_cohorts, maps,
 
     # Ignore other probability if either ignore_other is set or k == 1
     # (Boolean RAPPOR)
-    if (ignore_other || (k == 1)) {
+    if (ignore_other) {
       prob_other <- vector(mode = "list", length = var_params$m)
     } else {
       # Compute the probability of the "other" category
