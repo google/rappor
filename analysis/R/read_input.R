@@ -15,15 +15,22 @@
 #
 # Read parameter, counts and map files.
 
-gfile <- function(str) { str }  # NOTE: gfile will be identity function in open source version
 library(Matrix)
+
+source.rappor <- function(rel_path)  {
+  abs_path <- paste0(Sys.getenv("RAPPOR_REPO", ""), rel_path)
+  source(abs_path)
+}
+
+source.rappor("analysis/R/util.R")  # for Log
+
 
 ReadParameterFile <- function(params_file) {
   # Read parameter file. Format:
   # k, h, m, p, q, f
   # 128, 2, 8, 0.5, 0.75, 0.75
 
-  params <- as.list(read.csv(gfile(params_file)))
+  params <- as.list(read.csv(params_file))
   if (length(params) != 6) {
     stop("There should be exactly 6 columns in the parameter file.")
   }
@@ -38,7 +45,7 @@ ReadCountsFile <- function(counts_file, params = NULL) {
   if (!file.exists(counts_file)) {
     return(NULL)
   }
-  counts <- read.csv(gfile(counts_file), header = FALSE)
+  counts <- read.csv(counts_file, header = FALSE)
 
   if (!is.null(params)) {
     if (nrow(counts) != params$m) {
@@ -66,7 +73,7 @@ ReadMapFile <- function(map_file, params = NULL) {
   #    map: a sparse representation of set bits for each candidate string.
   #    strs: a vector of all candidate strings.
 
-  map_pos <- read.csv(gfile(map_file), header = FALSE, as.is = TRUE)
+  map_pos <- read.csv(map_file, header = FALSE, as.is = TRUE)
   strs <- map_pos[, 1]
   strs[strs == ""] <- "Empty"
 
@@ -101,24 +108,24 @@ ReadMapFile <- function(map_file, params = NULL) {
 }
 
 LoadMapFile <- function(map_file, params = NULL) {
-  # Reads the map file and creates an R binary .rda. If the .rda file already
-  # exists, just loads that file. NOTE: It assumes the map file is
-  # immutable.
+  # Reads the map file, caching an .rda (R binary data) version of it to speed
+  # up future loads.
 
-  rda_file <- sub(".csv", ".rda", map_file, fixed = TRUE)
+  rda_path <- sub(".csv", ".rda", map_file, fixed = TRUE)
+  # This must be unique per process, so concurrent processes don't try to
+  # write the same file.
+  tmp_path <- sprintf("%s.%d", rda_path, Sys.getpid())
 
-  # file.info() is not implemented yet by the gfile package. One must delete
-  # the .rda file manually when the .csv file is updated.
-  # csv_updated <- file.info(map_file)$mtime > file.info(rda_file)$mtime
-
-  if (!file.exists(rda_file)) {
-    cat("Parsing", map_file, "...\n")
+  # First save to a temp file, and then atomically rename to the destination.
+  if (!file.exists(rda_path)) {
+    Log("Reading %s", map_file)
     map <- ReadMapFile(map_file, params = params)
-    cat("Saving", map_file, "as an rda file for faster access.\n")
-    save(map, file = file.path(tempdir(), basename(rda_file)))
-    file.copy(file.path(tempdir(), basename(rda_file)), rda_file,
-              overwrite = TRUE)
+
+    Log("Saving %s as an rda file for faster access", map_file)
+    save(map, file = tmp_path)
+    file.rename(tmp_path, rda_path)
   }
-  load(gfile(rda_file), .GlobalEnv)
+  Log("Loading %s", rda_path)
+  load(rda_path, .GlobalEnv)
   return(map)
 }
