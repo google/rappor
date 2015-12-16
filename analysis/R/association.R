@@ -380,10 +380,15 @@ ComputeDistributionEM <- function(reports, report_cohorts, maps,
     Log('\tGetCondProb for each report (%d cores)', num_cores)
 
     # Get the joint conditional distribution
+    # TODO(pseudorandom): check RAPPOR type more systematically instead of by
+    # checking if k == 1
     if(k == 1) {
-      # TRUE, FALSE
+      # The candidate strings for Boolean are (TRUE, FALSE)
+      # The values below are p(report=1|value=TRUE), p(report=1|value=FALSE)
       cond_probs_for_1 <- c(qstar, pstar)
+      # The values below are p(report=0|value=TRUE), p(report=0|value=FALSE)
       cond_probs_for_0 <- c(1 - qstar,  1 - pstar)
+
       cond_report_dist <- mclapply(var_report, function(report) {
         if(report[[1]] == 1) {
           cond_probs_for_1
