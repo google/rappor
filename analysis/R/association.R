@@ -356,7 +356,7 @@ ComputeDistributionEM <- function(reports, report_cohorts, maps,
 
     # Ignore other probability if either ignore_other is set or k == 1
     # (Boolean RAPPOR)
-    if (ignore_other) {
+    if (ignore_other || (k == 1)) {
       prob_other <- vector(mode = "list", length = var_params$m)
     } else {
       # Compute the probability of the "other" category
@@ -380,13 +380,26 @@ ComputeDistributionEM <- function(reports, report_cohorts, maps,
     Log('\tGetCondProb for each report (%d cores)', num_cores)
 
     # Get the joint conditional distribution
-    cond_report_dist <- mclapply(seq(length(var_report)), function(i) {
-      cohort <- var_cohort[i]
-      #Log('Report %d, cohort %d', i, cohort)
-      bit_indices <- bit_indices_by_cohort[[cohort]]
-      GetCondProb(var_report[[i]], pstar, qstar, bit_indices,
-                  prob_other = prob_other[[cohort]])
-    }, mc.cores = num_cores)
+    if(k == 1) {
+      # TRUE, FALSE
+      cond_probs_for_1 <- c(qstar, pstar)
+      cond_probs_for_0 <- c(1 - qstar,  1 - pstar)
+      cond_report_dist <- mclapply(var_report, function(report) {
+        if(report[[1]] == 1) {
+          cond_probs_for_1
+        } else {
+          cond_probs_for_0
+        }
+      }, mc.cores = num_cores)
+    } else {
+      cond_report_dist <- mclapply(seq(length(var_report)), function(i) {
+        cohort <- var_cohort[i]
+        #Log('Report %d, cohort %d', i, cohort)
+        bit_indices <- bit_indices_by_cohort[[cohort]]
+        GetCondProb(var_report[[i]], pstar, qstar, bit_indices,
+                    prob_other = prob_other[[cohort]])
+      }, mc.cores = num_cores)
+    }
 
     Log('\tUpdateJointConditional')
 

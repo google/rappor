@@ -51,6 +51,9 @@ write-assoc-testdata() {
 domain,flag..HTTPS
 google.com,1
 google.com,1
+google.com,1
+google.com,1
+google.com,0
 yahoo.com,1
 yahoo.com,0
 bing.com,1
@@ -135,13 +138,18 @@ decode-assoc() {
     --var2 flag..HTTPS \
     --map1 _tmp/domain_map.csv \
     --create-bool-map \
-    --max-em-iters 10 \
+    --max-em-iters 1000 \
     --num-cores 2 \
     --output-dir _tmp \
     --tmp-dir _tmp \
     "$@"
 
   head _tmp/assoc-*
+
+  # Printing true results to compare against
+  echo
+  echo "==> _tmp/true_values.csv <=="
+  head _tmp/true_values.csv
 }
 
 decode-assoc-bad-rows() {
