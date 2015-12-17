@@ -181,10 +181,11 @@ ResultMatrixToDataFrame <- function(m, string_var_name, bool_var_name) {
   dim_names <- list()
   # First dimension is bool.  TODO: Remove this once we're not using
   # --create-bool-map.
-  dim_names[[bool_var_name]] <- c('TRUE', 'FALSE')
-  dim_names[[string_var_name]] <- dimnames(m)[[2]]
+  # dim_names[[bool_var_name]] <- c('TRUE', 'FALSE')
+  # dim_names[[string_var_name]] <- dimnames(m)[[2]]
 
-  dimnames(m) <- dim_names
+  # dimnames(m) <- dim_names
+
   # http://stackoverflow.com/questions/15885111/create-data-frame-from-a-matrix-in-r
   fit_df <- as.data.frame(as.table(m))
 

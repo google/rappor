@@ -60,6 +60,9 @@ EstimateBloomCounts <- function(params, obs_counts) {
 
   p2 <- p11 - p01  # == (1 - f) * (q - p)
 
+  # When m = 1, obs_counts does not have the right dimensions. Fixing this.
+  dim(obs_counts) <- c(m, k + 1)
+
   ests <- apply(obs_counts, 1, function(cohort_row) {
       N <- cohort_row[1]  # sample size for the cohort -- first column is total
       v <- cohort_row[-1] # counts for individual bits
@@ -276,6 +279,39 @@ Resample <- function(e) {
   list(estimates = estimates, stds = stds)
 }
 
+# Private function
+# Decode for Boolean RAPPOR inputs
+# Returns a list with attribute fit only. (Inference and other aspects
+# currently not incorporated because they're unnecessary for association.)
+.DecodeBoolean <- function(counts, params, num_reports) {
+  # Boolean variables are reported without cohorts and to estimate counts,
+  # first sum up counts across all cohorts and then run EstimateBloomCounts
+  # with the number of cohorts set to 1.
+  params$m <- 1  # set number of cohorts to 1
+  summed_counts <- colSums(counts)  # sum counts across cohorts
+  es <- EstimateBloomCounts(params, summed_counts)  # estimate boolean counts
+
+  ests <- es$estimates[[1]]
+  std <- es$stds[[1]]
+
+  fit <- data.frame(
+           string         = c("TRUE", "FALSE"),
+           estimate       = c(ests * num_reports,
+                              num_reports - ests * num_reports),
+           std_error      = c(std * num_reports, std * num_reports),
+           proportion     = c(ests, 1 - ests),
+           prop_std_error = c(std, std))
+
+  low_95 <- fit$proportion - 1.96 * fit$prop_std_error
+  high_95 <- fit$proportion + 1.96 * fit$prop_std_error
+
+  fit$prop_low_95 <- pmax(low_95, 0.0)
+  fit$prop_high_95 <- pmin(high_95, 1.0)
+  rownames(fit) <- fit$string
+
+  return(list(fit = fit))
+}
+
 Decode <- function(counts, map, params, alpha = 0.05,
                    correction = c("Bonferroni"), quiet = FALSE, ...) {
   k <- params$k
@@ -288,6 +324,9 @@ Decode <- function(counts, map, params, alpha = 0.05,
   S <- ncol(map)  # total number of candidates
 
   N <- sum(counts[, 1])
+  if (k == 1) {
+    return(.DecodeBoolean(counts, params, N))
+  }
 
   filter_cohorts <- which(counts[, 1] != 0)  # exclude cohorts with zero reports
 
