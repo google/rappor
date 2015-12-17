@@ -291,15 +291,15 @@ Resample <- function(e) {
   summed_counts <- colSums(counts)  # sum counts across cohorts
   es <- EstimateBloomCounts(params, summed_counts)  # estimate boolean counts
 
-  est <- es$estimates[[1]]
+  ests <- es$estimates[[1]]
   std <- es$stds[[1]]
 
   fit <- data.frame(
            string         = c("TRUE", "FALSE"),
-           estimate       = c(est * num_reports,
-                              num_reports - est * num_reports),
+           estimate       = c(ests * num_reports,
+                              num_reports - ests * num_reports),
            std_error      = c(std * num_reports, std * num_reports),
-           proportion     = c(est, 1 - est),
+           proportion     = c(ests, 1 - ests),
            prop_std_error = c(std, std))
 
   low_95 <- fit$proportion - 1.96 * fit$prop_std_error

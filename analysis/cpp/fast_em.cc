@@ -142,11 +142,7 @@ static void ExpectationMaximization(
   log("Starting %d EM iterations", max_em_iters);
 
   for (int em_iter = 0; em_iter < max_em_iters; ++em_iter) {
-
-    if(em_iter % 200 == 0) {
-      log("fast_em iteration %d", em_iter);
-    }
-
+    log("fast_em iteration %d", em_iter);
     //
     // lapply() step.
     //
@@ -183,8 +179,7 @@ static void ExpectationMaximization(
       new_pij[i] /= num_entries;
     }
 
-    // TODO(pseudorandom): include verbose mode where this is printed
-    // PrintPij(new_pij);
+    PrintPij(new_pij);
 
     //
     // Check for termination
@@ -199,10 +194,7 @@ static void ExpectationMaximization(
 
     pij = new_pij;  // copy
 
-    if (em_iter % 200 == 0) {
-      PrintPij(new_pij);
-      log("max_dif: %e", em_iter, max_dif);
-    }
+    log("max_dif: %e", em_iter, max_dif);
 
     if (max_dif < epsilon) {
       log("Early EM termination: %e < %e", max_dif, epsilon);
