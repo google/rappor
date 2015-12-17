@@ -275,7 +275,7 @@ int main(int argc, char **argv) {
   double epsilon = 1e-6;
   log("epsilon: %f", epsilon);
 
-  vector<double> pij(num_entries);
+  vector<double> pij(entry_size);
   ExpectationMaximization(
       num_entries, entry_size, cond_prob, max_em_iters, epsilon, &pij);
 
