@@ -14,4 +14,6 @@ readonly RAPPOR_REPO=$THIS_DIR/../
 
 # RAPPOR_REPO is used by source() statements to find .R files.
 export RAPPOR_REPO
-$THIS_DIR/decode_assoc.R "$@"
+
+# Make sure to reuse the same process so it can be killed easily.
+exec $THIS_DIR/decode_assoc.R "$@"
