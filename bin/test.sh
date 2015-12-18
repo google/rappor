@@ -51,6 +51,9 @@ write-assoc-testdata() {
 domain,flag..HTTPS
 google.com,1
 google.com,1
+google.com,1
+google.com,1
+google.com,0
 yahoo.com,1
 yahoo.com,0
 bing.com,1
@@ -66,8 +69,9 @@ EOF
   local prob_q=0.75
   local prob_f=0.5
 
-  # 7 items in the input.  7000 items is enough.
-  local assoc_testdata_count=1000
+  # 10 items in the input. 50,000 items is enough to eyeball accuracy of
+  # results.
+  local assoc_testdata_count=5000
 
   PYTHONPATH=../client/python \
     ../tests/rappor_sim.py \
@@ -145,6 +149,11 @@ decode-assoc() {
     "$@"
 
   head $output_dir/assoc-*
+
+  # Print true values for comparison
+  echo
+  echo "_tmp/true_values.csv:"
+  cat _tmp/true_values.csv
 }
 
 decode-assoc-R() {

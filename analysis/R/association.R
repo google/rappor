@@ -104,6 +104,75 @@ GetOtherProbs <- function(counts, map_by_cohort, marginal, params, pstar,
   result
 }
 
+GetCondProbBooleanReports <- function(reports, pstar, qstar, num_cores) {
+  # Compute conditional probabilities given a set of Boolean reports.
+  #
+  # Args:
+  #   reports: RAPPOR reports as a list of bit arrays (of length 1, because
+  #   this is a boolean report)
+  #   pstar, qstar: standard params computed from from rappor parameters
+  #   num_cores: number of cores to pass to mclapply to parallelize apply
+  #
+  # Returns:
+  #   Conditional probability of all boolean reports corresponding to
+  #   candidates (TRUE, FALSE)
+
+  # The values below are p(report=1|value=TRUE), p(report=1|value=FALSE)
+  cond_probs_for_1 <- c(qstar, pstar)
+  # The values below are p(report=0|value=TRUE), p(report=0|value=FALSE)
+  cond_probs_for_0 <- c(1 - qstar,  1 - pstar)
+
+  cond_report_dist <- mclapply(reports, function(report) {
+    if (report[[1]] == 1) {
+      cond_probs_for_1
+    } else {
+      cond_probs_for_0
+    }
+  }, mc.cores = num_cores)
+  cond_report_dist
+}
+
+GetCondProbStringReports <- function(reports, cohorts, map, m, pstar, qstar,
+                                     marginal, prob_other = NULL, num_cores) {
+  # Wrapper around GetCondProb. Given a set of reports, cohorts, map and
+  # parameters m, p*, and q*, it first computes bit indices by cohort, and
+  # then applies GetCondProb individually to each report.
+  #
+  # Args:
+  #   reports: RAPPOR reports as a list of bit arrays
+  #   cohorts: cohorts corresponding to these reports as a list
+  #   map: map file
+  #   m, pstar, qstar: standard params computed from from rappor parameters
+  #   marginal: list containing marginal estimates (output of Decode)
+  #   prob_other: vector of length k, indicating how often each bit in the
+  #     Bloom filter was set by a string in the "other" category.
+  #
+  # Returns:
+  #   Conditional probability of all reports given each of the strings in
+  #   marginal$string
+
+  # Get bit indices that are set per candidate per cohort
+  bit_indices_by_cohort <- lapply(1:m, function(cohort) {
+    map_for_cohort <- map$map_by_cohort[[cohort]]
+    # Find the bits set by the candidate strings
+    bit_indices <- lapply(marginal$string, function(x) {
+      which(map_for_cohort[, x])
+    })
+    bit_indices
+  })
+
+  # Apply GetCondProb over all reports
+  cond_report_dist <- mclapply(seq(length(reports)), function(i) {
+    cohort <- cohorts[i]
+    #Log('Report %d, cohort %d', i, cohort)
+    bit_indices <- bit_indices_by_cohort[[cohort]]
+    GetCondProb(reports[[i]], pstar, qstar, bit_indices,
+                prob_other = prob_other[[cohort]])
+  }, mc.cores = num_cores)
+  cond_report_dist
+}
+
+
 GetCondProb <- function(report, pstar, qstar, bit_indices, prob_other = NULL) {
   # Given the observed bit array, estimate P(report | true value).
   # Probabilities are estimated for all truth values.
@@ -327,7 +396,6 @@ ComputeDistributionEM <- function(reports, report_cohorts, maps,
       var_params <- params_list[[j]]
     }
 
-    # Compute the probability of the "other" category
     var_counts <- NULL
     if (is.null(marginals)) {
       Log('\tSumming bits to gets observed counts')
@@ -352,12 +420,18 @@ ComputeDistributionEM <- function(reports, report_cohorts, maps,
     p <- var_params$p
     q <- var_params$q
     f <- var_params$f
+    # pstar and qstar needed to compute other probabilities as well as for
+    # inputs to GetCondProb{Boolean, String}Reports subsequently
     pstar <- (1 - f / 2) * p + (f / 2) * q
     qstar <- (1 - f / 2) * q + (f / 2) * p
+    k <- var_params$k
 
-    if (ignore_other) {
+    # Ignore other probability if either ignore_other is set or k == 1
+    # (Boolean RAPPOR)
+    if (ignore_other || (k == 1)) {
       prob_other <- vector(mode = "list", length = var_params$m)
     } else {
+      # Compute the probability of the "other" category
       if (is.null(var_counts)) {
         var_counts <- ComputeCounts(var_report, var_cohort, var_params)
       }
@@ -366,25 +440,19 @@ ComputeDistributionEM <- function(reports, report_cohorts, maps,
       found_strings[[j]] <- c(found_strings[[j]], "Other")
     }
 
-    bit_indices_by_cohort <- lapply(1:var_params$m, function(cohort) {
-      map_for_cohort <- var_map$map_by_cohort[[cohort]]
-      # Find the bits set by the candidate strings
-      bit_indices <- lapply(marginal$string, function(x) {
-        which(map_for_cohort[, x])
-      })
-      bit_indices
-    })
-
+    # Get the joint conditional distribution
     Log('\tGetCondProb for each report (%d cores)', num_cores)
 
-    # Get the joint conditional distribution
-    cond_report_dist <- mclapply(seq(length(var_report)), function(i) {
-      cohort <- var_cohort[i]
-      #Log('Report %d, cohort %d', i, cohort)
-      bit_indices <- bit_indices_by_cohort[[cohort]]
-      GetCondProb(var_report[[i]], pstar, qstar, bit_indices,
-                  prob_other = prob_other[[cohort]])
-    }, mc.cores = num_cores)
+    # TODO(pseudorandom): check RAPPOR type more systematically instead of by
+    # checking if k == 1
+    if (k == 1) {
+      cond_report_dist <- GetCondProbBooleanReports(var_report, pstar, qstar,
+                                                    num_cores)
+    } else {
+      cond_report_dist <- GetCondProbStringReports(var_report,
+                                var_cohort, var_map, var_params$m, pstar, qstar,
+                                marginal, prob_other, num_cores)
+    }
 
     Log('\tUpdateJointConditional')
 
