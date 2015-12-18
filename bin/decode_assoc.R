@@ -178,18 +178,19 @@ ResultMatrixToDataFrame <- function(m, string_var_name, bool_var_name) {
   # Returns:
   #   A flattened data frame, e.g.
 
+  # Name the dimensions of the matrix.
   dim_names <- list()
-  # First dimension is bool.  TODO: Remove this once we're not using
-  # --create-bool-map.
-  # dim_names[[bool_var_name]] <- c('TRUE', 'FALSE')
-  # dim_names[[string_var_name]] <- dimnames(m)[[2]]
+  # TODO: generalize this.  Right now we're assuming the first dimension is
+  # boolean.
+  dim_names[[bool_var_name]] <- c('TRUE', 'FALSE')
+  dim_names[[string_var_name]] <- dimnames(m)[[2]]
 
-  # dimnames(m) <- dim_names
+  dimnames(m) <- dim_names
 
   # http://stackoverflow.com/questions/15885111/create-data-frame-from-a-matrix-in-r
   fit_df <- as.data.frame(as.table(m))
 
-  # The as.table conversion give syou a Freq column.  Call it "proportion" to
+  # The as.table conversion gives you a Freq column.  Call it "proportion" to
   # be consistent with single variable analysis.
   colnames(fit_df)[colnames(fit_df) == "Freq"] <- "proportion" 
 
