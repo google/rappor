@@ -86,6 +86,9 @@ def BuildEmIter(num_entries, entry_size, v):
   pij_in = tf.placeholder(tf.float64, shape=(entry_size,))
 
   # split along dimension 0
+  # TODO:
+  # - make sure this doesn't get run for every EM iteration
+  # - investigate using tf.tile() instead?  (this may cost more memory)
   v_split = tf.split(0, num_entries, v)
 
   z_numerator = [report * pij_in for report in v_split]

@@ -13,11 +13,10 @@ set -o errexit
 readonly THIS_DIR=$(dirname $0)
 
 fast-em() {
-  export LD_LIBRARY_PATH=/usr/local/cuda/lib64
-  export CUDA_HOME=/usr/local/cuda-7.0
-
   # Never returns
-  exec $THIS_DIR/fast_em.py "$@"
+  LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/cuda/lib64 \
+  CUDA_HOME=/usr/local/cuda-7.0 \
+    exec $THIS_DIR/fast_em.py "$@"
 }
 
 fast-em "$@"
