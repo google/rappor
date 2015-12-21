@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>RAPPOR Association Analysis Overview</title>
+
+    <link rel="stylesheet" type="text/css" href="static/table-sort.css" />
+    <script type="text/javascript" src="static/table-lib.js"></script>
+
+    <link rel="stylesheet" type="text/css" href="static/ui.css" />
+    <script type="text/javascript" src="static/ui.js"></script>
+  </head>
+
+  <body onload="initAssocOverview(gUrlHash, gTableStates, kStatusElem);"
+        onhashchange="onHashChange(gUrlHash, gTableStates, kStatusElem);">
+    <p id="status"></p>
+
+    <p style="text-align: right">
+      <a href="../../live/latest/overview.html">Single variable analysis</a> (latest)
+    </p>
+
+    <p style="text-align: right">
+      <a href="../home.html">Home</a> /
+      <b>Association Overview</b>
+    </p>
+
+    <h1>RAPPOR Association Analysis Overview</h1>
+
+    <table id="overview">
+    </table>
+
+    <p>
+      Underlying data: <a href="cooked/assoc-overview.csv">overview.csv</a>
+    </p>
+
+    <!-- page globals -->
+    <script type="text/javascript">
+      var gUrlHash = new UrlHash(location.hash);
+      var gTableStates = {};
+      var kStatusElem = document.getElementById('status');
+    </script>
+
+  </body>
+</html>
