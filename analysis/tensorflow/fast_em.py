@@ -81,19 +81,7 @@ def DebugSum(num_entries, entry_size, v):
   log('Debug sum: %f', s)
 
 
-def ExpectationMaximization(num_entries, entry_size, v, max_em_iters,
-                            epsilon=1e-6):
-  """EM algorithm (using the TensorFlow API).
-
-  Args:
-    num_entries: number of matrices (one per report)
-    entry_size: total number of cells in each matrix
-    v: numpy.ndarray (e.g. 7000 x 8 matrix)
-    max_em_iters: maximum number of EM iterations
-
-  Returns:
-    pij: numpy.ndarray (e.g. vector of length 8)
-  """
+def BuildEmIter(num_entries, entry_size, v):
   # Placeholder for the value from the previous iteration.
   pij_in = tf.placeholder(tf.float64, shape=(entry_size,))
 
@@ -110,8 +98,23 @@ def ExpectationMaximization(num_entries, entry_size, v, max_em_iters,
 
   # This whole expression represents an EM iteration.  Bind the pij_in
   # placeholder, and get a new estimation of Pij.
-  em_iter = tf.reduce_sum(z_concat, 0) / num_entries
+  em_iter_expr = tf.reduce_sum(z_concat, 0) / num_entries
 
+  return pij_in, em_iter_expr
+
+
+def RunEm(pij_in, entry_size, em_iter_expr, max_em_iters, epsilon=1e-6):
+  """Run the iterative EM algorithm (using the TensorFlow API).
+
+  Args:
+    num_entries: number of matrices (one per report)
+    entry_size: total number of cells in each matrix
+    v: numpy.ndarray (e.g. 7000 x 8 matrix)
+    max_em_iters: maximum number of EM iterations
+
+  Returns:
+    pij: numpy.ndarray (e.g. vector of length 8)
+  """
   # Initial value is the uniform distribution
   pij = np.ones(entry_size) / entry_size
 
@@ -121,7 +124,7 @@ def ExpectationMaximization(num_entries, entry_size, v, max_em_iters,
   with tf.Session() as sess:
     for i in xrange(max_em_iters):
       print 'PIJ', pij
-      new_pij = sess.run(em_iter, feed_dict={pij_in: pij})
+      new_pij = sess.run(em_iter_expr, feed_dict={pij_in: pij})
       dif = max(abs(new_pij - pij))
       log('EM iteration %d, dif = %e', i, dif)
       pij = new_pij
@@ -145,13 +148,14 @@ def main(argv):
 
   sep()
   with open(input_path) as f:
-    ne, es, v = ReadListOfMatrices(f)
+    num_entries, entry_size, cond_prob = ReadListOfMatrices(f)
 
   sep()
-  DebugSum(ne, es, v)
+  DebugSum(num_entries, entry_size, cond_prob)
 
   sep()
-  num_em_iters, pij = ExpectationMaximization(ne, es, v, max_em_iters)
+  pij_in, em_iter_expr = BuildEmIter(num_entries, entry_size, cond_prob)
+  num_em_iters, pij = RunEm(pij_in, entry_size, em_iter_expr, max_em_iters)
 
   sep()
   log('Final Pij: %s', pij)
