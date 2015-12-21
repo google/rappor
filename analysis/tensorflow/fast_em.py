@@ -8,6 +8,10 @@ TODO:
     distributed)
   - Reduce the number of ops (currently proportional to the number of reports).
     May require new TensorFlow ops.
+  - Fix performance bug (v_split is probably being recomputed on every
+    iteration):
+    bin$ ./test.sh decode-assoc-cpp - 1.1 seconds (single-threaded C++)
+    bin$ ./test.sh decode-assoc-tensorflow - 226 seconds on GPU
 """
 
 import sys
