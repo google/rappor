@@ -45,7 +45,7 @@ ReadCountsFile <- function(counts_file, params = NULL) {
   if (!file.exists(counts_file)) {
     return(NULL)
   }
-  counts <- as.matrix(read.csv(counts_file, header = FALSE))
+  counts <- read.csv(counts_file, header = FALSE)
 
   if (!is.null(params)) {
     if (nrow(counts) != params$m) {
