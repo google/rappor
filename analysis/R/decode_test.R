@@ -196,8 +196,8 @@ CheckDecodeHelper <- function(params, map, pdf, num_clients,
   checkTrue(LInfDistance(decoded_partition, partition) <
               max(partition)^.5 * tolerance_linf,
               sprintf("L_inf distance is too large: \
-                      L1Distance = %f, max(partition)^0.5 * tolerance_linf = %f",
-                      L1Distance(decoded_partition, partition),
+                      LInfDistance = %f, max(partition)^0.5 * tolerance_linf = %f",
+                      LInfDistance(decoded_partition, partition),
                       max(partition)^0.5 * tolerance_linf))
 
   list(estimates = decoded_partition,
@@ -313,36 +313,34 @@ TestDecodeBool <- function() {
   params_bool <- list(k = 1, m = 128, h = 2)
   # setting up map_bool to be consistent with the Decode API and for
   # GenerateCounts()
-  map_bool <- matrix(c(0, 1), nrow = 128 * 1, ncol = num_values, byrow = TRUE)
+  map_bool <- matrix(c(0, 1), nrow = 128 * 1, ncol = num_values, byrow = TRUE,
+                     dimnames = list(c(), c("FALSE", "TRUE")))
 
-  colnames(map_bool) <- c("FALSE", "TRUE")
-  distribution_bool <- ComputePdf("zipf1.5", num_values)
-  names(distribution_bool) <- colnames(map_bool)
+  distribution_bool <- c("FALSE" = 0.6, "TRUE" = .4)
+
   noise2 <- list(p = 0.25, q = 0.75, f = 0.5)
 
-  # tolerance_l1 set to four standard deviations to avoid any flakiness in
-  # tests
+  # tolerance_l1 set to ten standard deviations to avoid any flakiness in tests
   CheckDecodeAveAndStds("Testing .DecodeBoolean (1/3)", CheckDecodeHelper, 100,
                         c(params_bool, noise2), map_bool, distribution_bool,
                         10^6,
-                        tolerance_l1 = 4 * num_values,
-                        tolerance_linf = 80)
+                        tolerance_l1 = 10,
+                        tolerance_linf = 10)
 
-  noise1 <- list(p = .4, q = .6, f = .5)  # substantial noise => 7 stddevs error
+  noise1 <- list(p = .4, q = .6, f = .5)  # substantial noise => larger error
   CheckDecodeAveAndStds("Testing .DecodeBoolean (2/3)", CheckDecodeHelper, 100,
                         c(params_bool, noise1), map_bool, distribution_bool,
                         10^6,
-                        tolerance_l1 = 7 * num_values,
-                        tolerance_linf = 80)
+                        tolerance_l1 = 30,
+                        tolerance_linf = 30)
 
-  distribution_near_zero <- c(0.999, 0.001)
-  names(distribution_near_zero) <- colnames(map_bool)
+  distribution_near_zero <- c("FALSE" = 0.999, "TRUE" = 0.001)
 
   CheckDecodeAveAndStds("Testing .DecodeBoolean (3/3)", CheckDecodeHelper, 100,
                         c(params_bool, noise2), map_bool,
                         distribution_near_zero, 10^6,
-                        tolerance_l1 = 4 * num_values,
-                        tolerance_linf = 80)
+                        tolerance_l1 = 8,
+                        tolerance_linf = 8)
 }
 
 RunAll <- function() {
