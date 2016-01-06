@@ -45,7 +45,7 @@ stdout.  This is the `m x (k+1)` matrix that is used in the R analysis (where m
 ### hash-candidates
 
 Given a list of candidates on stdin, produce a CSV file of hashes (the "map
-file").  Each row has `m x k` cells.
+file").  Each row has `m x h` cells (where m = #cohorts and h = #hashes)
 
 See the `regtest.sh` script for examples of how these tools are invoked.
 
