@@ -1,0 +1,48 @@
+<!-- Example XML file that defines candidates -->
+
+<!--
+rappor.xml looks like this:
+
+<rappor-configuration>
+  <rappor-parameter-types>
+    <rappor-parameters name="foo">
+      <summary>
+        For opt-in users
+      </summary>
+      <parameters num-cohorts="128" ... />
+    </rappor-parameters>
+  </rappor-parameter-types>
+
+  <rappor-metrics>
+    <rappor-metric name="foo" type="ETLD_PLUS_ONE">
+      <owner>
+        email@google.com
+      </owner>
+      <summary>
+        Collecting foo from users.
+      </summary>
+    </rappor-metric>
+  </rappor-metrics>
+
+-->
+
+<metrics>
+
+  <rappor-metric name="foo">
+    <comment>
+      Comment that can be parsed
+    </comment>
+    <candidates>
+      urls1.txt
+      urls2.txt
+    </candidates>
+  </rappor-metric>
+
+  <rappor-metric name="foo">
+    <candidates>
+      urls1.txt
+      urls3.txt
+    </candidates>
+  </rappor-metric>
+
+</metrics>

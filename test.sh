@@ -151,4 +151,8 @@ gen-true-values() {
   cat $out
 }
 
+gen-maps() {
+  bin/gen_maps.py testdata/rappor-analysis.xml
+}
+
 "$@"
