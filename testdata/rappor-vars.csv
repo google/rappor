@@ -1,0 +1,3 @@
+metric,var,var_type,params
+m,domain,string,m_params
+m,flag..HTTPS,boolean,m_params

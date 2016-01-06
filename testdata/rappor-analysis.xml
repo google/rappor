@@ -26,9 +26,21 @@ rappor.xml looks like this:
 
 -->
 
+<!--
+How to use this file:
+
+There are two levels: metrics and fields.
+
+The names of metrics and fields must match those in rappor.xml.
+
+List all the candidate filenames in a single element.
+
+When
+
+-->
 <metrics>
 
-  <rappor-metric name="foo">
+  <rappor-metric name="Foo">
     <comment>
       Comment that can be parsed
     </comment>
@@ -38,7 +50,7 @@ rappor.xml looks like this:
     </candidates>
   </rappor-metric>
 
-  <rappor-metric name="foo">
+  <rappor-metric name="Bar">
     <candidates>
       urls1.txt
       urls3.txt

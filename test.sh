@@ -152,7 +152,7 @@ gen-true-values() {
 }
 
 gen-maps() {
-  bin/gen_maps.py testdata/rappor-analysis.xml
+  bin/gen_maps.py testdata/rappor-vars.csv testdata/rappor-analysis.xml
 }
 
 "$@"
