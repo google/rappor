@@ -14,6 +14,7 @@ rappor.xml looks like this:
   </rappor-parameter-types>
 
   <rappor-metrics>
+
     <rappor-metric name="foo" type="ETLD_PLUS_ONE">
       <owner>
         email@google.com
@@ -22,6 +23,23 @@ rappor.xml looks like this:
         Collecting foo from users.
       </summary>
     </rappor-metric>
+
+    <rappor-metric name="Multi-D" type="ETLD_PLUS_ONE">
+      <owner>
+        email@google.com
+      </owner>
+      <string-field name="Domain">
+        <summary>
+          Domain name.
+        </summary>
+      </string-field>
+
+      // NOTE: irrelevant since only strings need map files
+      <flags-field>
+      </flags-field>
+
+    </rappor-metric>
+
   </rappor-metrics>
 
 -->
