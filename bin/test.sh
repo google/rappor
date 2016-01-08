@@ -46,7 +46,7 @@ decode-assoc-help() {
 
 write-assoc-testdata() {
   mkdir -p _tmp
-
+  rm _tmp/*.rda
   cat >_tmp/true_values.csv <<EOF 
 domain,flag..HTTPS
 google.com,1
@@ -62,7 +62,7 @@ bing.com,0
 EOF
 
   local num_bits=8
-  local num_hashes=2
+  local num_hashes=1
   local num_cohorts=128
 
   local prob_p=0.25
@@ -128,8 +128,10 @@ EOF
   banner "Wrote testdata in _tmp"
 }
 
-# Run the R version of association.
+# internal function
 decode-assoc() {
+  write-assoc-testdata
+  
   local output_dir=$1
   shift
 
@@ -142,7 +144,7 @@ decode-assoc() {
     --var2 flag..HTTPS \
     --map1 _tmp/domain_map.csv \
     --create-bool-map \
-    --max-em-iters 10 \
+    --max-em-iters 1000 \
     --num-cores 2 \
     --output-dir $output_dir \
     --tmp-dir $output_dir \
