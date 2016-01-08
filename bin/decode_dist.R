@@ -127,7 +127,7 @@ main <- function(opts) {
 
   counts <- AdjustCounts(counts, params)
 
-  LoadMapFile(opts$map)
+  LoadMapFile(opts$map, params)
 
   val <- ValidateInput(params, counts, map$map)  # NOTE: using global map
   if (val != "valid") {

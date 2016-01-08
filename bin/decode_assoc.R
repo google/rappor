@@ -244,7 +244,7 @@ main <- function(opts) {
     UsageError("--map1 must be provided when --var1 is a string (var = %s)",
                opts$var1)
   }
-  LoadMapFile(opts$map1)
+  LoadMapFile(opts$map1, params)
   # for 100k map file: 31 seconds to load map and write cache; 2.2 seconds to
   # read cache
   # LoadMapFile has the side effect of putting 'map' in the global enviroment.
