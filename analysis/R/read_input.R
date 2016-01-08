@@ -62,8 +62,8 @@ ReadCountsFile <- function(counts_file, params = NULL) {
     stop("Counts file: all counts must be positive.")
   }
 
-  # Turn counts from a data frame into a matrix.  (Sometimes a data frame and
-  # matrix, but in most places we treat it as a matrix.)
+  # Turn counts from a data frame into a matrix.  (In R a data frame and matrix
+  # are sometimes interchangeable, but sometimes we need it to be matrix.)
   as.matrix(counts)
 }
 
