@@ -36,10 +36,12 @@ limitations under the License.
 
 uint64_t randbits(float p1, int num_bits) {
   uint64_t result = 0;
-  int threshold = (int)(p1 * RAND_MAX);
+  uint64_t threshold = p1 * RAND_MAX;
   int i;
   for (i = 0; i < num_bits; ++i) {
-    uint64_t bit = (rand() < threshold);
+    // NOTE: The comparison is <= so that p1 = 1.0 implies that the bit is
+    // ALWAYS set.  RAND_MAX is the maximum value returned by rand().
+    uint64_t bit = (rand() <= threshold);
     result |= (bit << i);
   }
   return result;
