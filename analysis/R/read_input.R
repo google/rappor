@@ -62,7 +62,9 @@ ReadCountsFile <- function(counts_file, params = NULL) {
     stop("Counts file: all counts must be positive.")
   }
 
-  counts
+  # Turn counts from a data frame into a matrix.  (Sometimes a data frame and
+  # matrix, but in most places we treat it as a matrix.)
+  as.matrix(counts)
 }
 
 ReadMapFile <- function(map_file, params = NULL) {
