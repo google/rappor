@@ -314,6 +314,8 @@ Resample <- function(e) {
 
 Decode <- function(counts, map, params, alpha = 0.05,
                    correction = c("Bonferroni"), quiet = FALSE, ...) {
+  counts = as.matrix(counts)
+  
   k <- params$k
   p <- params$p
   q <- params$q
