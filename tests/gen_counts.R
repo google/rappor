@@ -178,7 +178,7 @@ main <- function(argv) {
 
   params <- ReadParameterFile(params_file)
 
-  true_map <- ReadMapFile(true_map_file)
+  true_map <- ReadMapFile(true_map_file, params)
 
   num_unique_values <- length(true_map$strs)
 
