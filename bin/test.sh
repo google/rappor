@@ -54,7 +54,7 @@ decode-assoc-help() {
 # Clear the R cache for the map files.
 clear-cached-files() {
   local dir=$1
-  find $dir -name '*.rda' | xargs rm --verbose
+  find $dir -name '*.rda' | xargs --no-run-if-empty -- rm --verbose
 }
 
 write-assoc-testdata() {
