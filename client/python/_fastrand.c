@@ -38,14 +38,16 @@ uint64_t randbits(float p1, int num_bits) {
   uint64_t result = 0;
   // RAND_MAX is the maximum int returned by rand().
   //
-  // When p1 == 1.0, we to guarantee that all bits are 1.  In the rare case
-  // that rand() returns RAND_MAX, it will be strictly less than 'threshold',
-  // so we get 1.  (RAND_MAX is an int so it won't overflow a uint64_t.)
+  // When p1 == 1.0, we want to guarantee that all bits are 1.  The threshold
+  // will be RAND_MAX + 1.  In the rare case that rand() returns RAND_MAX, the
+  // "<" test succeeds, so we get 1.
   //
   // When p1 == 0.0, we want to guarantee that all bits are 0.  The threshold
-  // will be 0.  If rand() returns 0, then the "<" test fails, so we get 0.
+  // will be 0.  In the rare case that rand() returns 0, the "<" test fails, so
+  // we get 0.
 
   // NOTE: cast is necessary to do unsigned arithmetic rather than signed.
+  // RAND_MAX is an int so adding 1 won't overflow a uint64_t.
   uint64_t max = (uint64_t)RAND_MAX + 1u;
   uint64_t threshold = p1 * max;
   int i;
