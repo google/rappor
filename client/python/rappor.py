@@ -198,7 +198,8 @@ def get_prr_masks(secret, word, prob_f, num_bits):
   # bytes by repeated HMAC.  For arbitrary numbers of bytes it's probably
   # better to use the HMAC-DRBG algorithm.
   if num_bits > len(digest_bytes):
-    raise RuntimeError('%d bits is more than the max of %d', num_bits, len(d))
+    raise RuntimeError(
+        '%d bits is more than the max of %d' % (num_bits, len(digest_bytes)))
 
   threshold128 = prob_f * 128
 

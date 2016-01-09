@@ -76,7 +76,7 @@ bing.com,1
 bing.com,0
 EOF
 
-  local num_bits=8
+  local num_bits=64
   local num_hashes=1
   local num_cohorts=128
 
