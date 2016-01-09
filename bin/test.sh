@@ -76,7 +76,9 @@ bing.com,1
 bing.com,0
 EOF
 
-  local num_bits=64
+  # NOTE: 64 doesn't work because the Python client is now limited to 32 bits,
+  # because of sha1 in PRR.
+  local num_bits=32
   local num_hashes=1
   local num_cohorts=128
 
