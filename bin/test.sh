@@ -51,8 +51,16 @@ decode-assoc-help() {
   time $RAPPOR_SRC/bin/decode-assoc --help
 }
 
+# Clear the R cache for the map files.
+clear-cached-files() {
+  local dir=$1
+  find $dir -name '*.rda' | xargs --no-run-if-empty -- rm --verbose
+}
+
 write-assoc-testdata() {
   mkdir -p _tmp
+
+  clear-cached-files _tmp
 
   cat >_tmp/true_values.csv <<EOF 
 domain,flag..HTTPS
@@ -69,7 +77,7 @@ bing.com,0
 EOF
 
   local num_bits=8
-  local num_hashes=2
+  local num_hashes=1
   local num_cohorts=128
 
   local prob_p=0.25

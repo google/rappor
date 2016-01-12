@@ -37,17 +37,28 @@ readonly CLIENT_DIR=$REPO_ROOT/client/python
 # Fully Automated Tests
 #
 
-# Python unit tests.
+# Run all Python unit tests.
+#
+# Or pass a particular test to run with the correct PYTHONPATH, e.g.
+#
+# $ ./test.sh py-unit client/python/fastrand_test.py
 #
 # TODO: Separate out deterministic tests from statistical tests (which may
 # rarely fail)
 py-unit() {
   export PYTHONPATH=$CLIENT_DIR  # to find client library
 
-  set +o errexit
-  # -e: exit at first failure
-  find $REPO_ROOT -name \*_test.py | sh -x -e
+  if test $# -gt 0; then
+    "$@"
+  else
+    set +o errexit
+
+    # -e: exit at first failure
+    find $REPO_ROOT -name \*_test.py | sh -x -e
+  fi
+
   local exit_code=$?
+
   if test $exit_code -eq 0; then
     echo 'ALL TESTS PASSED'
   else

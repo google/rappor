@@ -40,32 +40,32 @@ ReadParameterFile <- function(params_file) {
   params
 }
 
-ReadCountsFile <- function(counts_file, params = NULL) {
+ReadCountsFile <- function(counts_file, params) {
   # Read in the counts file.
   if (!file.exists(counts_file)) {
     return(NULL)
   }
   counts <- read.csv(counts_file, header = FALSE)
 
-  if (!is.null(params)) {
-    if (nrow(counts) != params$m) {
-      stop("Counts file: number of rows should equal number of cohorts (m).")
-    }
+  if (nrow(counts) != params$m) {
+    stop("Counts file: number of rows should equal number of cohorts (m).")
+  }
 
-    if ((ncol(counts) - 1) != params$k) {
-      stop(paste0("Counts file: number of columns should equal to k + 1: ",
-                  ncol(counts)))
-    }
+  if ((ncol(counts) - 1) != params$k) {
+    stop(paste0("Counts file: number of columns should equal to k + 1: ",
+                ncol(counts)))
   }
 
   if (any(counts < 0)) {
     stop("Counts file: all counts must be positive.")
   }
 
-  counts
+  # Turn counts from a data frame into a matrix.  (In R a data frame and matrix
+  # are sometimes interchangeable, but sometimes we need it to be matrix.)
+  as.matrix(counts)
 }
 
-ReadMapFile <- function(map_file, params = NULL) {
+ReadMapFile <- function(map_file, params) {
   # Read in the map file which is in the following format (two hash functions):
   # str1, h11, h12, h21 + k, h22 + k, h31 + 2k, h32 + 2k ...
   # str2, ...
@@ -82,32 +82,31 @@ ReadMapFile <- function(map_file, params = NULL) {
   strs <- strs[ind]
   map_pos <- map_pos[ind, ]
 
-  if (!is.null(params)) {
-    n <- ncol(map_pos) - 1
-    if (n != (params$h * params$m)) {
-      stop(paste0("Map file: number of columns should equal hm + 1:",
-                  n, "_", params$h * params$m))
-    }
+  n <- ncol(map_pos) - 1
+  if (n != (params$h * params$m)) {
+    stop(paste0("Map file: number of columns should equal hm + 1:",
+                n, "_", params$h * params$m))
   }
+
   row_pos <- unlist(map_pos[, -1], use.names = FALSE)
   col_pos <- rep(1:nrow(map_pos), times = ncol(map_pos) - 1)
+
+  # TODO: When would this ever happen?
   removed <- which(is.na(row_pos))
   if (length(removed) > 0) {
+    Log("Removed %d entries", length(removed))
     row_pos <- row_pos[-removed]
     col_pos <- col_pos[-removed]
   }
 
-  if (!is.null(params)) {
-    map <- sparseMatrix(row_pos, col_pos,
-                        dims = c(params$m * params$k, length(strs)))
-  } else {
-    map <- sparseMatrix(row_pos, col_pos)
-  }
+  map <- sparseMatrix(row_pos, col_pos,
+                      dims = c(params$m * params$k, length(strs)))
+
   colnames(map) <- strs
   list(map = map, strs = strs, map_pos = map_pos)
 }
 
-LoadMapFile <- function(map_file, params = NULL) {
+LoadMapFile <- function(map_file, params) {
   # Reads the map file, caching an .rda (R binary data) version of it to speed
   # up future loads.
 
@@ -119,7 +118,7 @@ LoadMapFile <- function(map_file, params = NULL) {
   # First save to a temp file, and then atomically rename to the destination.
   if (!file.exists(rda_path)) {
     Log("Reading %s", map_file)
-    map <- ReadMapFile(map_file, params = params)
+    map <- ReadMapFile(map_file, params)
 
     Log("Saving %s as an rda file for faster access", map_file)
     save(map, file = tmp_path)

@@ -23,10 +23,13 @@ import unittest
 import _fastrand  # module under test
 
 
+BIT_WIDTHS = [8, 16, 32, 64]
+
+
 class FastRandTest(unittest.TestCase):
 
   def testRandbits64(self):
-    for n in [8, 16, 32, 64]:
+    for n in BIT_WIDTHS:
       #print '== %d' % n
       for p1 in [0.1, 0.5, 0.9]:
         #print '-- %f' % p1
@@ -39,6 +42,16 @@ class FastRandTest(unittest.TestCase):
           #b = bin(r)
           #print b
           #print b.count('1')
+
+
+  def testRandbits64_EdgeCases(self):
+    for n in BIT_WIDTHS:
+      r = _fastrand.randbits(0.0, n)
+      self.assertEqual(0, r)
+
+    for n in BIT_WIDTHS:
+      r = _fastrand.randbits(1.0, n)
+      self.assertEqual(2 ** n - 1, r)
 
   def testRandbitsError(self):
     r = _fastrand.randbits(-1, 64)
