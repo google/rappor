@@ -92,7 +92,7 @@ main <- function(opts) {
 
   # Run a single model of all inputs are specified.
   params <- ReadParameterFile(opts$params)
-  counts <- ReadCountsFile(opts$counts)
+  counts <- ReadCountsFile(opts$counts, params)
 
   # Count BEFORE adjustment.
   num_reports <- sum(counts[, 1])

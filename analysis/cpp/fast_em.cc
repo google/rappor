@@ -20,10 +20,8 @@
 #include <string.h>  // strcmp()
 #include <cmath>  // std::abs operates on doubles
 #include <cstdlib>  // strtol
-#include <string>
 #include <vector>
 
-using std::string;
 using std::vector;
 
 // Log messages to stdout.
