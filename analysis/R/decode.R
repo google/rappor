@@ -312,8 +312,39 @@ Resample <- function(e) {
   return(list(fit = fit))
 }
 
+CheckDecodeInputs <- function(counts, map, params) {
+  # Returns an error message, or NULL if there is no error.
+
+  if (nrow(map) != (params$m * params$k)) {
+    return(sprintf(
+        "Map matrix has invalid dimensions: m * k = %d, nrow(map) = %d",
+        params$m * params$k, nrow(map)))
+  }
+
+  if ((ncol(counts) - 1) != params$k) {
+    return(sprintf(paste0(
+        "Dimensions of counts file do not match: m = %d, k = %d, ",
+        "nrow(counts) = %d, ncol(counts) = %d"), params$m, params$k,
+        nrow(counts), ncol(counts)))
+
+  }
+
+  # numerically correct comparison
+  if (isTRUE(all.equal((1 - params$f) * (params$p - params$q), 0))) {
+    return("Information is lost. Cannot decode.")
+  }
+
+  return(NULL)  # no error
+}
+
 Decode <- function(counts, map, params, alpha = 0.05,
                    correction = c("Bonferroni"), quiet = FALSE, ...) {
+
+  error_msg <- CheckDecodeInputs(counts, map, params)
+  if (!is.null(error_msg)) {
+    stop(error_msg)
+  }
+
   k <- params$k
   p <- params$p
   q <- params$q
