@@ -26,7 +26,12 @@ option_list <- list(
               help="Output directory (default .)"),
 
   make_option("--correction", default="FDR", help="Correction method"),
-  make_option("--alpha", default=.05, help="Alpha level")
+  make_option("--alpha", default=.05, help="Alpha level"),
+
+  make_option(
+      "--use-map-cache", dest="use_map_cache", default=FALSE,
+      action="store_true",
+      help="Cache map .csv files as .rda for faster startup.")
 )
 
 ParseOptions <- function() {
@@ -99,7 +104,11 @@ main <- function(opts) {
 
   counts <- AdjustCounts(counts, params)
 
-  LoadMapFile(opts$map, params)
+  if (opts$use_map_cache) {
+    map <- LoadMapFile(opts$map, params)
+  } else {
+    map <- ReadMapFile(opts$map, params)
+  }
 
   Log("Decoding %d reports", num_reports)
   res <- Decode(counts, map$map, params, correction = opts$correction,

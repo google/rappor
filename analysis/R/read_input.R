@@ -66,6 +66,8 @@ ReadCountsFile <- function(counts_file, params) {
 }
 
 ReadMapFile <- function(map_file, params) {
+  Log("Parsing %s", map_file)
+
   # Read in the map file which is in the following format (two hash functions):
   # str1, h11, h12, h21 + k, h22 + k, h31 + 2k, h32 + 2k ...
   # str2, ...
@@ -117,7 +119,6 @@ LoadMapFile <- function(map_file, params) {
 
   # First save to a temp file, and then atomically rename to the destination.
   if (!file.exists(rda_path)) {
-    Log("Reading %s", map_file)
     map <- ReadMapFile(map_file, params)
 
     Log("Saving %s as an rda file for faster access", map_file)

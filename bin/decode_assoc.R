@@ -50,6 +50,10 @@ option_list <- list(
         help="Output directory (default .)"),
 
     make_option(
+        "--use-map-cache", dest="use_map_cache", default=FALSE,
+        action="store_true",
+        help="Cache map .csv files as .rda for faster startup."),
+    make_option(
         "--create-bool-map", dest="create_bool_map", default=FALSE,
         action="store_true",
         help="Hack to use string RAPPOR to analyze boolean variables."),
@@ -251,11 +255,14 @@ main <- function(opts) {
   }
 
   string_params <- params
-  LoadMapFile(opts$map1, string_params)
 
-  # for 100k map file: 31 seconds to load map and write cache; 2.2 seconds to
-  # read cache
-  # LoadMapFile has the side effect of putting 'map' in the global enviroment.
+  # Speedup for 100k map file: 31 seconds to load map and write cache; 2.2
+  # seconds to read .rda cache.
+  if (opts$use_map_cache) {
+    map <- LoadMapFile(opts$map1, string_params)
+  } else {
+    map <- ReadMapFile(opts$map1, string_params)
+  }
 
   # Important: first column is cohort (integer); the rest are variables, which
   # are ASCII bit strings.
