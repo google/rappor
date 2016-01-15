@@ -56,11 +56,11 @@ decode-dist-one() {
           --counts $counts \
           --params $params \
           --map $map \
-          --output-dir $task_dir
+          --output-dir $task_dir \
+          --adjust-counts-hack
   } >$log_file 2>&1
 
-  # TODO: set output name instead of dir?
-  # Right now it's the only CSV file.
+  # TODO: Don't pass --adjust-counts-hack unless the user asks for it.
 }
 
 # Print the number of processes to use.
