@@ -32,7 +32,7 @@ readonly ANALYSIS_ENTRIES='bin analysis pipeline ui util.sh'
 ensure-google3() {
   local dir=$1
 
-  if ! expr $dir : '.*google3$\|google3/$'; then
+  if ! expr $dir : '.*google3$\|.*google3/$'; then
     echo "$dir does not end with google3 or google3/"
     exit 1
   fi
