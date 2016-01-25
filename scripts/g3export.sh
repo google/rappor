@@ -3,14 +3,7 @@
 # Export RAPPOR analysis code back into Google.
 #
 # Usage:
-#   scripts/g3export.sh <function name>
-#
-# Examples:
-#   // Export code to rappor_analysis
-#   scripts/g3export.sh analysis ~/foo/google3
-#
-#   // Export data to rappor_analysis/testdata
-#   scripts/g3export.sh testdata ~/foo/google3
+#   scripts/g3export.sh <function name> <args>...
 
 set -o nounset
 set -o pipefail
@@ -52,6 +45,7 @@ print-analysis-files() {
   git ls-files $ANALYSIS_ENTRIES
 }
 
+# Copy analysis code to google3.
 analysis() {
   # The destination root to copy to.
   #
@@ -71,6 +65,7 @@ print-testdata-files() {
   ls decode-*-test/input/*.csv
 }
 
+# Copy testdata to google3.
 testdata() {
   local dest_g3=$1
   ensure-google3 $dest_g3
@@ -87,18 +82,40 @@ testdata() {
   popd
 }
 
-#   // Export to rappor_client
-#   scripts/g3export.sh cpp-client ~/foo/google3
-#
-#   // Export to java/rappor_client
-#   scripts/g3export.sh java-client ~/foo/google3
+usage() {
+  cat <<EOF
+Usage: $0 <function name> <args>...
 
-cpp-client() {
-  echo TODO
+Export RAPPOR code to google3.
+
+Examples:
+
+  # Export code to rappor_analysis
+  scripts/g3export.sh analysis ~/foo/google3
+  
+  # Export data to rappor_analysis/testdata
+  scripts/g3export.sh testdata ~/foo/google3
+
+The destination path must be a google3 dir, which ensures that the files are
+put in the right place.
+EOF
+  exit 0
 }
 
-java-client() {
-  echo TODO
-}
+if test $# = 0; then
+  usage
+fi
 
-"$@"
+case "$1" in
+  # end-user functions
+  analysis|testdata)
+    "$@"
+    ;;
+  # function called by xargs
+  copy-rel-path)
+    "$@"
+    ;;
+  *)
+    usage
+    ;;
+esac
