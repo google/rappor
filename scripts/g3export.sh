@@ -18,7 +18,7 @@ readonly EM_CPP_EXECUTABLE=$RAPPOR_SRC/analysis/cpp/_tmp/fast_em
 #
 # util.sh is used by the shell scripts in pipeline/
 
-readonly ANALYSIS_ENTRIES='bin analysis pipeline ui util.sh'
+readonly ANALYSIS_ENTRIES='bin analysis pipeline ui util.sh LICENSE'
 
 # Ensure that a dir ends with google3 (or google3/), so we put the files in the
 # right place.
