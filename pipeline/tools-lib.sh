@@ -11,6 +11,8 @@ set -o errexit
 # Caller can override shebang line by setting $DEP_PYTHON.
 readonly PYTHON=${DEP_PYTHON:-}
 
+readonly METRIC_STATUS=${DEP_METRIC_STATUS:-}
+
 
 # These 3 used by cook.sh.
 
@@ -31,7 +33,11 @@ TOOLS-combine-results() {
 }
 
 TOOLS-metric-status() {
-  $RAPPOR_SRC/pipeline/metric_status.R "$@"
+  if test -n "$METRIC_STATUS"; then
+    $METRIC_STATUS "$@"
+  else
+    $RAPPOR_SRC/pipeline/metric_status.R "$@"
+  fi
 }
 
 # Used by ui.sh.
