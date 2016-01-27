@@ -89,6 +89,8 @@ ReadMapFile <- function(map_file, params) {
   #    map: a sparse representation of set bits for each candidate string.
   #    strs: a vector of all candidate strings.
 
+  Log("Parsing %s", map_file)
+
   map_pos <- read.csv(map_file, header = FALSE, as.is = TRUE)
   strs <- map_pos[, 1]
   strs[strs == ""] <- "Empty"
@@ -132,15 +134,21 @@ LoadMapFile <- function(map_file, params) {
   tmp_path <- sprintf("%s.%d", rda_path, Sys.getpid())
 
   # First save to a temp file, and then atomically rename to the destination.
-  if (!file.exists(rda_path)) {
-    Log("Reading %s", map_file)
+  if (file.exists(rda_path)) {
+    Log("Loading %s", rda_path)
+    load(rda_path, .GlobalEnv)  # creates the 'map' variable in the global env
+  } else {
     map <- ReadMapFile(map_file, params)
 
     Log("Saving %s as an rda file for faster access", map_file)
-    save(map, file = tmp_path)
-    file.rename(tmp_path, rda_path)
+    tryCatch({
+      save(map, file = tmp_path)
+      file.rename(tmp_path, rda_path)
+    }, warning = function(w) {
+      Log("WARNING: %s", w)
+    }, error = function(e) {
+      Log("ERROR: %s", e)
+    })
   }
-  Log("Loading %s", rda_path)
-  load(rda_path, .GlobalEnv)
   return(map)
 }

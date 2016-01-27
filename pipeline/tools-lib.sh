@@ -6,28 +6,48 @@ set -o nounset
 set -o pipefail
 set -o errexit
 
-#
 # NOTE: RAPPOR_SRC defined by the module that sources (cook.sh or ui.sh)
-#
+
+# Caller can override shebang line by setting $DEP_PYTHON.
+readonly PYTHON=${DEP_PYTHON:-}
+
+readonly METRIC_STATUS=${DEP_METRIC_STATUS:-}
+
 
 # These 3 used by cook.sh.
 
 TOOLS-combine-status() {
-  $RAPPOR_SRC/pipeline/combine_status.py "$@"
+  if test -n "$PYTHON"; then
+    $PYTHON $RAPPOR_SRC/pipeline/combine_status.py "$@"
+  else
+    $RAPPOR_SRC/pipeline/combine_status.py "$@"
+  fi
 }
 
 TOOLS-combine-results() {
-  $RAPPOR_SRC/pipeline/combine_results.py "$@"
+  if test -n "$PYTHON"; then
+    $PYTHON $RAPPOR_SRC/pipeline/combine_results.py "$@"
+  else
+    $RAPPOR_SRC/pipeline/combine_results.py "$@"
+  fi
 }
 
 TOOLS-metric-status() {
-  $RAPPOR_SRC/pipeline/metric_status.R "$@"
+  if test -n "$METRIC_STATUS"; then
+    $METRIC_STATUS "$@"
+  else
+    $RAPPOR_SRC/pipeline/metric_status.R "$@"
+  fi
 }
 
 # Used by ui.sh.
 
 TOOLS-csv-to-html() {
-  $RAPPOR_SRC/pipeline/csv_to_html.py "$@"
+  if test -n "$PYTHON"; then
+    $PYTHON $RAPPOR_SRC/pipeline/csv_to_html.py "$@"
+  else
+    $RAPPOR_SRC/pipeline/csv_to_html.py "$@"
+  fi
 }
 
 #
@@ -42,4 +62,3 @@ TOOLS-cook() {
 TOOLS-gen-ui() {
   $RAPPOR_SRC/pipeline/ui.sh "$@"
 }
-

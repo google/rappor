@@ -23,33 +23,8 @@ readonly EM_CPP_EXECUTABLE=$RAPPOR_SRC/analysis/cpp/_tmp/fast_em
 
 source $RAPPOR_SRC/util.sh
 
-
-decode-dist-help() {
-  time $RAPPOR_SRC/bin/decode-dist --help
-}
-
-decode-dist() {
-  # ./demo.sh quick-python creates these files
-  local case_dir=$RAPPOR_SRC/_tmp/python/demo3
-
-  mkdir -p _tmp
-
-  # Uses the ./demo.sh regtest files
-  time $RAPPOR_SRC/bin/decode-dist \
-    --counts $case_dir/1/case_counts.csv \
-    --map $case_dir/case_map.csv \
-    --params $case_dir/case_params.csv \
-    --output-dir _tmp
-
-  echo
-  head _tmp/results.csv 
-  echo
-  cat _tmp/metrics.json
-}
-
-decode-assoc-help() {
-  time $RAPPOR_SRC/bin/decode-assoc --help
-}
+readonly ASSOC_TESTDATA_DIR=_tmp/decode-assoc-test
+readonly DIST_TESTDATA_DIR=_tmp/decode-dist-test
 
 # Clear the R cache for the map files.
 clear-cached-files() {
@@ -57,12 +32,59 @@ clear-cached-files() {
   find $dir -name '*.rda' | xargs --no-run-if-empty -- rm --verbose
 }
 
+decode-dist-help() {
+  time $RAPPOR_SRC/bin/decode-dist --help
+}
+
+write-dist-testdata() {
+  local input_dir=$DIST_TESTDATA_DIR/input
+
+  mkdir -p $input_dir
+
+  clear-cached-files $DIST_TESTDATA_DIR
+
+  # Right now, we copy a case from regtest.sh.  (./demo.sh quick-python creates
+  # just this case)
+  local case_dir=$RAPPOR_SRC/_tmp/python/demo3
+
+  cp --verbose $case_dir/1/case_counts.csv $input_dir/counts.csv
+  cp --verbose $case_dir/case_map.csv $input_dir/map.csv
+  cp --verbose $case_dir/case_params.csv $input_dir/params.csv
+}
+
+decode-dist() {
+  local output_dir=$DIST_TESTDATA_DIR
+
+  local input_dir=$DIST_TESTDATA_DIR/input
+
+  # Uses the ./demo.sh regtest files
+  time $RAPPOR_SRC/bin/decode-dist \
+    --counts $input_dir/counts.csv \
+    --map $input_dir/map.csv \
+    --params $input_dir/params.csv \
+    --output-dir $output_dir
+
+  echo
+  head $output_dir/results.csv 
+  echo
+  cat $output_dir/metrics.json
+}
+
+decode-assoc-help() {
+  time $RAPPOR_SRC/bin/decode-assoc --help
+}
+
 write-assoc-testdata() {
-  mkdir -p _tmp
+  # 'build' has intermediate build files, 'input' is the final input to the
+  # decode-assoc tool.
+  local build_dir=$ASSOC_TESTDATA_DIR/build
+  local input_dir=$ASSOC_TESTDATA_DIR/input
 
-  clear-cached-files _tmp
+  mkdir -p $build_dir $input_dir
 
-  cat >_tmp/true_values.csv <<EOF 
+  clear-cached-files $ASSOC_TESTDATA_DIR
+
+  cat >$build_dir/true_values.csv <<EOF 
 domain,flag..HTTPS
 google.com,1
 google.com,1
@@ -97,37 +119,37 @@ EOF
     -p $prob_p \
     -q $prob_q \
     -f $prob_f \
-    < _tmp/true_values.csv \
-    > _tmp/reports.csv
+    < $build_dir/true_values.csv \
+    > $input_dir/reports.csv
 
   # Output two bad rows: each row is missing one of the columns.
-  cat >_tmp/bad_rows.txt <<EOF
+  cat >$build_dir/bad_rows.txt <<EOF
 c0,0,10101010,
 c0,0,,0
 EOF
 
   # Make CSV file with the header
-  cat - _tmp/bad_rows.txt > _tmp/bad_rows.csv <<EOF
+  cat - $build_dir/bad_rows.txt > $input_dir/bad_rows.csv <<EOF
 client,cohort,domain,flag..HTTPS
 EOF
 
   # Make reports file with bad rows
-  cat _tmp/reports.csv _tmp/bad_rows.txt > _tmp/reports_bad_rows.csv
+  cat $input_dir/reports.csv $build_dir/bad_rows.txt > $input_dir/reports_bad_rows.csv
 
   # Define a string variable and a boolean varaible.
-  cat >_tmp/rappor-vars.csv <<EOF 
+  cat >$input_dir/rappor-vars.csv <<EOF 
 metric, var, var_type, params
 m,domain,string,m_params
 m,flag..HTTPS,boolean,m_params
 EOF
 
-  cat >_tmp/m_params.csv <<EOF
+  cat >$input_dir/m_params.csv <<EOF
 k,h,m,p,q,f
 $num_bits,$num_hashes,$num_cohorts,$prob_p,$prob_q,$prob_f
 EOF
 
   # Add a string with a double quote to test quoting behavior
-  cat >_tmp/domain_candidates.csv <<EOF
+  cat >$build_dir/domain_candidates.csv <<EOF
 google.com
 yahoo.com
 bing.com
@@ -135,11 +157,11 @@ q"q
 EOF
 
   # Hash candidates to create map.
-  $RAPPOR_SRC/bin/hash-candidates _tmp/m_params.csv \
-    < _tmp/domain_candidates.csv \
-    > _tmp/domain_map.csv
+  $RAPPOR_SRC/bin/hash-candidates $input_dir/m_params.csv \
+    < $build_dir/domain_candidates.csv \
+    > $input_dir/domain_map.csv
 
-  banner "Wrote testdata in _tmp"
+  banner "Wrote testdata in $input_dir (intermediate files in $build_dir)"
 }
 
 # Helper function to run decode-assoc with testdata.
@@ -147,14 +169,17 @@ decode-assoc-helper() {
   local output_dir=$1
   shift
 
+  local build_dir=$ASSOC_TESTDATA_DIR/build
+  local input_dir=$ASSOC_TESTDATA_DIR/input
+
   time $RAPPOR_SRC/bin/decode-assoc \
     --metric-name m \
-    --schema _tmp/rappor-vars.csv \
-    --reports _tmp/reports.csv \
-    --params-dir _tmp \
+    --schema $input_dir/rappor-vars.csv \
+    --reports $input_dir/reports.csv \
+    --params-dir $input_dir \
     --var1 domain \
     --var2 flag..HTTPS \
-    --map1 _tmp/domain_map.csv \
+    --map1 $input_dir/domain_map.csv \
     --create-bool-map \
     --max-em-iters 10 \
     --num-cores 2 \
@@ -166,8 +191,8 @@ decode-assoc-helper() {
 
   # Print true values for comparison
   echo
-  echo "_tmp/true_values.csv:"
-  cat _tmp/true_values.csv
+  echo "$build_dir/true_values.csv:"
+  cat "$build_dir/true_values.csv"
 }
 
 # Quick smoke test for R version.
