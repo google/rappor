@@ -41,7 +41,7 @@ readonly CLIENT_DIR=$REPO_ROOT/client/python
 #
 # Or pass a particular test to run with the correct PYTHONPATH, e.g.
 #
-# $ ./test.sh py-unit client/python/fastrand_test.py
+# $ ./test.sh py-unit tests/fastrand_test.py
 #
 # TODO: Separate out deterministic tests from statistical tests (which may
 # rarely fail)

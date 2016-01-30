@@ -91,7 +91,7 @@ doc() {
 # Build dependencies: Python development headers.  Most systems should have
 # this.  On Ubuntu/Debian, the 'python-dev' package contains headers.
 fastrand() {
-  pushd client/python >/dev/null
+  pushd tests >/dev/null
   python setup.py build
   # So we can 'import _fastrand' without installing
   ln -s --force build/*/_fastrand.so .
