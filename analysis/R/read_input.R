@@ -47,15 +47,13 @@ ReadCountsFile <- function(counts_file, params) {
   }
   counts <- read.csv(counts_file, header = FALSE)
 
-  if (!is.null(params)) {
-    if (nrow(counts) != params$m) {
-      stop("Counts file: number of rows should equal number of cohorts (m).")
-    }
+  if (nrow(counts) != params$m) {
+    stop("Counts file: number of rows should equal number of cohorts (m).")
+  }
 
-    if ((ncol(counts) - 1) != params$k) {
-      stop(paste0("Counts file: number of columns should equal to k + 1: ",
-                  ncol(counts)))
-    }
+  if ((ncol(counts) - 1) != params$k) {
+    stop(paste0("Counts file: number of columns should equal to k + 1: ",
+                ncol(counts)))
   }
 
   if (any(counts < 0)) {

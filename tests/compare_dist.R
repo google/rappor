@@ -80,7 +80,9 @@ RunRappor <- function(prefix_case, prefix_instance, ctx) {
   counts <- ReadCountsFile(c, ctx$params)
 
   m <- paste0(prefix_case, '_map.csv')
-  map <- ReadMapFile(m, ctx$params)  # Switch to LoadMapFile if want to cache the result
+
+  # Switch to LoadMapFile if want to cache the result
+  map <- ReadMapFile(m, ctx$params)
 
   # Main decode.R API
   timing <- system.time({
