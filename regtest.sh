@@ -1,39 +1,40 @@
 #!/bin/bash
-#
-# Run end-to-end tests in parallel.
-#
-# Usage:
-#   ./regtest.sh <function name>
+usage() {
+echo "
+ Run end-to-end tests in parallel.
 
-# At the end, it will print an HTML summary.
-# 
-# Three main functions are 
-#    run [[<pattern> [<num> [<fast>]] - run tests matching <pattern> in
-#                                       parallel, each <num> times. The fast 
-#                                       mode (T/F) shortcuts generation of 
-#                                       reports.
-#    run-seq [<pattern> [<num> [<fast>]] - ditto, except that tests are run
-#                                       sequentially
-#    run-all [<num>]              - run all tests, in parallel, each <num> times
-#
-# Examples:
-# $ ./regtest.sh run-seq unif-small-typical  # Sequential run, matches 1 case
-# $ ./regtest.sh run-seq unif-small- 3 F  # Sequential, each test is run three
-#                                           times, using slow generation
-# $ ./regtest.sh run unif-  # Parallel run, matches multiple cases
-# $ ./regtest.sh run unif- 5 # Parallel run, matches multiple cases, each test 
-#                              is run 5 times
-# $ ./regtest.sh run-all     # Run all tests once
-#
-# The <pattern> argument is a regex in 'grep -E' format. (Detail: Don't
-# use $ in the pattern, since it matches the whole spec line and not just the
-# test case name.) The number of processors used in a parallel run is one less
-# than the number of CPUs on the machine.
+ Usage:
+   ./regtest.sh <function name>
+ At the end, it will print an HTML summary.
+ 
+ Three main functions are 
+    run [[<pattern> [<num> [<fast>]] - run tests matching <pattern> in
+                                       parallel, each <num> times. The fast 
+                                       mode (T/F) shortcuts generation of 
+                                       reports.
+    run-seq [<pattern> [<num> [<fast>]] - ditto, except that tests are run
+                                       sequentially
+    run-all [<num>]              - run all tests, in parallel, each <num> times
 
+ Examples:
+ $ ./regtest.sh run-seq unif-small-typical  # Sequential run, matches 1 case
+ $ ./regtest.sh run-seq unif-small- 3 F  # Sequential, each test is run three
+                                           times, using slow generation
+ $ ./regtest.sh run unif-  # Parallel run, matches multiple cases
+ $ ./regtest.sh run unif- 5 # Parallel run, matches multiple cases, each test 
+                              is run 5 times
+ $ ./regtest.sh run-all     # Run all tests once
 
-# Future speedups:
-# - Reuse the same input -- come up with naming scheme based on params
-# - Reuse the same maps -- ditto, rappor library can cache it
+ The <pattern> argument is a regex in 'grep -E' format. (Detail: Don't
+ use $ in the pattern, since it matches the whole spec line and not just the
+ test case name.) The number of processors used in a parallel run is one less
+ than the number of CPUs on the machine.
+
+ Future speedups:
+ - Reuse the same input -- come up with naming scheme based on params
+ - Reuse the same maps -- ditto, rappor library can cache it
+"
+}
 
 set -o nounset
 set -o pipefail
@@ -461,4 +462,9 @@ compare-python-cpp() {
   head _tmp/{python,cpp}/demo3/1/case_reports.csv
 }
 
-"$@"
+if [ $# -eq 0 ]
+then
+  usage
+else
+  "$@"
+fi

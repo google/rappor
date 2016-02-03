@@ -162,4 +162,9 @@ gen-true-values() {
   cat $out
 }
 
-"$@"
+if [ $# -eq 0 ]
+then
+  all
+else
+  "$@"
+fi

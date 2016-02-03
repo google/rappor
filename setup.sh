@@ -21,7 +21,7 @@ native-packages() {
   # - python-dev is for building the fastrand extension
   #
   # NOTE: we get R 3.0.2 on Trusty.
-  sudo apt-get install build-essential gfortran libblas-dev r-base python-dev
+  sudo apt-get install build-essential gfortran libblas-dev r-base python-dev graphviz
 }
 
 r-packages() {
@@ -81,4 +81,9 @@ shiny-smoke-test() {
 # Then set up a "firewall rule" in console.developers.google.com to open up
 # "tcp:6789".  Test it from the outside.
 
-"$@"
+if [ $# -eq 0 ]
+then
+  install-most
+else
+  "$@"
+fi

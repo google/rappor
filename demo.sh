@@ -102,4 +102,9 @@ ok-case() {
   run-dist exp 10000 10 'v1|v2'
 }
 
-"$@"
+if [ $# -eq 0 ]
+then
+  quick
+else
+  "$@"
+fi

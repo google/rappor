@@ -23,7 +23,7 @@ die() {
 }
 
 run-markdown() {
-  which markdown >/dev/null || die "Markdown not installed"
+  md=`which markdown || echo "echo"`
 
   # Markdown is output unstyled; make it a little more readable.
   cat <<EOF
@@ -41,7 +41,7 @@ run-markdown() {
       <!-- INSERT LATCH HTML -->
 EOF
 
-  markdown "$@"
+  $md "$@"
 
   cat <<EOF
     </body>
@@ -108,4 +108,11 @@ cpp-client() {
   popd
 }
 
-"$@"
+if [ $# -eq 0 ]
+then
+  cpp-client
+  doc
+  fastrand
+else
+  "$@"
+fi
