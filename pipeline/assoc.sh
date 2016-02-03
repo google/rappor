@@ -14,6 +14,9 @@ source $RAPPOR_SRC/util.sh  # log, banner
 source $RAPPOR_SRC/pipeline/tools-lib.sh
 source $RAPPOR_SRC/pipeline/alarm-lib.sh
 
+# Change the default location by setting DEP_FAST_EM.
+readonly FAST_EM=${DEP_FAST_EM:-$RAPPOR_SRC/analysis/cpp/_tmp/fast_em}
+
 # Run a single decode-assoc process, to analyze one variable pair for one
 # metric.  The arguments to this function are one row of the task spec.
 decode-one() {
@@ -41,7 +44,7 @@ decode-one() {
   # Flags drived from job constants
   local schema=$job_dir/config/rappor-vars.csv
   local params_dir=$job_dir/config
-  local em_executable=$rappor_src/analysis/cpp/_tmp/fast_em
+  local em_executable=$FAST_EM
 
   # TODO:
   # - Skip jobs with few reports, like ./backfill.sh analyze-one.

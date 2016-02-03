@@ -93,7 +93,7 @@ main <- function(opts) {
   # The left-most column has totals.
   num_reports <- sum(counts[, 1])
 
-  LoadMapFile(opts$map, params)
+  map <- LoadMapFile(opts$map, params)
 
   val <- ValidateInput(params, counts, map$map)  # NOTE: using global map
   if (val != "valid") {

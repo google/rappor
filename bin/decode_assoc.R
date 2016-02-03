@@ -250,12 +250,10 @@ main <- function(opts) {
                opts$var1)
   }
 
+  # Example cache speedup for 100k map file: 31 seconds to load map and write
+  # cache; vs 2.2 seconds to read cache.
   string_params <- params
-  LoadMapFile(opts$map1, string_params)
-
-  # for 100k map file: 31 seconds to load map and write cache; 2.2 seconds to
-  # read cache
-  # LoadMapFile has the side effect of putting 'map' in the global enviroment.
+  map <- LoadMapFile(opts$map1, string_params)
 
   # Important: first column is cohort (integer); the rest are variables, which
   # are ASCII bit strings.
