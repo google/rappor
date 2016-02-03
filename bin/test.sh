@@ -51,9 +51,17 @@ decode-assoc-help() {
   time $RAPPOR_SRC/bin/decode-assoc --help
 }
 
+# Clear the R cache for the map files.
+clear-cached-files() {
+  local dir=$1
+  find $dir -name '*.rda' | xargs rm --verbose
+}
+
 write-assoc-testdata() {
   mkdir -p _tmp
-  rm _tmp/*.rda
+
+  clear-cached-files _tmp
+
   cat >_tmp/true_values.csv <<EOF 
 domain,flag..HTTPS
 google.com,1
