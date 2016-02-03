@@ -23,7 +23,7 @@ import csv
 import hashlib
 import hmac
 import json
-import random
+import os
 import struct
 import sys
 
@@ -122,36 +122,34 @@ class Params(object):
 class _SimpleRandom(object):
   """Returns an integer where each bit has probability p of being 1."""
 
-  def __init__(self, prob_one, num_bits, _rand=None):
+  def __init__(self, prob_one, num_bits):
     self.prob_one = prob_one
     self.num_bits = num_bits
-    self._rand = _rand or random.Random()
 
   def __call__(self):
     p = self.prob_one
-    rand_fn = self._rand.random  # cache it for speed
+    bytes = os.urandom(self.num_bits)
 
     r = 0
-    for i in xrange(self.num_bits):
-      bit = rand_fn() < p
+    for i, b in enumerate(xrange(self.num_bits)):
+      bit = b < p * 255.0
       r |= (bit << i)  # using bool as int
     return r
 
 
 class SimpleIrrRand(object):
-  """Pure Python randomness."""
+  """Python's os.random()"""
 
-  def __init__(self, params, _rand=None):
+  def __init__(self, params):
     """
     Args:
       params: rappor.Params
-      _rand: Python Random object, for testing ONLY
     """
     num_bits = params.num_bloombits
     # IRR probabilities
 
-    self.p_gen = _SimpleRandom(params.prob_p, num_bits, _rand=_rand)
-    self.q_gen = _SimpleRandom(params.prob_q, num_bits, _rand=_rand)
+    self.p_gen = _SimpleRandom(params.prob_p, num_bits)
+    self.q_gen = _SimpleRandom(params.prob_q, num_bits)
 
 
 def to_big_endian(i):
