@@ -17,7 +17,7 @@
 Privacy is ensured without a third party by only sending RAPPOR'd data over the
 network (as opposed to raw client data).
 
-Note that we use SHA1 for the Bloom filter hash function.
+Note that we use MD5 for the Bloom filter hash function. (security not required)
 """
 import csv
 import hashlib
