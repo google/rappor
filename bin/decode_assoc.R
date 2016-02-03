@@ -133,14 +133,19 @@ source.rappor("analysis/R/util.R")
 options(stringsAsFactors = FALSE)
 options(max.print = 100)  # So our structure() debug calls look better
 
-# Processes the maps loaded using ReadMapFile and turns it into something that
-# association.R can use.  Namely, we want a map per cohort.
-#
-# Arguments:
-#   map: map object as parsed by ReadMapFile (i.e. has map$map member)
-#   k: report width in bits
-CreateAssocStringMap <- function(map, params) {
-  all_cohorts_map <- map$map
+CreateAssocStringMap <- function(all_cohorts_map, params) {
+  # Processes the maps loaded using ReadMapFile and turns it into something
+  # that association.R can use.  Namely, we want a map per cohort.
+  #
+  # Arguments:
+  #   all_cohorts_map: map matrix, as for single variable analysis
+  #   params: encoding parameters
+
+  if (nrow(all_cohorts_map) != (params$m * params$k)) {
+    stop(sprintf(
+        "Map matrix has invalid dimensions: m * k = %d, nrow(map) = %d",
+        params$m * params$k, nrow(all_cohorts_map)))
+  }
 
   k <- params$k
   map_by_cohort <- lapply(0 : (params$m-1), function(cohort) {
@@ -244,7 +249,10 @@ main <- function(opts) {
     UsageError("--map1 must be provided when --var1 is a string (var = %s)",
                opts$var1)
   }
-  LoadMapFile(opts$map1, params)
+
+  string_params <- params
+  LoadMapFile(opts$map1, string_params)
+
   # for 100k map file: 31 seconds to load map and write cache; 2.2 seconds to
   # read cache
   # LoadMapFile has the side effect of putting 'map' in the global enviroment.
@@ -309,9 +317,6 @@ main <- function(opts) {
   # NOTE: Basic RAPPOR doesn't need cohorts.
   cohorts_list <- rep(list(cohorts), num_vars)
 
-  # i.e. create a list of length 2, with identical cohorts.
-  string_params <- params
-
   # TODO: We should use the closed-form formulas rather than calling the
   # solver, and not require this flag.
   if (!opts$create_bool_map) {
@@ -326,7 +331,7 @@ main <- function(opts) {
   params_list <- list(bool_params, string_params)
 
   Log('CreateAssocStringMap')
-  string_map <- CreateAssocStringMap(map, params)
+  string_map <- CreateAssocStringMap(map$map, params)
 
   Log('CreateAssocBoolMap')
   bool_map <- CreateAssocBoolMap(params)

@@ -92,13 +92,17 @@ ReadMapFile <- function(map_file, params) {
 
   row_pos <- unlist(map_pos[, -1], use.names = FALSE)
   col_pos <- rep(1:nrow(map_pos), times = ncol(map_pos) - 1)
+
+  # TODO: When would this ever happen?
   removed <- which(is.na(row_pos))
   if (length(removed) > 0) {
+    Log("Removed %d entries", length(removed))
     row_pos <- row_pos[-removed]
     col_pos <- col_pos[-removed]
   }
 
- map <- sparseMatrix(row_pos, col_pos, dims = c(params$m * params$k, length(strs)))
+  map <- sparseMatrix(row_pos, col_pos,
+                      dims = c(params$m * params$k, length(strs)))
 
   colnames(map) <- strs
   list(map = map, strs = strs, map_pos = map_pos)

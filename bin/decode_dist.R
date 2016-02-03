@@ -83,34 +83,6 @@ AdjustCounts <- function(counts, params) {
   })
 }
 
-ValidateInput <- function(params, counts, map) {
-  val <- "valid"
-  if (is.null(counts)) {
-    val <- "No counts file found. Skipping"
-    return(val)
-  }
-
-  if (nrow(map) != (params$m * params$k)) {
-    val <- paste("Map does not match the counts file!",
-                 "mk = ", params$m * params$k,
-                 "nrow(map):", nrow(map),
-                 collapse = " ")
-  }
-
-  if ((ncol(counts) - 1) != params$k) {
-    val <- paste("Dimensions of counts file do not match:",
-                 "m =", params$m, "counts rows: ", nrow(counts),
-                 "k =", params$k, "counts cols: ", ncol(counts) - 1,
-                 collapse = " ")
-  }
-
-  # numerically correct comparison
-  if(isTRUE(all.equal((1 - params$f) * (params$p - params$q), 0)))
-    stop("Information is lost. Cannot decode.")
-
-  val
-}
-
 main <- function(opts) {
   Log("decode-dist")
   Log("argv:")
@@ -136,8 +108,8 @@ main <- function(opts) {
   }
 
   Log("Decoding %d reports", num_reports)
-  res <- Decode(counts, map$map, params, correction = opts$correction, alpha =
-                opts$alpha)
+  res <- Decode(counts, map$map, params, correction = opts$correction,
+                alpha = opts$alpha)
   Log("Done decoding")
 
   if (nrow(res$fit) == 0) {
