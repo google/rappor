@@ -3,3 +3,5 @@
 _tmp
 client/python/build
 client/python/_fastrand.so
+tests/_fastrand.so
+tests/build/
