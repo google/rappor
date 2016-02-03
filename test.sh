@@ -119,8 +119,6 @@ r-unit() {
   # This one needs to be run from the root dir
   tests/compare_dist_test.R
 
-  tests/gen_counts_test.R
-
   tests/gen_true_values_test.R
 
   analysis/R/decode_test.R

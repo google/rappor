@@ -51,29 +51,23 @@ build() {
 # Main entry point that is documented in README.md.  Uses the Python client.
 run() {
   # Run all the test cases that start with "demo".
-  ./regtest.sh run-seq '^demo' 1 python
+  ./regtest.sh run-seq '^demo' python
 }
 
 quick-python() {
-  ./regtest.sh run-seq '^demo3' 1 python
+  ./regtest.sh run-seq '^demo3' python
 }
 
 quick-cpp() {
   # For now we build it first.  Don't want to build it in parallel.
   ./build.sh cpp-client
 
-  ./regtest.sh run-seq '^demo3' 1 cpp
-}
-
-# NOTE: This behaves worse than 'quick', because of cohort issue.
-quick-fast-counts() {
-  ./regtest.sh run-seq '^demo3' 1 fast_counts
+  ./regtest.sh run-seq '^demo3' cpp
 }
 
 quick() {
   quick-python
   quick-cpp
-  quick-fast-counts
 }
 
 # TODO: Port these old bad cases to regtest_spec.py.
