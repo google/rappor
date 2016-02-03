@@ -26,7 +26,12 @@ option_list <- list(
               help="Output directory (default .)"),
 
   make_option("--correction", default="FDR", help="Correction method"),
-  make_option("--alpha", default=.05, help="Alpha level")
+  make_option("--alpha", default=.05, help="Alpha level"),
+
+  make_option("--adjust-counts-hack", dest="adjust_counts_hack",
+              default=FALSE, action="store_true",
+              help="Allow the counts file to have more rows than cohorts. 
+                    Most users should not use this.")
 )
 
 ParseOptions <- function() {
@@ -72,17 +77,6 @@ source.rappor("analysis/R/alternative.R")
 options(stringsAsFactors = FALSE)
 
 
-# Handle the case of redundant cohorts, i.e. the counts file needs to be
-# further aggregated to obtain counts for the number of cohorts specified in
-# the params file.
-#
-# NOTE: Why is this happening?
-AdjustCounts <- function(counts, params) {
-  apply(counts, 2, function(x) {
-    tapply(x, rep(1:params$m, nrow(counts) / params$m), sum)
-  })
-}
-
 main <- function(opts) {
   Log("decode-dist")
   Log("argv:")
@@ -92,12 +86,12 @@ main <- function(opts) {
 
   # Run a single model of all inputs are specified.
   params <- ReadParameterFile(opts$params)
-  counts <- ReadCountsFile(opts$counts, params)
-
-  # Count BEFORE adjustment.
-  num_reports <- sum(counts[, 1])
-
+  counts <- ReadCountsFile(opts$counts, params, adjust_counts = opts$adjust_counts_hack)
   counts <- AdjustCounts(counts, params)
+
+
+  # The left-most column has totals.
+  num_reports <- sum(counts[, 1])
 
   LoadMapFile(opts$map, params)
 
