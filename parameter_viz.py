@@ -55,15 +55,17 @@ def printDelta(f, p, q):
     print(i, p_id, ' vs ', p_other, ' delta ', p_id-p_other, ' for a sum of ', predictN(max(p_id,p_other), p_id-p_other))
 
 def eInf(f, h):
-  return 2 * h * log( (1-.5*f)/(.5*f) )
+  if f <= 1.0:
+    return 2 * h * log( (1-.5*f)/(.5*f) )
+  else:
+    return 2 * h * log( (.5*f)/(1-.5*f) )
 
 def getData():
   for h in (1,2):
-    for f in (.125,.25,.5,.75) :
-      for p in (.0,.1,.25,.4,.5,.6,.75,.9,1) :
-        for q in (.0,.1,.25,.5,.75,.9,1) :
-          if abs(p-q) > 0.05 :
-            yield (f, p, q, h, 1/(.5*f), eInf(f,h), signal(f, p, q, h), valueIFPQ(2,f,p,q), valueIFPQ(3,f,p,q), valueIFPQ(10000,f,p,q))
+    for f in (.125,.2,.25,.3,.4,.5,.75,1,1.25,1.5,1.75) :
+      for p in (.0,.1,.2,.3,.4,.5,.6,.7,.8,.9) :
+        for q in (.15,.25,.35,.45,.55,.65,.75,.85,1) :
+          yield (f, p, q, h, 1/(.5*f), eInf(f,h), signal(f, p, q, h), valueIFPQ(2,f,p,q), valueIFPQ(3,f,p,q), valueIFPQ(10000,f,p,q))
 
 def toColor(color):
   x = max(1, min(255, int(round(color * 256.0))))
@@ -73,10 +75,12 @@ def makePlot():
   fig = plt.figure()
   ax = fig.add_subplot(111, projection='3d')
   for f, p, q, h, s, e, sig, val2, val3, val1000 in getData():
-    ax.scatter(e, log(val1000), log(sig), s=(h*h*10), c='%s'%f, marker='o')
-  ax.set_xlabel('e')
-  ax.set_ylabel('log(val1000)')
-  ax.set_zlabel('log(sig)')
+    ax.scatter(e, log(val1000), log(sig), s=(h*h*10), c=(0.5*f,p,q), marker='o')
+  ax.set_xlabel('e \n Epesolon of privacy bound')
+  ax.set_ylabel('log(val1000) \n Log of number of bits of K needed to form a identifier that could distinguish two users')
+  ax.set_zlabel('log(sig) \n The log scale of the amount of data gained per repport. \n (The inverse of the number of repports needed to distinguish something from nothing)')
+  ax.text(0,9,1.5,"Good")
+  ax.text(12,-1,-9,"Bad")
   plt.show()
 
 makePlot()
