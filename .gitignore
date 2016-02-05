@@ -1,0 +1,5 @@
+*.pyc
+*.swp
+_tmp
+client/python/build
+client/python/_fastrand.so
