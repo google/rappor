@@ -23,7 +23,7 @@ die() {
 }
 
 run-markdown() {
-  md=`which markdown || echo "echo"`
+  local md=`which markdown || echo "echo"`
 
   # Markdown is output unstyled; make it a little more readable.
   cat <<EOF
