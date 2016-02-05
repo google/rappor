@@ -119,7 +119,7 @@ class Params(object):
     return p
 
 
-class _SimpleRandom(object):
+class _SecureRandom(object):
   """Returns an integer where each bit has probability p of being 1."""
 
   def __init__(self, prob_one, num_bits):
@@ -148,8 +148,8 @@ class SimpleIrrRand(object):
     num_bits = params.num_bloombits
     # IRR probabilities
 
-    self.p_gen = _SimpleRandom(params.prob_p, num_bits)
-    self.q_gen = _SimpleRandom(params.prob_q, num_bits)
+    self.p_gen = _SecureRandom(params.prob_p, num_bits)
+    self.q_gen = _SecureRandom(params.prob_q, num_bits)
 
 
 def to_big_endian(i):
