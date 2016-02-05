@@ -24,7 +24,7 @@ import _fastrand
 
 
 class FastIrrRand(object):
-  """Fast version of rappor.SimpleIrrRand."""
+  """Fast insecure version of rappor.SecureIrrRand."""
 
   def __init__(self, params):
     randbits = _fastrand.randbits  # accelerated function

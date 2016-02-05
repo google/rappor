@@ -137,7 +137,7 @@ class _SecureRandom(object):
     return r
 
 
-class SimpleIrrRand(object):
+class SecureIrrRand(object):
   """Python's os.random()"""
 
   def __init__(self, params):
