@@ -1,0 +1,83 @@
+// Based on http://graphviz.org/content/cluster
+
+// Node types:
+//   Rectangle: process
+//   Oval: data
+//   Diamond: debug/simulation data
+
+digraph G {
+  //rankdir="LR";  // left to right layout
+
+  // http://www.graphviz.org/content/color-names
+  colorscheme=pastel13;
+
+  subgraph cluster_0 {
+    graph [ fontsize=24 ];
+    label = "Reporting";
+    style=filled;
+    color=2;
+
+    node [style=filled, color=white, fontsize=12];
+
+    gen_sim_input -> dist_csv -> rappor_sim;
+    
+    rappor_sim -> out;
+    rappor_sim -> params;
+    rappor_sim -> hist;
+    rappor_sim -> true_inputs;
+
+    // Process
+    rappor_sim [label="rappor_sim"];
+
+    // Data
+    dist_csv [shape=box, label="dist.csv"];
+    out [shape=box, label="dist_out.csv"];
+    params [shape=box, label="dist_params.csv"];
+
+    // simulation data
+    hist [shape=box, style=dotted, color=black, label="dist_hist.csv"];
+    true_inputs [shape=box, style=dotted, color=black, label="dist_true_inputs.txt"];
+  }
+
+  subgraph cluster_1 {
+    graph [ fontsize=24 ];
+    label = "Analysis";
+    style = filled;
+    color=3;
+
+    node [style=filled, color=white, fontsize=12];
+
+    sum_bits -> counts;
+
+    // sum_bits needs the params to construct the matrix.  Technically it could
+    // infer it, but this is simple.
+    params -> sum_bits;
+
+    // only in the simulation
+    true_inputs -> demo_sh -> candidates [style=dotted];
+
+    candidates -> hash_candidates -> map;
+    params -> hash_candidates;
+
+    params -> analyze;
+    map -> analyze;
+    counts -> analyze;
+    hist -> analyze [style=dotted];  // only for comparison
+
+    analyze -> plot_png;
+
+    // Processes
+    analyze [label="analyze.R"];
+    demo_sh [label="demo.sh", style=dotted, color=black];
+
+    // Data
+    counts [shape=box, label="dist_count.csv"];
+    candidates [shape=box, label="dist_candidates.txt"];
+    map [shape=box, label="dist_map.csv"];
+
+    plot_png [shape=box, label="dist.png"];
+
+  }
+
+  out -> sum_bits;
+}

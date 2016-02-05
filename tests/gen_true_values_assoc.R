@@ -1,0 +1,99 @@
+#!/usr/bin/env Rscript
+#
+# Copyright 2015 Google Inc. All rights reserved.
+# 
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+# 
+#     http://www.apache.org/licenses/LICENSE-2.0
+# 
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+source('tests/gen_counts.R')
+
+# Usage:
+#
+# $ ./gen_true_values_assoc.R 100 20 10000 foo.csv
+#
+# Inputs:
+#   size of the distribution's support for var 1
+#   size of the distribution's support for var 2
+#   number of clients
+#   name of the output file
+# Output:
+#   csv file with reports sampled according to the specified distribution. 
+
+GenerateTrueValuesAssoc <- function(n, N, num_cohorts) {
+  # Inputs: n, a list of supports for vars 1, 2
+  #         N, the number of reports/clients
+  #         num_cohorts, the number of cohorts
+  # Output: tuples of values sampled according to a zipf x zipf distr
+  #         with support n[[1]] and n[[2]] respectively
+
+  # Sample values to compute partition
+  # Resulting distribution is a correlated zipf x zipf
+  # distribution over 2 variables
+  PartitionWithCorrelation <- function(size, support, index) {
+    part <- RandomPartition(size, ComputePdf("zipf1.5", support))
+    if (index %% 2 == 0) {part} else {rev(part)}
+  }
+  
+  # Zipfian over n[[1]] strings
+  part <- RandomPartition(N, ComputePdf("zipf1.5", n[[1]]))
+  # Zipfian over n[[2]] strings for each of variable 1
+  final_part <- as.vector(sapply(1:n[[1]],
+                  function(i) PartitionWithCorrelation(part[[i]], n[[2]], i)))
+  
+  final_part <- matrix(final_part, nrow = n[[1]], byrow = TRUE)
+  rownames(final_part) <- sapply(1:n[[1]], function(x) paste("str", x, sep = ""))
+  colnames(final_part) <- sapply(1:n[[2]], function(x) paste("opt", x, sep = ""))
+  distr <- final_part/sum(final_part)
+  print("DISTRIBUTION")
+  print(distr)
+
+  print('PARTITION')
+  print(final_part)
+
+  # Expand partition
+  values <- list(
+    rep(1:n[[1]], rowSums(final_part)),
+    unlist(sapply(1:n[[1]], function(x) rep(1:n[[2]], final_part[x, ]))))
+  
+  stopifnot((length(values[[1]]) == N) &
+              (length(values[[2]]) == N))
+
+  # Shuffle values randomly (may take a few sec for > 10^8 inputs)
+  perm <- sample(N)
+  values <- list(values[[1]][perm], values[[2]][perm])
+  cohorts <- rep(1:N) %% num_cohorts
+  list(cohorts = cohorts, values = values)
+}
+
+main <- function(argv) {
+  n <- list(as.integer(argv[[1]]), as.integer(argv[[2]]))
+  N <- as.integer(argv[[3]])
+  num_cohorts <- as.integer(argv[[4]])
+  out_file <- argv[[5]]
+
+  res <- GenerateTrueValuesAssoc(n, N, num_cohorts)
+  # Prepend with str and opt
+  reports <- list(sprintf("str%d", res$values[[1]]),
+                  sprintf("opt%d", res$values[[2]]))
+
+
+  # Paste together client name, cohort input, report1, report2
+  reports <- cbind(sprintf("cli%d", 1:N),
+                   res$cohorts, reports[[1]], reports[[2]])
+  colnames(reports) <- c("client", "cohort", "value1", "value2")
+  write.table(reports, file = out_file, row.names = FALSE, col.names = TRUE, 
+              sep = ",", quote = FALSE)
+}
+
+if (length(sys.frames()) == 0) {
+  main(commandArgs(TRUE))
+}
