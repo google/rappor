@@ -1,0 +1,19 @@
+#!/bin/bash
+#
+# Decode a distribution from summed RAPPOR reports.
+#
+# This is a tiny shell wrapper around R.
+
+readonly THIS_DIR=$(dirname $0)
+
+# NOTE: A trailing / is *required* on RAPPOR_REPO, because we use string
+# concatenation to form the absolute path.  (file.path() in R doesn't do what
+# we want.)
+
+readonly RAPPOR_REPO=$THIS_DIR/../
+
+# RAPPOR_REPO is used by source() statements to find .R files.
+export RAPPOR_REPO
+
+# Make sure to reuse the same process so it can be killed easily.
+exec $THIS_DIR/decode_dist.R "$@"

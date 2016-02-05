@@ -1,0 +1,7 @@
+#!/bin/bash
+#
+# Shell wrapper around sum_bits.py.
+
+readonly THIS_DIR=$(dirname $0)
+
+PYTHONPATH=$THIS_DIR/../client/python $THIS_DIR/sum_bits.py "$@"

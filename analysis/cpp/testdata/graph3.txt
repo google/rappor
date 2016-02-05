@@ -1,0 +1,7 @@
+num_partitions 3
+ngram_size 2
+edge 0.ab 1.cd
+edge 1.cd 2.ef
+edge 0.ab 2.ef
+edge 0.AB 1.CD
+edge 1.CD 2.EF

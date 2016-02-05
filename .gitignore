@@ -1,0 +1,5 @@
+*.pyc
+*.swp
+_tmp
+tests/_fastrand.so
+tests/build/
