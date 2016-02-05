@@ -108,8 +108,7 @@ cpp-client() {
   popd
 }
 
-if test $# -eq 0
-then
+if test $# -eq 0 ; then
   cpp-client
   doc
   fastrand

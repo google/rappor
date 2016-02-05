@@ -434,8 +434,7 @@ compare-python-cpp() {
   head _tmp/{python,cpp}/demo3/1/case_reports.csv
 }
 
-if test $# -eq 0
-then
+if test $# -eq 0 ; then
   usage
 else
   "$@"

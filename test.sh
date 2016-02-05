@@ -160,8 +160,7 @@ gen-true-values() {
   cat $out
 }
 
-if test $# -eq 0
-then
+if test $# -eq 0 ; then
   all
 else
   "$@"
