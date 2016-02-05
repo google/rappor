@@ -160,7 +160,7 @@ gen-true-values() {
   cat $out
 }
 
-if [ $# -eq 0 ]
+if test $# -eq 0
 then
   all
 else

@@ -26,12 +26,12 @@ echo "
  use $ in the pattern, since it matches the whole spec line and not just the
  test case name.) The number of processors used in a parallel run is one less
  than the number of CPUs on the machine.
-
- Future speedups:
- - Reuse the same input -- come up with naming scheme based on params
- - Reuse the same maps -- ditto, rappor library can cache it
 "
 }
+# Future speedups:
+# - Reuse the same input -- come up with naming scheme based on params
+# - Reuse the same maps -- ditto, rappor library can cache it
+#
 
 set -o nounset
 set -o pipefail
@@ -433,7 +433,7 @@ compare-python-cpp() {
   head _tmp/{python,cpp}/demo3/1/case_reports.csv
 }
 
-if [ $# -eq 0 ]
+if test $# -eq 0
 then
   usage
 else

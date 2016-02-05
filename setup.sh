@@ -81,7 +81,7 @@ shiny-smoke-test() {
 # Then set up a "firewall rule" in console.developers.google.com to open up
 # "tcp:6789".  Test it from the outside.
 
-if [ $# -eq 0 ]
+if test $# -eq 0
 then
   install-most
 else

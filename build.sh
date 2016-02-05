@@ -108,7 +108,7 @@ cpp-client() {
   popd
 }
 
-if [ $# -eq 0 ]
+if test $# -eq 0
 then
   cpp-client
   doc
