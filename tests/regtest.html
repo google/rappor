@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>RAPPOR regtest.sh (_IMPL_)</title>
+  <style type="text/css">
+    h2 { text-align: center }
+    p { margin: 0 auto; width: 80%; text-align: center }
+
+    table { width: 100%; border-spacing: 0 }
+    .tophead { text-align: center; font-weight: bold }
+    .explain { text-align: left; font-weight: normal }
+    .subhead { text-align: right; font-weight: bold }
+    .highlight { background-color: #eeeeee }
+    tbody td { text-align: right }
+    #parent { text-align: right }
+  </style>
+</head>
+
+<body>
+  <a id="top"></a>
+
+  <p id="parent"><a href="..">Parent</a></p>
+
+  <h2>RAPPOR regtest.sh (_IMPL_)</h2>
+
+  <!-- These strings will be replaced by a sed script. -->
+
+  <table cellspacing="0" cellpadding="5">
+    <colgroup>
+      <col span="1" class="highlight" />
+      <col span="4" />
+      <col span="6" class="highlight" />
+      <col span="2" />
+      <col span="7" class="highlight" />
+    </colgroup>
+
+    <thead>
+      <tr class="tophead">
+        <td>
+          Test Case
+        </td>
+        <td colspan=4>
+          Input Params
+        </td>
+        <td colspan=6>
+          RAPPOR Params
+        </td>
+        <td colspan=2>
+          Map Params
+        </td>
+        <td colspan=7>
+          Result Metrics
+        </td>
+      </tr>
+
+      <tr class="explain">
+        <td></td>
+        <td colspan=4>
+          d: distribution drawn from<br/>
+          u: total unique values<br/>
+          c: clients<br/>
+          v: values per client<br/>
+        </td>
+        <td colspan=6>
+          k: report bits<br/>
+          h: hashes<br/>
+          m: cohorts<br/>
+          p, q, f: probabilities<br/>
+        </td>
+        <td colspan=2>
+          +: num additional candidates<br/>
+          -: regex for true values removed<br/>
+        </td>
+        <td colspan=7>
+          a: actual values<br/>
+          r: values RAPPOR detected<br/>
+          fp: false positive rate<br/>
+          fn: false negative rate<br/>
+          tv: total variation distance<br/>
+          am: allocated mass<br/>
+          time: time in seconds<br/>
+        </td>
+      </tr>
+
+      <tr class="subhead">
+        <td></td>
+
+        <td>d</td>
+        <td>u</td>
+        <td>c</td>
+        <td>v</td>
+
+        <td>k</td>
+        <td>h</td>
+        <td>m</td>
+        <td>p</td>
+        <td>q</td>
+        <td>f</td>
+
+        <td>+</td>
+        <td>-</td>
+
+        <td>a</td>
+        <td>r</td>
+        <td>fp</td>
+        <td>fn</td>
+        <td>tv</td>
+        <td>am</td>
+        <td>time</td>
+      </tr>
+    </thead>
+
+    <tbody>
+  <!-- __TABLE_ROWS__ -->
+
+</body>
+
+</html>
