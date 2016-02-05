@@ -226,6 +226,7 @@ _run-one-instance() {
       log "Invalid impl $impl (should be one of python|cpp)"
       exit 1
       ;;
+      
   esac
 
   banner "Summing RAPPOR IRR bits to get 'counts'"
