@@ -264,8 +264,10 @@ FitDistribution <- function(estimates_stds, map, quiet = FALSE) {
 
     coefs[support_coefs] <- constrained_coefs
   }
-
-  coefs
+  # Output LASSO and ConstrainedLinModel coefficients
+  lasso_coefs <- setNames(rep(0, S), colnames(map))
+  lasso_coefs[support_coefs] <- lasso[support_coefs]
+  list(lasso_coefs = lasso_coefs, coefs = coefs)
 }
 
 Resample <- function(e) {
@@ -383,7 +385,7 @@ Decode <- function(counts, map, params, alpha = 0.05,
       e <- estimates_stds_filtered
 
     coefs_all <- rbind(coefs_all,
-                       FitDistribution(e, map_filtered,  quiet))
+                       FitDistribution(e, map_filtered,  quiet)$lasso_coefs)
   }
 
   coefs_ssd <- N * apply(coefs_all, 2, sd)  # compute sample standard deviations
