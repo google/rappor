@@ -117,6 +117,10 @@ main <- function(opts) {
   histogram$counts <- histogram$counts / sum(histogram$counts)  # convert the histogram to frequencies
   plot(histogram, main = "Histogram of the residual",
        xlab = sprintf("Residual (observed - explained, %d x %d values)", params$m, params$k))
+  # Write raw residuals into csv file
+  write.table(t(res$residual),
+            file = file.path(opts$output_dir, 'raw_residuals.txt'),
+            row.names = FALSE, col.names = FALSE, sep = ",")
   dev.off()
 
   res$metrics$total_elapsed_time <- proc.time()[['elapsed']]
