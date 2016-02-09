@@ -354,7 +354,6 @@ FilterCohorts <- function(counts, quiet = FALSE) {
 
   if(!quiet & length(keep) < cohorts){
     Log(c("Dropped cohorts: [", setdiff(seq(cohorts), keep), "]"))
-    print(c(totals[setdiff(seq(cohorts), keep)], m, margin))
     Log("Combined, these cohorts contained %f of all reports", 1 - sum(totals[keep]) / sum(totals))
   }
 
