@@ -324,13 +324,14 @@ default-processes() {
 #   parallel: Whether the tests are run in parallel (T/F).  Sequential
 #     runs log to the console; parallel runs log to files.
 #   impl: one of python, or cpp
+#   instances: A number of times each test case is run
 
 _run-tests() {
   local spec_gen=$1
   local spec_regex="$2"  # grep -E format on the spec, can be empty
   local parallel=$3
   local impl=$4
-  local instances=1
+  local instances=$5
 
   local regtest_dir=$REGTEST_BASE_DIR/$impl
   rm -r -f --verbose $regtest_dir
@@ -379,17 +380,17 @@ readonly REGTEST_SPEC=tests/regtest_spec.py
 # Run tests sequentially.  NOTE: called by demo.sh.
 run-seq() {
   local spec_regex=${1:-'^r-'}  # grep -E format on the spec
-  local impl=$2
+  shift
 
-  time _run-tests $REGTEST_SPEC $spec_regex F $impl
+  time _run-tests $REGTEST_SPEC $spec_regex F $@
 }
 
 # Run tests in parallel
 run() {
   local spec_regex=${1:-'^r-'}  # grep -E format on the spec
-  local impl=$3
+  shift
   
-  time _run-tests $REGTEST_SPEC $spec_regex T $impl
+  time _run-tests $REGTEST_SPEC $spec_regex T $@
 }
 
 # Run tests in parallel (7+ minutes on 8 cores)
