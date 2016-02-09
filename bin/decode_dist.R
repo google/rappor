@@ -30,7 +30,7 @@ option_list <- list(
 
   make_option("--adjust-counts-hack", dest="adjust_counts_hack",
               default=FALSE, action="store_true",
-              help="Allow the counts file to have more rows than cohorts. 
+              help="Allow the counts file to have more rows than cohorts.
                     Most users should not use this.")
 )
 
@@ -109,7 +109,7 @@ main <- function(opts) {
   results_csv_path <- file.path(opts$output_dir, 'results.csv')
   write.csv(res$fit, file = results_csv_path, row.names = FALSE)
 
-  # Write residual histograph as a png.
+  # Write residual histogram as a png.
   results_png_path <- file.path(opts$output_dir, 'residual.png')
   png(results_png_path)
   breaks <- pretty(res$residual, n = 200)
@@ -119,13 +119,19 @@ main <- function(opts) {
        xlab = sprintf("Residual (observed - explained, %d x %d values)", params$m, params$k))
   dev.off()
 
+  # Write raw residuals into csv file
+  residual_csv_path <- file.path(opts$output_dir, 'residual.csv')
+  write.csv(res$residual,
+            file = residual_csv_path,
+            row.names = FALSE)
+
   res$metrics$total_elapsed_time <- proc.time()[['elapsed']]
 
   # Write summary as JSON (scalar values).
   metrics_json_path <- file.path(opts$output_dir, 'metrics.json')
   m <- toJSON(res$metrics)
   writeLines(m, con = metrics_json_path)
-  Log("Wrote %s, %s, and %s", results_csv_path, results_png_path, metrics_json_path)
+  Log("Wrote %s, %s, %s, and %s", results_csv_path, results_png_path, metrics_json_path, residual_csv_path)
 
   # TODO:
   # - These are in an 2 column 'parameters' and 'values' format.  Should these

@@ -337,6 +337,29 @@ CheckDecodeInputs <- function(counts, map, params) {
   return(NULL)  # no error
 }
 
+FilterCohorts <- function(counts) {
+  # Returns the list of cohorts to keep. Filters out cohorts that:
+  #  - Didn't get any data
+  #  - Received too much relative to the expectation
+
+  cohorts <- ncol(counts) - 1
+  totals <- counts[, 1]
+
+  keep <- seq(cohorts)
+
+  keep <- keep[totals != 0]
+  m <- median(totals[keep])
+  margin <- sqrt(m) * 3  # Upper bound on the variance of the binomial distribution
+  keep <- keep[totals[keep] < m + margin]
+
+  if(length(keep) < cohorts){
+    Log(c("Dropped cohorts: ", setdiff(seq(cohorts), keep)))
+    Log("Combined, these cohorts contained %f of all reports", 1 - sum(totals[keep]) / sum(totals))
+  }
+
+  keep
+}
+
 Decode <- function(counts, map, params, alpha = 0.05,
                    correction = c("Bonferroni"), quiet = FALSE, ...) {
 
@@ -354,12 +377,13 @@ Decode <- function(counts, map, params, alpha = 0.05,
 
   S <- ncol(map)  # total number of candidates
 
-  N <- sum(counts[, 1])
+  filter_cohorts <- FilterCohorts(counts)
+
+  N <- sum(counts[filter_cohorts, 1])
+
   if (k == 1) {
     return(.DecodeBoolean(counts, params, N))
   }
-
-  filter_cohorts <- which(counts[, 1] != 0)  # exclude cohorts with zero reports
 
   # stretch cohorts to bits
   filter_bits <- as.vector(matrix(1:nrow(map), ncol = m)[,filter_cohorts, drop = FALSE])
