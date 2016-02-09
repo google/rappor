@@ -205,7 +205,7 @@ _run-one-instance() {
         < $true_values \
         > "$instance_dir/case_reports.csv"
       ;;
-
+      
     cpp)
       banner "Running RAPPOR C++ client (see rappor_sim.log for errors)"
 
@@ -219,14 +219,13 @@ _run-one-instance() {
         < $true_values \
         > "$instance_dir/case_reports.csv" \
         2>"$instance_dir/rappor_sim.log"
-
       ;;
-
+      
     *)
       log "Invalid impl $impl (should be one of python|cpp)"
       exit 1
-      ;;
-      
+    ;;
+    
   esac
 
   banner "Summing RAPPOR IRR bits to get 'counts'"
@@ -235,7 +234,6 @@ _run-one-instance() {
     $case_dir/case_params.csv \
     < $instance_dir/case_reports.csv \
     > $instance_dir/case_counts.csv
-  ;;
 
   local out_dir=${instance_dir}_report
   mkdir --verbose -p $out_dir
