@@ -1,0 +1,49 @@
+  <!DOCTYPE html>
+  <html>
+    <head>
+      <meta charset="UTF-8">
+      <style type="text/css">
+        code { color: green; }
+        pre { margin-left: 3em; }
+      </style>
+      <!-- INSERT LATCH JS -->
+    </head>
+    <body style="margin: 0 auto; width: 40em; text-align: left;">
+      <!-- INSERT LATCH HTML -->
+<h1>Generating Random Bits for RAPPOR</h1>
+
+<p>To ensure privacy, an application using RAPPOR must generate random bits in an
+unpredictable manner.  In other words, an adversary that can predict the
+sequence of random bits used can determine the true values being reported.</p>
+
+<p>Generating random numbers is highly platform-specific -- even
+language-specific.  So, libraries implementing RAPPOR should be parameterized
+by an interface to generate random bits.  (This can be thought of as
+"dependency injection".)</p>
+
+<!-- TODO: details on the interfaces, once we have them in more than one
+     language -->
+
+<p>For now, we have collected some useful links.</p>
+
+<h2>Linux</h2>
+
+<ul>
+<li><p><a href="http://www.2uo.de/myths-about-urandom/">Myths about /dev/urandom</a> -- Nice
+article explaining implementation aspects of <code>/dev/urandom</code> and <code>/dev/random</code>
+on Linux.  (Summary: just use <code>/dev/urandom</code>, with caveats explained)</p></li>
+<li><p><a href="http://lwn.net/Articles/606141/">LWN on getrandom</a>
+(<a href="http://lwn.net/Articles/605828/">patch</a>) -- A very recent addition to the
+Linux kernel.  As of this writing (11/2014), it's safe to say that very few
+applications use it.  The relevant change, involving an issue mentioned in
+the first link, involves the situation at system boot, when there is little
+entropy available.</p></li>
+</ul>
+
+<!-- TODO: other platforms.  Chrome uses /dev/urandom on Linux.  What about
+     other platforms?  -->
+
+<!-- TODO: when we have a C/C++ client, explain provide sample implementation
+     using simple C functions -->
+    </body>
+  </html>
