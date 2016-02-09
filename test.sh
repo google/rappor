@@ -71,12 +71,8 @@ py-unit() {
 # All tests
 all() {
   banner "Running Python unit tests"
-
   py-unit
   echo
-
-  banner "Linting Python source files"
-  py-lint
 
   banner "Running R unit tests"
   r-unit
@@ -85,6 +81,14 @@ all() {
 #
 # Lint
 #
+lint() {
+  banner "Linting Python source files"
+  py-lint
+  echo
+  
+  banner "Linting Documentation files"
+  doc-lint
+}
 
 python-lint() {
   # E111: indent not a multiple of 4.  We are following the Google/Chrome
