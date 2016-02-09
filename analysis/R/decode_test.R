@@ -320,19 +320,19 @@ TestDecodeBool <- function() {
   names(distribution_bool) <- colnames(map_bool)
   noise2 <- list(p = 0.25, q = 0.75, f = 0.5)
 
-  # tolerance_l1 set to four standard deviations to avoid any flakiness in
+  # tolerance_l1 set to five standard deviations to avoid any flakiness in
   # tests
   CheckDecodeAveAndStds("Testing .DecodeBoolean (1/3)", CheckDecodeHelper, 100,
                         c(params_bool, noise2), map_bool, distribution_bool,
                         10^6,
-                        tolerance_l1 = 4 * num_values,
+                        tolerance_l1 = 5 * num_values,
                         tolerance_linf = 80)
 
-  noise1 <- list(p = .4, q = .6, f = .5)  # substantial noise => 7 stddevs error
+  noise1 <- list(p = .4, q = .6, f = .5)  # substantial noise => 10 stddevs error
   CheckDecodeAveAndStds("Testing .DecodeBoolean (2/3)", CheckDecodeHelper, 100,
                         c(params_bool, noise1), map_bool, distribution_bool,
                         10^6,
-                        tolerance_l1 = 7 * num_values,
+                        tolerance_l1 = 10 * num_values,
                         tolerance_linf = 80)
 
   distribution_near_zero <- c(0.999, 0.001)
@@ -341,7 +341,7 @@ TestDecodeBool <- function() {
   CheckDecodeAveAndStds("Testing .DecodeBoolean (3/3)", CheckDecodeHelper, 100,
                         c(params_bool, noise2), map_bool,
                         distribution_near_zero, 10^6,
-                        tolerance_l1 = 4 * num_values,
+                        tolerance_l1 = 5 * num_values,
                         tolerance_linf = 80)
 }
 

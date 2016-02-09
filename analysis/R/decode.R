@@ -337,12 +337,12 @@ CheckDecodeInputs <- function(counts, map, params) {
   return(NULL)  # no error
 }
 
-FilterCohorts <- function(counts) {
+FilterCohorts <- function(counts, quiet = FALSE) {
   # Returns the list of cohorts to keep. Filters out cohorts that:
   #  - Didn't get any data
   #  - Received too much relative to the expectation
 
-  cohorts <- ncol(counts) - 1
+  cohorts <- nrow(counts)
   totals <- counts[, 1]
 
   keep <- seq(cohorts)
@@ -352,8 +352,9 @@ FilterCohorts <- function(counts) {
   margin <- sqrt(m) * 3  # Upper bound on the variance of the binomial distribution
   keep <- keep[totals[keep] < m + margin]
 
-  if(length(keep) < cohorts){
-    Log(c("Dropped cohorts: ", setdiff(seq(cohorts), keep)))
+  if(!quiet & length(keep) < cohorts){
+    Log(c("Dropped cohorts: [", setdiff(seq(cohorts), keep), "]"))
+    print(c(totals[setdiff(seq(cohorts), keep)], m, margin))
     Log("Combined, these cohorts contained %f of all reports", 1 - sum(totals[keep]) / sum(totals))
   }
 
@@ -376,14 +377,13 @@ Decode <- function(counts, map, params, alpha = 0.05,
   m <- params$m
 
   S <- ncol(map)  # total number of candidates
-
-  filter_cohorts <- FilterCohorts(counts)
-
-  N <- sum(counts[filter_cohorts, 1])
+  N <- sum(counts[, 1])
 
   if (k == 1) {
     return(.DecodeBoolean(counts, params, N))
   }
+
+  filter_cohorts <- FilterCohorts(counts, quiet)
 
   # stretch cohorts to bits
   filter_bits <- as.vector(matrix(1:nrow(map), ncol = m)[,filter_cohorts, drop = FALSE])
