@@ -331,7 +331,7 @@ _run-tests() {
   local spec_regex="$2"  # grep -E format on the spec, can be empty
   local parallel=$3
   local impl=$4
-  local instances=$5
+  local instances=${5:-1}
 
   local regtest_dir=$REGTEST_BASE_DIR/$impl
   rm -r -f --verbose $regtest_dir
