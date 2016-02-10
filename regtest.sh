@@ -9,11 +9,11 @@ echo "
  
  Three main functions are 
     run [<pattern> [<lang>]] - run tests matching <pattern> in
-                                       parallel, each <num> times. The language
+                                       parallel. The language
                                        of the client to use.
     run-seq [<pattern> [<lang>]] - ditto, except that tests are run
                                        sequentially
-    run-all                      - run all tests, in parallel, each <num> times
+    run-all                      - run all tests, in parallel
 
  Examples:
  $ ./regtest.sh run-seq unif-small-typical  # Run, the unif-small-typical test
