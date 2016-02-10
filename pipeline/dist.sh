@@ -14,6 +14,8 @@ source $RAPPOR_SRC/util.sh  # log, banner
 source $RAPPOR_SRC/pipeline/tools-lib.sh
 source $RAPPOR_SRC/pipeline/alarm-lib.sh
 
+readonly DECODE_DIST=${DEP_DECODE_DIST:-$RAPPOR_SRC/bin/decode-dist}
+
 readonly NUM_ARGS=7  # used for xargs
 
 decode-dist-one() {
@@ -52,7 +54,7 @@ decode-dist-one() {
   # Run it with a timeout, and record status in the task dir.
   { time \
       alarm-status $status_file $timeout_secs \
-        $rappor_src/bin/decode-dist \
+        $DECODE_DIST \
           --counts $counts \
           --params $params \
           --map $map \

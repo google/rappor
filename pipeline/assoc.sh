@@ -14,7 +14,8 @@ source $RAPPOR_SRC/util.sh  # log, banner
 source $RAPPOR_SRC/pipeline/tools-lib.sh
 source $RAPPOR_SRC/pipeline/alarm-lib.sh
 
-# Change the default location by setting DEP_FAST_EM.
+# Change the default location of these tools by setting DEP_*
+readonly DECODE_ASSOC=${DEP_DECODE_ASSOC:-$RAPPOR_SRC/bin/decode-assoc}
 readonly FAST_EM=${DEP_FAST_EM:-$RAPPOR_SRC/analysis/cpp/_tmp/fast_em}
 
 # Run a single decode-assoc process, to analyze one variable pair for one
@@ -59,7 +60,7 @@ decode-one() {
 
   { time \
       alarm-status $status_file $timeout_secs \
-        $rappor_src/bin/decode-assoc \
+        $DECODE_ASSOC \
           --create-bool-map \
           --remove-bad-rows \
           --em-executable $em_executable \
