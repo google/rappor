@@ -132,7 +132,7 @@ class _SecureRandom(object):
 
     r = 0
     for i, b in enumerate(xrange(self.num_bits)):
-      bit = b < p * 255.0
+      bit = b < p * 256.0
       r |= (bit << i)  # using bool as int
     return r
 
