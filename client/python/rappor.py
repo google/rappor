@@ -23,10 +23,10 @@ import csv
 import hashlib
 import hmac
 import json
-import os
 import struct
 import sys
 
+from random import SystemRandom
 
 class Error(Exception):
   pass
@@ -128,11 +128,11 @@ class _SecureRandom(object):
 
   def __call__(self):
     p = self.prob_one
-    bytes = os.urandom(self.num_bits)
-
+    rand = SystemRandom()
     r = 0
-    for i, b in enumerate(xrange(self.num_bits)):
-      bit = b < p * 256.0
+
+    for i in xrange(self.num_bits):
+      bit = rand.random() < p
       r |= (bit << i)  # using bool as int
     return r
 
