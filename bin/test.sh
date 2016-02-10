@@ -254,4 +254,8 @@ decode-assoc-tensorflow-converge() {
   decode-assoc-tensorflow --max-em-iters 1000
 }
 
-"$@"
+if test $# -eq 0 ; then
+  usage
+else
+  "$@"
+fi
