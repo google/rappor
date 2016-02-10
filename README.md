@@ -120,9 +120,11 @@ Directory Structure
       ...
     build.sh             # Build scripts (docs, C extension, etc.)
     demo.sh              # Quick demonstration
+    docs.sh              # Generate docs form the markdown in doc/
+    gh-pages/            # Where generated docs go. (A subtree of the branch gh-pages)
+    pipeline/            # Analysis pipeline code.
     regtest.sh           # End-to-end regression tests, including client
                          #  libraries and analysis
-    run.sh               # Misc automation
     setup.sh             # Install dependencies (for Linux)
     test.sh              # Test runner
 
