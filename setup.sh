@@ -7,7 +7,9 @@
 # cause versioning problems, so we keep them separate.
 #
 # Usage:
-#   ./setup.sh <function name>
+#   ./setup.sh [function name]
+# If run without specifing any function it will run: install-most 
+# which should cover all the packages needed to run the demo.
 
 set -o nounset
 set -o pipefail

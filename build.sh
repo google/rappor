@@ -3,11 +3,14 @@
 # Build automation.
 #
 # Usage:
-#   ./build.sh <function name>
+#   ./build.sh [function name]
 #
 # Important targets are:
+#   cpp-client: Build the C++ client
 #   doc: build docs with Markdown
 #   fastrand: build Python extension module to speed up the client simulation
+#
+# If no function is specified all 3 targets will be built.
 
 set -o nounset
 set -o pipefail

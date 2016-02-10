@@ -17,11 +17,13 @@
 # Test automation script.
 #
 # Usage:
-#   test.sh <function name>
+#   test.sh [function name]
 #
 # Examples:
 #   $ ./test.sh py-unit  # run Python unit tests
 #   $ ./test.sh all      # all tests
+#   $ ./test.sh lint     # run lint checks
+# If no function is provided all of the unit tests will be run.
 
 set -o nounset
 set -o pipefail
