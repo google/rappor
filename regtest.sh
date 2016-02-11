@@ -330,7 +330,7 @@ _run-tests() {
   local spec_gen=$1
   local spec_regex="$2"  # grep -E format on the spec, can be empty
   local parallel=$3
-  local impl=$4
+  local impl=${4:-"cpp"}
   local instances=${5:-1}
 
   local regtest_dir=$REGTEST_BASE_DIR/$impl
