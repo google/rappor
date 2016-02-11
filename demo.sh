@@ -3,11 +3,12 @@
 # Demo of RAPPOR.  Automating Python and R scripts.  See README.
 #
 # Usage:
-#   ./demo.sh <function name>
+#   ./demo.sh [function name]
 #
-# End to end demo for 3 distributions:
-#
-#   $ ./demo.sh run
+# End to end demo of rappor. Notable functions include:
+#   quick-python: Runs a demo using the python client
+#   quick-cpp: Runs a demo using the c++ client
+# If no function is specified the above two will be run consecutivly. 
 #
 # This takes a minute or so.  It runs a subset of tests from regtest.sh and
 # writes an HTML summary.
@@ -42,38 +43,20 @@ rappor-sim-profile() {
     | tee _tmp/profile.txt
 }
 
-# Build prerequisites for the demo.
-build() {
-  # This is optional; the simulation will fall back to pure Python code.
-  ./build.sh fastrand
-}
-
-# Main entry point that is documented in README.md.  Uses the Python client.
-run() {
-  # Run all the test cases that start with "demo".
-  ./regtest.sh run-seq '^demo' 1 python
-}
-
-quick-python() {
-  ./regtest.sh run-seq '^demo3' 1 python
+quick-python() {  
+  ./regtest.sh run-seq '^demo3' python
 }
 
 quick-cpp() {
   # For now we build it first.  Don't want to build it in parallel.
   ./build.sh cpp-client
 
-  ./regtest.sh run-seq '^demo3' 1 cpp
-}
-
-# NOTE: This behaves worse than 'quick', because of cohort issue.
-quick-fast-counts() {
-  ./regtest.sh run-seq '^demo3' 1 fast_counts
+  ./regtest.sh run-seq '^demo3' cpp
 }
 
 quick() {
   quick-python
   quick-cpp
-  quick-fast-counts
 }
 
 # TODO: Port these old bad cases to regtest_spec.py.
@@ -102,4 +85,8 @@ ok-case() {
   run-dist exp 10000 10 'v1|v2'
 }
 
-"$@"
+if test $# -eq 0 ; then
+  quick
+else
+  "$@"
+fi

@@ -21,21 +21,15 @@ end-to-end demo has only been tested on Linux.
 If you don't have a Linux box handy, you can [view the generated
 output](http://google.github.io/rappor/examples/report.html).
 
-To get your feet wet, install the R dependencies (details below).  It should
-look something like this:
-
-    $ R
-    ...
-    > install.packages(c('glmnet', 'optparse', 'ggplot2'))
-
-Then run:
-
-    $ ./demo.sh build  # optional speedup, it's OK for now if it fails
-
+To setup your enviroment there are some packages and R dependencies. There is a setup script to install them:
+    $ ./setup.sh
+Then to build the native components run:
+    $ ./build.sh 
 This compiles and tests the `fastrand` C extension module for Python, which
 speeds up the simulation.
 
-    $ ./demo.sh run
+Finally to run the demo run:
+    $ ./demo.sh
 
 The demo strings together the Python and R code.  It:
 
@@ -78,7 +72,7 @@ Development
 
 To run tests:
 
-    $ ./test.sh all
+    $ ./test.sh
 
 This currently runs Python unit tests, lints Python source files, and runs R
 unit tests.
@@ -126,9 +120,11 @@ Directory Structure
       ...
     build.sh             # Build scripts (docs, C extension, etc.)
     demo.sh              # Quick demonstration
+    docs.sh              # Generate docs form the markdown in doc/
+    gh-pages/            # Where generated docs go. (A subtree of the branch gh-pages)
+    pipeline/            # Analysis pipeline code.
     regtest.sh           # End-to-end regression tests, including client
                          #  libraries and analysis
-    run.sh               # Misc automation
     setup.sh             # Install dependencies (for Linux)
     test.sh              # Test runner
 

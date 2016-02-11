@@ -1,0 +1,252 @@
+  <!DOCTYPE html>
+  <html>
+    <head>
+      <meta charset="UTF-8">
+      <style type="text/css">
+        code { color: green; }
+        pre { margin-left: 3em; }
+      </style>
+      <!-- INSERT LATCH JS -->
+    </head>
+    <body style="margin: 0 auto; width: 40em; text-align: left;">
+      <!-- INSERT LATCH HTML -->
+<h1>RAPPOR Data Flow</h1>
+
+<p>This doc explains the simulation tools and data formats in the <a href="https://github.com/google/rappor">RAPPOR
+repository</a>.  We'll focus on the code, and
+describe the algorithm only informally.  For details, see the <a href="http://arxiv.org/abs/1407.6981">paper</a>.</p>
+
+<h2>Overview</h2>
+
+<p>Start with this command:</p>
+
+<pre><code>$ ./demo.sh run
+</code></pre>
+
+<p>It takes a minute or so to run.  The dependencies listed in the
+<a href="https://github.com/google/rappor/blob/master/README.md">README</a> must be installed.  At the end, it will say:</p>
+
+<pre><code>Wrote _tmp/report.html.  Open this in your browser.
+</code></pre>
+
+<p>It should look like <a href="http://google.github.io/rappor/examples/report.html">this</a>.</p>
+
+<p>The following diagram shows what processes and files are involved in the demo.
+Ovals represent <strong>processes</strong>; rectangles represent <strong>data</strong>.  The dotted lines
+denote components that are involved in the simulation, but wouldn't be used in
+a "real" setting.</p>
+
+<p>In most configurations, reporting (in blue) is done by client machines, while
+analysis (in green) is done by a server.</p>
+
+<p><img src="data-flow.png" alt="Diagram of RAPPOR Data Flow" /></p>
+
+<p>In the simulation, reporting consists of these steps:</p>
+
+<ol>
+<li>Generate simulated input data with different distributions.</li>
+<li>Obscure each value with the RAPPOR privacy-preserving reporting mechanism.</li>
+</ol>
+
+<p>Analysis consists of these steps:</p>
+
+<ol>
+<li>Aggregate the reports by summing bits (i.e. make a counting Bloom filter)</li>
+<li>Come up with candidate strings, and hash them in the same manner as the
+client.</li>
+<li>Using the reports, RAPPOR parameters, and candidate strings as input,
+infer the distribution of true values.  We don't see the values themselves.
+We plot the true and inferred distributions side by side for comparison.</li>
+</ol>
+
+<p>This process is described in detail below.</p>
+
+<h2>1. Generating Simulated Input</h2>
+
+<p>The <code>tests/gen_sim_input.py</code> tool generates CSV data, like this:</p>
+
+<!-- TODO: a realistic data set would be nice? How could we generate one?  -->
+
+<p><strong>exp.csv</strong></p>
+
+<pre><code>client, true_value
+1,      v6
+1,      v3
+1,      v3
+1,      v5
+1,      v13
+1,      v1
+1,      v8
+2,      v2
+2,      v3
+2,      v1
+2,      v8
+2,      v1
+2,      v30
+2,      v10
+3,      v4
+...
+</code></pre>
+
+<p><em>(spaces added for clarity)</em></p>
+
+<p>By default we generate 700,000 rows: 7 random values from <code>v1</code> to <code>v50</code> for
+each client.  These can be thought of as a variable being reported over time.</p>
+
+<p>We're simulating an environment where there are many RAPPOR clients, and a
+single server does the RAPPOR analysis on the accumulated data.</p>
+
+<p>The <code>client</code> is represented by an integer ID.  The <code>true_value</code> should <strong>not</strong>
+be sent over the network because we wish to preserve the client's privacy.</p>
+
+<h2>2. RAPPOR Reporting</h2>
+
+<p>The <code>tests/rappor_sim.py</code> tool uses the Python client library
+(<code>client/python/rappor.py</code>) to obscure the <code>v1</code> .. <code>vN</code> strings.  We want to
+infer the distribution of these strings over the entire population, but we
+don't want to know any individual values.</p>
+
+<p>After the RAPPOR transformation, we get another CSV file with 700,000 rows.
+Each client is assigned a cohort.</p>
+
+<p><strong>exp_out.csv</strong></p>
+
+<pre><code>client, cohort, rappor
+1,      63,     1111101011110111
+1,      15,     1110110011111100
+1,      12,     0110101111100101
+1,       0,     1111100111110111
+1,       3,     1001110111110011
+1,      14,     1011111010110011
+1,      33,     0111010100101011
+2,      40,     0011011010101001
+2,      35,     1010110101110100
+2,      58,     1110110110111110
+2,      38,     0010001111001010
+2,       5,     1110111011100101
+2,      36,     0111010100111111
+2,      39,     0101101000101101
+3,      32,     0011100111111110
+...
+</code></pre>
+
+<p><em>(spaces added for clarity)</em></p>
+
+<p>We also get a one-row CSV file that contains the RAPPOR parameters:</p>
+
+<p><strong>exp_params.csv</strong></p>
+
+<pre><code>k,h,m,p,q,f
+16,2,64,0.5,0.75,0.5
+</code></pre>
+
+<p>These are described in the <a href="http://arxiv.org/abs/1407.6981">paper</a>. The parameters that the clients use
+must be known to the server, or the decoding will fail.  In addition, all
+clients must use the same parameters for a given variable.</p>
+
+<p>The <code>rappor_sim.py</code> process also writes these files:</p>
+
+<ul>
+<li><code>exp_hist.csv</code>: The true histogram of input values.  This is used only for
+comparison.  In the real world you obviously won't have this.</li>
+<li><code>exp_true_inputs.txt</code>: A list of the unique values reported, e.g. <code>v1</code> ..
+<code>v50</code>.  You won't have this either, in general.  To use RAPPOR, you must
+supply <em>candidate strings</em>, described below.</li>
+</ul>
+
+<h2>3. Report Aggregation</h2>
+
+<p><code>sum_bits.py</code> takes the <code>exp_out.csv</code> output, and produces the "counts" file:</p>
+
+<p><strong>exp_counts.csv</strong></p>
+
+<pre><code>11116,6273,6433,6347,6385,6290,6621,6359,6747,6623,6321,6696,6282,6652,6368,6286,6222
+10861,6365,6263,6170,6258,6107,6633,6171,6226,6123,6286,6254,6408,6182,6442,6195,6187
+...
+</code></pre>
+
+<p>The file has 64 rows, because the simulation has 64 cohorts by default (<code>m =
+64</code>).  This parameter should be adjusted based on the number of unique true
+values expected.  <!-- TODO: more detail --></p>
+
+<p>There are 17 columns.  The left-most column is the total number of reports in
+the cohort.  The remaining 16 columns correspond to the <code>k = 16</code> bits in the
+Bloom filter.  Each column contains the number of reports with that bit set
+to 1.</p>
+
+<p>So, in general, the "counts" file is a <code>(k+1) * m</code> matrix.</p>
+
+<h2>4. Candidate Strings</h2>
+
+<p>In the simulation, we assume that the analyst will come up with a <em>superset</em> of
+the candidate strings.  This is done in the <code>more-candidates</code> /
+<code>print-candidates</code> functions in <code>demo.sh</code>.</p>
+
+<p>You can also test what happens if you omit true strings from the candidates, by
+editing the invocation of <code>print-candidates</code> in <code>run-dist</code>:</p>
+
+<pre><code># Example of omitting true values.  Generate candidates from
+# exp_true_inputs.txt, omitting values v1 and v2.
+
+print-candidates $dist 'v1|v2'  &gt; _tmp/${dist}_candidates.txt
+</code></pre>
+
+<p>In general, coming up with candidates is an application- or metric-specific
+process.</p>
+
+<p>The candidates are hashed by <code>hash_candidates.py</code> to create the "map" file,
+before being passed to R for analysis.</p>
+
+<p><strong>exp_map.csv</strong></p>
+
+<pre><code>v1,8,13,30,22,37,37,53,53,77,67,89,86,97,97,118,128,139,136,157,&lt;truncated&gt;
+v10,13,2,25,28,42,45,58,60,68,66,91,89,108,102,113,125,130,131,&lt;truncated&gt;
+</code></pre>
+
+<p>The map file has one row per candidate.  In this case, there are 60 rows: 
+50 for the true values and 10 for "fake" values, which make the candidates a
+superset of the true input.</p>
+
+<p>The left most column is the raw candidate string.  Then there are 128 more
+columns: for <code>m = 64</code> cohorts times <code>k = 2</code> hash functions in the Bloom filter.</p>
+
+<!-- TODO: more detail about setting params?  Examples of coming up with
+candidate strings? -->
+
+<h2>5. RAPPOR Analysis</h2>
+
+<p>Once you have the <code>counts</code>, <code>params</code>, and <code>map</code> files, you can pass it to the
+<code>tests/analyze.R</code> tool, which is a small wrapper around the <code>analyze/R</code>
+library.</p>
+
+<p>You will get a plot of the true distribution vs. the distribution recovered
+with the RAPPOR privacy algorithm.</p>
+
+<p><a href="http://google.github.io/rappor/examples/report.html">View the example output</a>.</p>
+
+<p>You can change the simulation parameters and RAPPOR parameters via flags, and
+compare the resulting distributions.</p>
+
+<p>For example, if you expect more unique values from clients, you should also use
+more cohorts (i.e. raise <code>m</code>), to prevent hash function collisions from
+degrading the result quality.</p>
+
+<!-- TODO: 
+     - how to change flags
+     - more detail on what the various parameters do
+     - association analysis
+     - basic RAPPOR
+     - longitudinal privacy
+-->
+
+<h2>Conclusion</h2>
+
+<p>RAPPOR allows you infer statistics about populations while preserving the
+privacy of individual clients.  In this doc, we walked through a simple demo.
+However, there are other variations of RAPPOR and settings in which you can use
+RAPPOR, which we'll write more about.</p>
+
+<p>Feel free to send feedback on this doc to
+<a href="https://groups.google.com/forum/#!forum/rappor-discuss">rappor-discuss@googlegroups.com</a>.</p>
+    </body>
+  </html>
