@@ -189,7 +189,7 @@ def main(argv):
   params.prob_f = opts.prob_f
 
   if opts.random_mode == 'simple':
-    irr_rand = rappor.SimpleIrrRand(params)
+    irr_rand = rappor.SecureIrrRand(params)
   elif opts.random_mode == 'fast':
     if fastrand:
       log('Using fastrand extension')
@@ -198,7 +198,7 @@ def main(argv):
     else:
       log('Warning: fastrand module not importable; see README for build '
           'instructions.  Falling back to simple randomness.')
-      irr_rand = rappor.SimpleIrrRand(params)
+      irr_rand = rappor.SecureIrrRand(params)
   else:
     raise AssertionError
   # Other possible implementations:

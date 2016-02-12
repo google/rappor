@@ -7,7 +7,9 @@
 # cause versioning problems, so we keep them separate.
 #
 # Usage:
-#   ./setup.sh <function name>
+#   ./setup.sh [function name]
+# If run without specifing any function it will run: install-most 
+# which should cover all the packages needed to run the demo.
 
 set -o nounset
 set -o pipefail
@@ -21,7 +23,7 @@ native-packages() {
   # - python-dev is for building the fastrand extension
   #
   # NOTE: we get R 3.0.2 on Trusty.
-  sudo apt-get install build-essential gfortran libblas-dev r-base python-dev
+  sudo apt-get install build-essential gfortran libblas-dev r-base python-dev graphviz
 }
 
 r-packages() {
@@ -81,4 +83,8 @@ shiny-smoke-test() {
 # Then set up a "firewall rule" in console.developers.google.com to open up
 # "tcp:6789".  Test it from the outside.
 
-"$@"
+if test $# -eq 0 ; then
+  install-most
+else
+  "$@"
+fi

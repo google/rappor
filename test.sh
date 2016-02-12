@@ -17,11 +17,13 @@
 # Test automation script.
 #
 # Usage:
-#   test.sh <function name>
+#   test.sh [function name]
 #
 # Examples:
 #   $ ./test.sh py-unit  # run Python unit tests
 #   $ ./test.sh all      # all tests
+#   $ ./test.sh lint     # run lint checks
+# If no function is provided all of the unit tests will be run.
 
 set -o nounset
 set -o pipefail
@@ -71,12 +73,8 @@ py-unit() {
 # All tests
 all() {
   banner "Running Python unit tests"
-
   py-unit
   echo
-
-  banner "Linting Python source files"
-  py-lint
 
   banner "Running R unit tests"
   r-unit
@@ -85,6 +83,14 @@ all() {
 #
 # Lint
 #
+lint() {
+  banner "Linting Python source files"
+  py-lint
+  echo
+  
+  banner "Linting Documentation files"
+  doc-lint
+}
 
 python-lint() {
   # E111: indent not a multiple of 4.  We are following the Google/Chrome
@@ -120,7 +126,7 @@ r-unit() {
   tests/compare_dist_test.R
 
   tests/gen_counts_test.R
-
+  
   tests/gen_true_values_test.R
 
   analysis/R/decode_test.R
@@ -162,4 +168,8 @@ gen-true-values() {
   cat $out
 }
 
-"$@"
+if test $# -eq 0 ; then
+  all
+else
+  "$@"
+fi
