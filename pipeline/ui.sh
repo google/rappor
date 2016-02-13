@@ -14,6 +14,9 @@ readonly RAPPOR_SRC=$(cd $THIS_DIR/.. && pwd)
 
 source $RAPPOR_SRC/pipeline/tools-lib.sh
 
+# Change the default location of this file by setting DEP_DYGRAPHS_JS
+readonly DYGRAPHS_JS=${DEP_DYGRAPHS_JS:-$RAPPOR_SRC/third_party/dygraph-combined.js}
+
 _link() {
   ln --verbose -s -f "$@"
 }
@@ -65,7 +68,7 @@ symlink-static() {
   _link \
     $base/ui.css $base/ui.js \
     $base/table-sort.css $base/table-lib.js \
-    $RAPPOR_SRC/third_party/dygraph-combined.js \
+    $DYGRAPHS_JS \
     $job_dir/static
 }
 
