@@ -75,8 +75,7 @@ def CombineDistResults(stdin, c_out, num_top):
           row = c.next()
         except StopIteration:
           # It's OK if it doesn't have enough
-          util.log('Stopping early. Fewer than %d results to render',
-                  str(num_top))
+          util.log('Stopping early. Fewer than %d results to render', num_top)
           break
 
         string, _, _, proportion, _, prop_low, prop_high = row
