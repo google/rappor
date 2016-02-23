@@ -94,6 +94,12 @@ main <- function(opts) {
 
   map <- LoadMapFile(opts$map, params)
 
+  val <- ValidateInput(params, counts, map$map)  # NOTE: using global map
+  if (val != "valid") {
+    Log("ERROR: Invalid input: %s", val)
+    quit(status = 1)
+  }
+
   Log("Decoding %d reports", num_reports)
   res <- Decode(counts, map$map, params, correction = opts$correction,
                 alpha = opts$alpha)
