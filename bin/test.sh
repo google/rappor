@@ -161,10 +161,8 @@ EOF
   banner "Wrote testdata in $input_dir (intermediate files in $build_dir)"
 }
 
-
 # Helper function to run decode-assoc with testdata.
 decode-assoc-helper() {
-# Clear cached rda files and regenerate test-data each run.
   write-assoc-testdata
   
   local output_dir=$1
@@ -182,7 +180,7 @@ decode-assoc-helper() {
     --var2 flag..HTTPS \
     --map1 $input_dir/domain_map.csv \
     --create-bool-map \
-    --max-em-iters 1000 \
+    --max-em-iters 10 \
     --num-cores 2 \
     --output-dir $output_dir \
     --tmp-dir $output_dir \

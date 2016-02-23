@@ -112,7 +112,8 @@ def GenAssocTestdata(params1, params2, irr_rand, assoc_testdata_count,
     for v1, v2 in rows:
       client_str = 'c%d' % report_index
       # randint(a, b) gives i such that a <= i <= b
-      cohort = random.randint(0, params1.num_cohorts - 1) # Assign cohort randomly.
+      cohort = random.randint(0, params1.num_cohorts - 1)
+
       string_encoder = rappor.Encoder(params1, cohort, client_str, irr_rand)
       bool_encoder = rappor.Encoder(params2, cohort, client_str, irr_rand)
 
