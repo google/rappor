@@ -40,8 +40,18 @@ ReadParameterFile <- function(params_file) {
   params
 }
 
-ReadCountsFile <- function(counts_file, params) {
-
+# Handle the case of redundant cohorts, i.e. the counts file needs to be
+# further aggregated to obtain counts for the number of cohorts specified in           
+# the params file.            
+#             
+# NOTE: Why is this happening?                
+AdjustCounts <- function(counts, params) {            
+  apply(counts, 2, function(x) {              
+    tapply(x, rep(1:params$m, nrow(counts) / params$m), sum)          
+  })          
+}             
+                  
+ReadCountsFile <- function(counts_file, params, adjust_counts = FALSE) {
   # Read in the counts file.
   if (!file.exists(counts_file)) {
     return(NULL)
