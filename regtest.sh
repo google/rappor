@@ -1,39 +1,37 @@
 #!/bin/bash
-#
-# Run end-to-end tests in parallel.
-#
-# Usage:
-#   ./regtest.sh <function name>
+usage() {
+echo "
+ Run end-to-end tests in parallel.
 
-# At the end, it will print an HTML summary.
-# 
-# Three main functions are 
-#    run [[<pattern> [<num> [<fast>]] - run tests matching <pattern> in
-#                                       parallel, each <num> times. The fast 
-#                                       mode (T/F) shortcuts generation of 
-#                                       reports.
-#    run-seq [<pattern> [<num> [<fast>]] - ditto, except that tests are run
-#                                       sequentially
-#    run-all [<num>]              - run all tests, in parallel, each <num> times
-#
-# Examples:
-# $ ./regtest.sh run-seq unif-small-typical  # Sequential run, matches 1 case
-# $ ./regtest.sh run-seq unif-small- 3 F  # Sequential, each test is run three
-#                                           times, using slow generation
-# $ ./regtest.sh run unif-  # Parallel run, matches multiple cases
-# $ ./regtest.sh run unif- 5 # Parallel run, matches multiple cases, each test 
-#                              is run 5 times
-# $ ./regtest.sh run-all     # Run all tests once
-#
-# The <pattern> argument is a regex in 'grep -E' format. (Detail: Don't
-# use $ in the pattern, since it matches the whole spec line and not just the
-# test case name.) The number of processors used in a parallel run is one less
-# than the number of CPUs on the machine.
+ Usage:
+   ./regtest.sh <function name>
+ At the end, it will print an HTML summary.
+ 
+ Three main functions are 
+    run [<pattern> [<lang>]] - run tests matching <pattern> in
+                                       parallel. The language
+                                       of the client to use.
+    run-seq [<pattern> [<lang>]] - ditto, except that tests are run
+                                       sequentially
+    run-all                      - run all tests, in parallel
 
+ Examples:
+ $ ./regtest.sh run-seq unif-small-typical  # Run, the unif-small-typical test
+ $ ./regtest.sh run-seq unif-small-         # Sequential, the tests containing:
+                                            # 'unif-small-'
+ $ ./regtest.sh run unif-  # Parallel run, matches multiple cases
+ $ ./regtest.sh run-all    # Run all tests 
 
+ The <pattern> argument is a regex in 'grep -E' format. (Detail: Don't
+ use $ in the pattern, since it matches the whole spec line and not just the
+ test case name.) The number of processors used in a parallel run is one less
+ than the number of CPUs on the machine.
+"
+}
 # Future speedups:
 # - Reuse the same input -- come up with naming scheme based on params
 # - Reuse the same maps -- ditto, rappor library can cache it
+#
 
 set -o nounset
 set -o pipefail
@@ -171,91 +169,71 @@ _run-one-instance() {
   local instance_dir=$case_dir/$test_instance
   mkdir --verbose -p $instance_dir
 
-  # NOTE: This is a nested case statement on the same variable ($impl).  If
-  # it's fast_counts, we just run gen_counts.R.  If it's anything else, then we
-  # generate raw reports, run them through the appropriate client, and then sum
-  # the bits.
+  banner "Generating reports (gen_reports.R)"
+
+  # the TRUE_VALUES_PATH environment variable can be used to avoid
+  # generating new values every time.  NOTE: You are responsible for making
+  # sure the params match!
+
+  local true_values=${TRUE_VALUES_PATH:-}
+  if test -z "$true_values"; then
+    true_values=$instance_dir/case_true_values.csv
+    tests/gen_true_values.R $distr $num_unique_values $num_clients \
+                            $values_per_client $num_cohorts \
+                            $true_values
+  else
+    # TEMP hack: Make it visible to plot.
+    # TODO: Fix compare_dist.R
+    ln -s -f --verbose \
+      $PWD/$true_values \
+      $instance_dir/case_true_values.csv
+  fi
 
   case $impl in
-    fast_counts)
-      local params_file=$case_dir/case_params.csv
-      local true_map_file=$case_dir/case_true_map.csv
+    python)
+      banner "Running RAPPOR Python client"
 
-      banner "Generating counts directly (gen_counts.R)"
-
-      # Writes _counts.csv and _hist.csv
-      tests/gen_counts.R $distr $num_clients $values_per_client $params_file \
-                         $true_map_file "$instance_dir/case"
+      # Writes encoded "out" file, true histogram, true inputs to
+      # $instance_dir.
+      time tests/rappor_sim.py \
+        --num-bits $num_bits \
+        --num-hashes $num_hashes \
+        --num-cohorts $num_cohorts \
+        -p $p \
+        -q $q \
+        -f $f \
+        < $true_values \
+        > "$instance_dir/case_reports.csv"
       ;;
+      
+    cpp)
+      banner "Running RAPPOR C++ client (see rappor_sim.log for errors)"
 
+      time client/cpp/_tmp/rappor_sim \
+        $num_bits \
+        $num_hashes \
+        $num_cohorts \
+        $p \
+        $q \
+        $f \
+        < $true_values \
+        > "$instance_dir/case_reports.csv" \
+        2>"$instance_dir/rappor_sim.log"
+      ;;
+      
     *)
-      banner "Generating reports (gen_reports.R)"
-
-      # the TRUE_VALUES_PATH environment variable can be used to avoid
-      # generating new values every time.  NOTE: You are responsible for making
-      # sure the params match!
-
-      local true_values=${TRUE_VALUES_PATH:-}
-      if test -z "$true_values"; then
-        true_values=$instance_dir/case_true_values.csv
-        tests/gen_true_values.R $distr $num_unique_values $num_clients \
-                                $values_per_client $num_cohorts \
-                                $true_values
-      else
-        # TEMP hack: Make it visible to plot.
-        # TODO: Fix compare_dist.R
-        ln -s -f --verbose \
-          $PWD/$true_values \
-          $instance_dir/case_true_values.csv
-      fi
-
-      case $impl in
-        python)
-          banner "Running RAPPOR Python client"
-
-          # Writes encoded "out" file, true histogram, true inputs to
-          # $instance_dir.
-          time tests/rappor_sim.py \
-            --num-bits $num_bits \
-            --num-hashes $num_hashes \
-            --num-cohorts $num_cohorts \
-            -p $p \
-            -q $q \
-            -f $f \
-            < $true_values \
-            > "$instance_dir/case_reports.csv"
-          ;;
-
-        cpp)
-          banner "Running RAPPOR C++ client (see rappor_sim.log for errors)"
-
-          time client/cpp/_tmp/rappor_sim \
-            $num_bits \
-            $num_hashes \
-            $num_cohorts \
-            $p \
-            $q \
-            $f \
-            < $true_values \
-            > "$instance_dir/case_reports.csv" \
-            2>"$instance_dir/rappor_sim.log"
-
-          ;;
-
-        *)
-          log "Invalid impl $impl (should be one of fast_counts|python|cpp)"
-          exit 1
-          ;;
-      esac
-
-      banner "Summing RAPPOR IRR bits to get 'counts'"
-
-      bin/sum_bits.py \
-        $case_dir/case_params.csv \
-        < $instance_dir/case_reports.csv \
-        > $instance_dir/case_counts.csv
-      ;;
+      log "Invalid impl $impl (should be one of python|cpp)"
+      exit 1
+    ;;
+    
   esac
+
+  banner "Summing RAPPOR IRR bits to get 'counts'"
+
+  bin/sum_bits.py \
+    $case_dir/case_params.csv \
+    < $instance_dir/case_reports.csv \
+    > $instance_dir/case_counts.csv
 
   local out_dir=${instance_dir}_report
   mkdir --verbose -p $out_dir
@@ -343,17 +321,17 @@ default-processes() {
 # Args:
 #   spec_gen: A program to execute to generate the spec.
 #   spec_regex: A pattern selecting the subset of tests to run
-#   instances: A number of times each test case is run
 #   parallel: Whether the tests are run in parallel (T/F).  Sequential
 #     runs log to the console; parallel runs log to files.
-#   impl: one of fast_counts, python, cpp
+#   impl: one of python, or cpp
+#   instances: A number of times each test case is run
 
 _run-tests() {
   local spec_gen=$1
   local spec_regex="$2"  # grep -E format on the spec, can be empty
-  local instances=$3
-  local parallel=$4
-  local impl=$5
+  local parallel=$3
+  local impl=${4:-"cpp"}
+  local instances=${5:-1}
 
   local regtest_dir=$REGTEST_BASE_DIR/$impl
   rm -r -f --verbose $regtest_dir
@@ -402,35 +380,29 @@ readonly REGTEST_SPEC=tests/regtest_spec.py
 # Run tests sequentially.  NOTE: called by demo.sh.
 run-seq() {
   local spec_regex=${1:-'^r-'}  # grep -E format on the spec
-  local instances=${2:-1}
-  local impl=${3:-fast_counts}
+  shift
 
-  time _run-tests $REGTEST_SPEC $spec_regex $instances F $impl
+  time _run-tests $REGTEST_SPEC $spec_regex F $@
 }
 
 # Run tests in parallel
 run() {
   local spec_regex=${1:-'^r-'}  # grep -E format on the spec
-  local instances=${2:-1}
-  local impl=${3:-fast_counts}
+  shift
   
-  time _run-tests $REGTEST_SPEC $spec_regex $instances T $impl
+  time _run-tests $REGTEST_SPEC $spec_regex T $@
 }
 
 # Run tests in parallel (7+ minutes on 8 cores)
 run-all() {
-  local instances=${1:-1}
-
   log "Running all tests. Can take a while."
-  time _run-tests $REGTEST_SPEC '^r-' $instances T fast_counts
+  time _run-tests $REGTEST_SPEC '^r-' T cpp
 }
 
 run-user() {
   local spec_regex=${1:-}
-  local instances=${2:-1}
   local parallel=T  # too much memory
-  time _run-tests tests/user_spec.py "$spec_regex" $instances $parallel \
-    fast_counts
+  time _run-tests tests/user_spec.py "$spec_regex" $parallel cpp
 }
 
 # Use stable true values
@@ -461,4 +433,8 @@ compare-python-cpp() {
   head _tmp/{python,cpp}/demo3/1/case_reports.csv
 }
 
-"$@"
+if test $# -eq 0 ; then
+  usage
+else
+  "$@"
+fi

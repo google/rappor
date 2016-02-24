@@ -89,7 +89,6 @@ main <- function(opts) {
   counts <- ReadCountsFile(opts$counts, params, adjust_counts = opts$adjust_counts_hack)
   counts <- AdjustCounts(counts, params)
 
-
   # The left-most column has totals.
   num_reports <- sum(counts[, 1])
 

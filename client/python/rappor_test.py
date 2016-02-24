@@ -81,12 +81,10 @@ class RapporParamsTest(unittest.TestCase):
     params.prob_p = 0.5
     params.prob_q = 0.75
 
-    # SimpleRandom will call self.random() below for each bit, which will
-    # return these 3 values in sequence.
-    rand = MockRandom([0.0, 0.6, 0.0])
+    # return these 3 probabilities in sequence.
+    rand = MockRandom([0.0, 0.6, 0.0], params)
 
-    irr_rand = rappor.SimpleIrrRand(params, _rand=rand)
-    e = rappor.Encoder(params, 0, 'secret', irr_rand)
+    e = rappor.Encoder(params, 0, 'secret', rand)
 
     irr = e.encode("abc")
 
@@ -101,17 +99,26 @@ class MockRandom(object):
   with stubs for testing purposes.
   """
 
-  def __init__(self, cycle):
-    self.counter = 0
+  def __init__(self, cycle, params):
+    self.p_gen = MockRandomCall(params.prob_p, cycle, params.num_bloombits)
+    self.q_gen = MockRandomCall(params.prob_q, cycle, params.num_bloombits)
+    
+class MockRandomCall:
+  def __init__(self, prob, cycle, num_bits):
     self.cycle = cycle
     self.n = len(self.cycle)
-
-  def random(self):
-    rand_val = self.cycle[self.counter]
-    self.counter += 1
-    self.counter %= self.n  # wrap around
-    print 'RAND', rand_val
-    return rand_val
+    self.prob = prob
+    self.num_bits = num_bits
+    
+  def __call__(self):
+    counter = 0
+    r = 0
+    for i in xrange(0, self.num_bits):
+      rand_val = self.cycle[counter]
+      counter += 1
+      counter %= self.n  # wrap around
+      r |= ((rand_val < self.prob) << i)
+    return r
 
 
 if __name__ == "__main__":

@@ -3,11 +3,14 @@
 # Build automation.
 #
 # Usage:
-#   ./build.sh <function name>
+#   ./build.sh [function name]
 #
 # Important targets are:
+#   cpp-client: Build the C++ client
 #   doc: build docs with Markdown
 #   fastrand: build Python extension module to speed up the client simulation
+#
+# If no function is specified all 3 targets will be built.
 
 set -o nounset
 set -o pipefail
@@ -23,7 +26,7 @@ die() {
 }
 
 run-markdown() {
-  which markdown >/dev/null || die "Markdown not installed"
+  local md=`which markdown || echo "cat"`
 
   # Markdown is output unstyled; make it a little more readable.
   cat <<EOF
@@ -41,7 +44,7 @@ run-markdown() {
       <!-- INSERT LATCH HTML -->
 EOF
 
-  markdown "$@"
+  $md "$@"
 
   cat <<EOF
     </body>
@@ -108,4 +111,10 @@ cpp-client() {
   popd
 }
 
-"$@"
+if test $# -eq 0 ; then
+  cpp-client
+  doc
+  fastrand
+else
+  "$@"
+fi

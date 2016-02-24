@@ -47,9 +47,9 @@ def printDelta(f, p, q):
 
 def eInf(f, h):
   if f <= 1.0:
-    return 2 * h * log( (1-.5*f)/(.5*f) )
+    return 2 * h * log( (1-.5*f)/(.5*f) ) / log(2)
   else:
-    return 2 * h * log( (.5*f)/(1-.5*f) )
+    return 2 * h * log( (.5*f)/(1-.5*f) ) / log(2)
 
 def getData():
   for h in (1,2):
@@ -66,8 +66,8 @@ def makePlot():
   fig = plt.figure()
   ax = fig.add_subplot(111, projection='3d')
   for f, p, q, h, s, e, sig, val2, val3, val10000 in getData():
-    ax.scatter(e, log(val10000), log(sig), s=(h*h*10), c=(0.5*f,p,q), marker='o')
-  ax.set_xlabel('e \n Epesolon of privacy bound')
+    ax.scatter(e, log(val10000)/log(2), log(sig)/log(2), s=(h*h*10), c=(0.5*f,p,q), marker='o')
+  ax.set_xlabel('e \n Epsilon of privacy bound')
   ax.set_ylabel('log(val10000) \n Log of number of bits of K needed to form a identifier that could distinguish two users')
   ax.set_zlabel('log(sig) \n The log scale of the amount of data gained per repport. \n (The inverse of the number of repports needed to distinguish something from nothing)')
   ax.text(0,9,1.5,"Good")

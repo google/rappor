@@ -1,17 +1,20 @@
 #!/bin/bash
-#
-# Simple smoke test for the decode-dist tool.  This will fail if your machine
-# doesn't have the right R libraries.
-#
-# Usage:
-#   ./test.sh <function name>
-#
-# Example:
-#   ./test.sh write-assoc-testdata       # write data needed for R and C++ tests
-#   ./test.sh decode-assoc-R-smoke       # test pure R implementation
-#   ./test.sh decode-assoc-cpp-smoke     # test with analysis/cpp/fast_em.cc
-#   ./test.sh decode-assoc-cpp-converge  # run for longer with C++
-#   ./test.sh decode-assoc-tensorflow
+usage() {
+echo "
+
+ Simple smoke test for the decode-dist tool.  This will fail if your machine
+ doesn't have the right R libraries.
+
+ Usage:
+   ./test.sh <function name>
+
+ Example:
+   ./test.sh decode-assoc-R-smoke       # test pure R implementation
+   ./test.sh decode-assoc-cpp-smoke     # test with analysis/cpp/fast_em.cc
+   ./test.sh decode-assoc-cpp-converge  # run for longer with C++
+   ./test.sh decode-assoc-tensorflow
+"
+}
 
 set -o nounset
 set -o pipefail
@@ -32,10 +35,6 @@ clear-cached-files() {
   find $dir -name '*.rda' | xargs --no-run-if-empty -- rm --verbose
 }
 
-decode-dist-help() {
-  time $RAPPOR_SRC/bin/decode-dist --help
-}
-
 write-dist-testdata() {
   local input_dir=$DIST_TESTDATA_DIR/input
 
@@ -53,6 +52,8 @@ write-dist-testdata() {
 }
 
 decode-dist() {
+  write-dist-testdata
+  
   local output_dir=$DIST_TESTDATA_DIR
 
   local input_dir=$DIST_TESTDATA_DIR/input
@@ -68,10 +69,6 @@ decode-dist() {
   head $output_dir/results.csv 
   echo
   cat $output_dir/metrics.json
-}
-
-decode-assoc-help() {
-  time $RAPPOR_SRC/bin/decode-assoc --help
 }
 
 write-assoc-testdata() {
@@ -164,11 +161,10 @@ EOF
   banner "Wrote testdata in $input_dir (intermediate files in $build_dir)"
 }
 
-
-# internal function
-decode-assoc() {
+# Helper function to run decode-assoc with testdata.
+decode-assoc-helper() {
   write-assoc-testdata
-
+  
   local output_dir=$1
   shift
 
@@ -184,7 +180,7 @@ decode-assoc() {
     --var2 flag..HTTPS \
     --map1 $input_dir/domain_map.csv \
     --create-bool-map \
-    --max-em-iters 1000 \
+    --max-em-iters 10 \
     --num-cores 2 \
     --output-dir $output_dir \
     --tmp-dir $output_dir \
@@ -258,4 +254,8 @@ decode-assoc-tensorflow-converge() {
   decode-assoc-tensorflow --max-em-iters 1000
 }
 
-"$@"
+if test $# -eq 0 ; then
+  usage
+else
+  "$@"
+fi

@@ -23,10 +23,10 @@ import csv
 import hashlib
 import hmac
 import json
-import os
 import struct
 import sys
 
+from random import SystemRandom
 
 class Error(Exception):
   pass
@@ -119,7 +119,7 @@ class Params(object):
     return p
 
 
-class _SimpleRandom(object):
+class _SecureRandom(object):
   """Returns an integer where each bit has probability p of being 1."""
 
   def __init__(self, prob_one, num_bits):
@@ -128,16 +128,16 @@ class _SimpleRandom(object):
 
   def __call__(self):
     p = self.prob_one
-    bytes = os.urandom(self.num_bits)
-
+    rand = SystemRandom()
     r = 0
-    for i, b in enumerate(xrange(self.num_bits)):
-      bit = b < p * 255.0
+
+    for i in xrange(self.num_bits):
+      bit = rand.random() < p
       r |= (bit << i)  # using bool as int
     return r
 
 
-class SimpleIrrRand(object):
+class SecureIrrRand(object):
   """Python's os.random()"""
 
   def __init__(self, params):
@@ -148,8 +148,8 @@ class SimpleIrrRand(object):
     num_bits = params.num_bloombits
     # IRR probabilities
 
-    self.p_gen = _SimpleRandom(params.prob_p, num_bits)
-    self.q_gen = _SimpleRandom(params.prob_q, num_bits)
+    self.p_gen = _SecureRandom(params.prob_p, num_bits)
+    self.q_gen = _SecureRandom(params.prob_q, num_bits)
 
 
 def to_big_endian(i):
