@@ -21,12 +21,6 @@ def predictN(prob, delta):
     return float('inf')
   return prob * (1-prob) * 4 / (delta**2)
 
-def valueFPQ(f, p, q):
-  total = 0
-  for i in range(2,4):
-    total += valueIFPQ(i,f,p,q)
-  return total
-
 def valueIFPQ(i,f,p,q):
   p_id = pid(i, f, p, q)
   p_other = pother(i,f,p,q)
@@ -41,9 +35,6 @@ def signal(f, p, q, h):
     return 1.0 / predictN(pStar**h, (qStar**h-pStar**h))
   else:
     return 1.0 / predictN((1-pStar)**h, (1-qStar)**h - (1-pStar)**h)
-
-def value(x) :  
-  return - signal(x[0],x[1],x[2], 1) * valueFPQ(x[0], x[1], x[2], 1)
 
 def printDelta(x):
   printDelta(x[1], x[0], x[2])
@@ -74,10 +65,10 @@ def toColor(color):
 def makePlot():
   fig = plt.figure()
   ax = fig.add_subplot(111, projection='3d')
-  for f, p, q, h, s, e, sig, val2, val3, val1000 in getData():
-    ax.scatter(e, log(val1000), log(sig), s=(h*h*10), c=(0.5*f,p,q), marker='o')
+  for f, p, q, h, s, e, sig, val2, val3, val10000 in getData():
+    ax.scatter(e, log(val10000), log(sig), s=(h*h*10), c=(0.5*f,p,q), marker='o')
   ax.set_xlabel('e \n Epesolon of privacy bound')
-  ax.set_ylabel('log(val1000) \n Log of number of bits of K needed to form a identifier that could distinguish two users')
+  ax.set_ylabel('log(val10000) \n Log of number of bits of K needed to form a identifier that could distinguish two users')
   ax.set_zlabel('log(sig) \n The log scale of the amount of data gained per repport. \n (The inverse of the number of repports needed to distinguish something from nothing)')
   ax.text(0,9,1.5,"Good")
   ax.text(12,-1,-9,"Bad")
