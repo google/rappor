@@ -47,7 +47,7 @@ ReadParameterFile <- function(params_file) {
 # NOTE: Why is this happening?
 AdjustCounts <- function(counts, params) {
   apply(counts, 2, function(x) {
-    tapply(x, rep(1:params$m, nrow(counts) / params$m), sum)    
+    tapply(x, rep(1:params$m, nrow(counts) / params$m), sum)
   })
 }
 
