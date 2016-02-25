@@ -1,5 +1,8 @@
 package com.google.rappor;
 
+import static com.google.common.base.Preconditions.checkArgument;
+
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Verify;
 
 import java.nio.ByteBuffer;
@@ -9,6 +12,7 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 
+import javax.annotation.Nullable;
 import javax.annotation.concurrent.GuardedBy;
 import javax.crypto.Mac;
 import javax.crypto.ShortBufferException;
@@ -17,7 +21,12 @@ import javax.crypto.spec.SecretKeySpec;
 /**
  * Encodes reports using the RAPPOR differentially-private encoding algorithm.
  *
+ * The RAPPOR algorithm is described at go/rappor and presented in detail at go/rappor-writeup.
+ *
+ * @author bonawitz@google.com Keith Bonawitz
  */
+// TODO(bonawitz): Make encoder and interface and make this a final class implementing it.
+// We can't just make this final now because there exist tests that need to Mock it.
 public class Encoder {
   /**
    * A non-decreasing version number.
@@ -89,7 +98,7 @@ public class Encoder {
    *
    * <p>Setting probabilityF to 0 disables the PRR phase of RAPPOR.
    */
-  public final double probabilityF;
+  private final double probabilityF;
 
   /**
    * The RAPPOR "p" probability, on the range [0.0, 1.0].
@@ -99,7 +108,7 @@ public class Encoder {
    *
    * <p>Setting probabilityP to 0.0 and probabilityQ to 1.0 disables the IRR phase of RAPPOR.
    */
-  public final double probabilityP;
+  private final double probabilityP;
 
   /**
    * The RAPPOR "1" probability, on the range [0.0, 1.0].
@@ -109,7 +118,7 @@ public class Encoder {
    *
    * <p>Setting probabilityP to 0.0 and probabilityQ to 1.0 disables the IRR phase of RAPPOR.
    */
-  public final double probabilityQ;
+  private final double probabilityQ;
 
   /**
    * The number of bits in the RAPPOR-encoded report.
@@ -122,19 +131,19 @@ public class Encoder {
    * <li>For encodeBits, only the low-order numBits may be non-zero.
    * </ul>
    */
-  public final int numBits;
+  private final int numBits;
 
   /**
    * The number of hash functions used forming the Bloom filter encoding of a string.
    *
    * <p>Must satisfy 1 &lt;= numBloomHashes &lt;= MAX_BLOOM_HASHES.
    */
-  public final int numBloomHashes;
+  private final int numBloomHashes;
 
   /**
    * The number of cohorts used for cohort assignment.
    */
-  public final int numCohorts;
+  private final int numCohorts;
 
   /**
    * The cohort this user is assigned to for Bloom filter string encoding.
@@ -148,7 +157,7 @@ public class Encoder {
    * cohort value and (numCohorts-1), noting that numCohorts is required to be a positive power of
    * 2.
    */
-  public final int cohort;
+  private final int cohort;
 
   /**
    * A bitmask with 1 bits in all the positions where a RAPPOR-encoded report could have a 1 bit.
@@ -266,8 +275,8 @@ public class Encoder {
    * @param numBloomHashes The number of hash functions used forming the Bloom filter encoding of a
    *     string.
    */
-  public Encoder(SecureRandom random, Mac hmacSha256, MessageDigest md5,
-                 byte[] userSecret, String encoderId, int numBits,
+  public Encoder(@Nullable SecureRandom random, @Nullable Mac hmacSha256,
+                 @Nullable MessageDigest md5, byte[] userSecret, String encoderId, int numBits,
                  double probabilityF, double probabilityP, double probabilityQ,
                  int numCohorts, int numBloomHashes) {
     if (md5 != null) {
@@ -275,10 +284,10 @@ public class Encoder {
     } else {
       try {
         this.md5 = MessageDigest.getInstance("MD5");
-      } catch (NoSuchAlgorithmException e) {
+      } catch (NoSuchAlgorithmException impossible) {
         // This should never happen.  Every implementation of the Java platform
         // is required to support MD5.
-        throw new RuntimeException(e);
+        throw new AssertionError(impossible);
       }
     }
 
@@ -291,61 +300,56 @@ public class Encoder {
       this.random = new SecureRandom();
     }
 
-    if (userSecret.length < 32) {
-      throw new IllegalArgumentException(
-          "userSecret must be at least 32 bytes of high-quality entropy.");
-    }
+    checkArgument(
+        userSecret.length >= 32, "userSecret must be at least 32 bytes of high-quality entropy.");
 
     if (hmacSha256 != null) {
       this.hmacSha256 = hmacSha256;
     } else {
       try {
         this.hmacSha256 = Mac.getInstance("HmacSHA256");
-      } catch (NoSuchAlgorithmException e) {
+      } catch (NoSuchAlgorithmException impossible) {
         // This should never happen.  Every implementation of the Java platform
         // is required to support HmacSHA256.
-        throw new RuntimeException(e);
+        throw new AssertionError(impossible);
       }
     }
     try {
       SecretKeySpec hmacKey = new SecretKeySpec(userSecret, "HmacSHA256");
       this.hmacSha256.init(hmacKey);
-    } catch (InvalidKeyException e) {
+    } catch (InvalidKeyException impossible) {
       // This should never happen.  HmacSHA256 is expected to work with arbitrary
       // key strings.
-      throw new RuntimeException(e);
+      throw new AssertionError(impossible);
     }
 
-    if (probabilityF < 0 || probabilityF > 1) {
-      throw new IllegalArgumentException("probabilityF must be on range [0.0, 1.0]");
-    }
+    checkArgument(
+        probabilityF >= 0 && probabilityF <= 1, "probabilityF must be on range [0.0, 1.0]");
     this.probabilityF = Math.round(probabilityF * 128) / 128.0;
 
-    if (probabilityP < 0 || probabilityP > 1) {
-      throw new IllegalArgumentException("probabilityP must be on range [0.0, 1.0]");
-    }
+    checkArgument(
+        probabilityP >= 0 && probabilityP <= 1, "probabilityP must be on range [0.0, 1.0]");
     this.probabilityP = probabilityP;
 
-    if (probabilityQ < 0 || probabilityQ > 1) {
-      throw new IllegalArgumentException("probabilityQ must be on range [0.0, 1.0]");
-    }
+    checkArgument(
+        probabilityQ >= 0 && probabilityQ <= 1, "probabilityQ must be on range [0.0, 1.0]");
     this.probabilityQ = probabilityQ;
 
-    if (numBits < 1 || numBits > MAX_BITS) {
-      throw new IllegalArgumentException("numBits must be on range [1, " + MAX_BITS + "].");
-    }
+    checkArgument(
+        numBits >= 1 && numBits <= MAX_BITS, "numBits must be on range [1, " + MAX_BITS + "].");
     this.numBits = numBits;
     // Make a bitmask with the lowest-order numBits set to 1.
     this.inputMask = (1L << numBits) - 1;
 
-    if (numBloomHashes < 1 || numBloomHashes > numBits) {
-      throw new IllegalArgumentException("numBloomHashes must be on range [1, numBits).");
-    }
+    checkArgument(
+        numBloomHashes >= 1 && numBloomHashes <= numBits,
+        "numBloomHashes must be on range [1, numBits).");
     this.numBloomHashes = numBloomHashes;
 
-    if (numCohorts < 1 || numCohorts > MAX_COHORTS) {
-      throw new IllegalArgumentException("numCohorts must be on range [1, " + MAX_COHORTS + "].");
-    }
+    checkArgument(
+        numCohorts >= 1 && numCohorts <= MAX_COHORTS,
+        "numCohorts must be on range [1, " + MAX_COHORTS + "].");
+
     // Assuming numCohorts >= 1:
     //
     // If numCohorts is a power of 2, then numCohorts has one bit set and numCohorts - 1 has only
@@ -354,22 +358,55 @@ public class Encoder {
     // If numCohorts is not a power of 2, then numCohorts has at least two bits set.  It follows
     // subtracting one from numCohorts keeps the most significant bit set to 1, and thus the
     // bitwise-and has at least this non-zero bit.
-    final boolean numCohortsIsPowerOfTwo = (numCohorts & (numCohorts - 1)) == 0;
-    if (!numCohortsIsPowerOfTwo) {
-      throw new IllegalArgumentException("numCohorts must be a power of 2.");
-    }
+    boolean numCohortsIsPowerOfTwo = (numCohorts & (numCohorts - 1)) == 0;
+    checkArgument(numCohortsIsPowerOfTwo, "numCohorts must be a power of 2.");
     this.numCohorts = numCohorts;
 
     this.hmacSha256.reset();
     this.hmacSha256.update(HMAC_TYPE_COHORT);
     ByteBuffer cohortPseudorandomStream = ByteBuffer.wrap(this.hmacSha256.doFinal());
     // cohortMasterAssignment depends only on the userSecret.
-    final int cohortMasterAssignment = Math.abs(cohortPseudorandomStream.getInt()) % MAX_COHORTS;
+    int cohortMasterAssignment = Math.abs(cohortPseudorandomStream.getInt()) % MAX_COHORTS;
     this.cohort = cohortMasterAssignment & (numCohorts - 1);
 
     // Make sure that the byte buffer has enough space for the data.
     Verify.verify(MAX_BITS <= 8 * 8); // 8 bits per byte, allocating an 8 byte buffer.
     this.byteBuffer8 = ByteBuffer.allocate(8);
+  }
+
+  public double getProbabilityF() {
+    return probabilityF;
+  }
+
+  public double getProbabilityP() {
+    return probabilityP;
+  }
+
+  public double getProbabilityQ() {
+    return probabilityQ;
+  }
+
+  public int getNumBits() {
+    return numBits;
+  }
+
+  public int getNumBloomHashes() {
+    return numBloomHashes;
+  }
+
+  public int getNumCohorts() {
+    return numCohorts;
+  }
+
+  public int getCohort() {
+    return cohort;
+  }
+
+  /**
+   * Returns the Encoder ID as a UTF-8 formatted string.
+   */
+  public String getEncoderId() {
+    return new String(encoderIdBytes, StandardCharsets.UTF_8);
   }
 
   /**
@@ -392,9 +429,8 @@ public class Encoder {
    * @param ordinal A value on the range [0, numBits).
    */
   public long encodeOrdinal(int ordinal) {
-    if (ordinal < 0 || ordinal >= numBits) {
-      throw new IllegalArgumentException("Ordinal value must be in range [0, numBits).");
-    }
+    checkArgument(
+        ordinal >= 0 && ordinal < numBits, "Ordinal value must be in range [0, numBits).");
 
     return encodeBits(1L << ordinal);
   }
@@ -409,14 +445,14 @@ public class Encoder {
    */
   public long encodeString(String string) {
     // Implements a Bloom filter by slicing a single MD5 hash into numBloomHashes bit indices.
-    final byte[] stringInUtf8 = string.getBytes(StandardCharsets.UTF_8);
-    final byte[] message =
+    byte[] stringInUtf8 = string.getBytes(StandardCharsets.UTF_8);
+    byte[] message =
         ByteBuffer.allocate(4 + stringInUtf8.length)
                   .putInt(cohort)
                   .put(stringInUtf8)
                   .array();
 
-    final byte[] digest;
+    byte[] digest;
     synchronized (this) {
       md5.reset();
       digest = md5.digest(message);
@@ -440,7 +476,7 @@ public class Encoder {
    * @param bits A bitstring in which only the least significant numBits bits may be 1.
    */
   public long encodeBits(long bits) {
-    final long permanentRandomizedResponse = computePermanentRandomizedResponse(bits);
+    long permanentRandomizedResponse = computePermanentRandomizedResponse(bits);
     return computeInstantaneousRandomizedResponse(permanentRandomizedResponse);
   }
 
@@ -450,33 +486,32 @@ public class Encoder {
    * <p>The response for a particular bits input is guaranteed to always be the same for any encoder
    * constructed with the same parameters (including the encoderId and the userSecret).
    */
-  protected long computePermanentRandomizedResponse(long bits) {
+  private long computePermanentRandomizedResponse(long bits) {
     // Ensures that the input only has bits set in the lowest
-    if ((bits & ~inputMask) != 0) {
-      throw new IllegalArgumentException("Input bits had bits set past Encoder's numBits limit.");
-    }
+    checkArgument(
+        (bits & ~inputMask) == 0, "Input bits had bits set past Encoder's numBits limit.");
 
     if (probabilityF == 0.0) {
       return bits;
     }
-    final byte[] pseudorandomStream = getPseudorandomStream(bits, numBits);
+    byte[] pseudorandomStream = getPseudorandomStream(bits, numBits);
     Verify.verify(numBits <= pseudorandomStream.length);
 
-    final int probabilityFTimes128 = (int) Math.round(probabilityF * 128);
+    int probabilityFTimes128 = (int) Math.round(probabilityF * 128);
     long shouldUseNoiseMask = 0;
     long noiseBits = 0;
     for (int i = 0; i < numBits; i++) {
       // Grabs a single byte from the pseudorandom stream.
       // Anding with 0xFF converts a signed byte to an unsigned integer.
-      final int pseudorandomByte = pseudorandomStream[i] & 0xFF;
+      int pseudorandomByte = pseudorandomStream[i] & 0xFF;
 
       // Uses bit 0 as a flip of a fair coin.
-      final long noiseBit = pseudorandomByte & 0x01;
+      long noiseBit = pseudorandomByte & 0x01;
       noiseBits |= noiseBit << i;
 
       // Uses bits 1-7 to get a random number between 0 and 127.
-      final int uniform0to127 = pseudorandomByte >> 1;
-      final long shouldUseNoiseBit = uniform0to127 < probabilityFTimes128 ? 1 : 0;
+      int uniform0to127 = pseudorandomByte >> 1;
+      long shouldUseNoiseBit = uniform0to127 < probabilityFTimes128 ? 1 : 0;
       shouldUseNoiseMask |= shouldUseNoiseBit << i;
     }
 
@@ -495,15 +530,16 @@ public class Encoder {
    * @param length required length (in bytes) of psuedo random stream.
    * @return the psuedorandom stream used to determine the permanent randomized response.
    */
+  @VisibleForTesting
   byte[] getPseudorandomStream(long bits, int length) {
-    final int numHMACsRequired = (int) Math.ceil(length / 32.0);
-    final int numHMACsAvailable = HMAC_TYPE_PRR_PRNG_FINAL - HMAC_TYPE_PRR_PRNG_INITIAL + 1;
+    int numHMACsRequired = (int) Math.ceil(length / 32.0);
+    int numHMACsAvailable = HMAC_TYPE_PRR_PRNG_FINAL - HMAC_TYPE_PRR_PRNG_INITIAL + 1;
     Verify.verify(numHMACsRequired > 0 && numHMACsRequired <= numHMACsAvailable);
 
     byte[] result = new byte[numHMACsRequired * 32];
     // Each pass through the loop adds 32 bytes to the pseudorandom stream.
     for (int hmacIndex = 0; hmacIndex < numHMACsRequired; hmacIndex++) {
-      final byte hmacSeed = (byte) (HMAC_TYPE_PRR_PRNG_INITIAL + hmacIndex);
+      byte hmacSeed = (byte) (HMAC_TYPE_PRR_PRNG_INITIAL + hmacIndex);
       synchronized (this) {
         byteBuffer8.clear();  // Note: resets buffer indices, doesn't actually clear data.
         byteBuffer8.putLong(bits);
@@ -528,10 +564,9 @@ public class Encoder {
    * <p>The instantaneous response is NOT memoized -- it is sampled randomly on
    * every invocation.
    */
-  protected long computeInstantaneousRandomizedResponse(long bits) {
-    if ((bits & ~inputMask) != 0) {
-      throw new IllegalArgumentException("Input bits had bits set past Encoder's numBits limit.");
-    }
+  private long computeInstantaneousRandomizedResponse(long bits) {
+    checkArgument(
+        (bits & ~inputMask) == 0, "Input bits had bits set past Encoder's numBits limit.");
 
     if (probabilityP == 0.0 && probabilityQ == 1.0) {
       return bits;
@@ -539,18 +574,11 @@ public class Encoder {
 
     long response = 0;
     for (int i = 0; i < numBits; i++) {
-      final boolean bit = (bits & (1L << i)) != 0L;
-      final double probability = bit ? probabilityQ : probabilityP;
-      final boolean responseBit = random.nextFloat() < probability;
+      boolean bit = (bits & (1L << i)) != 0L;
+      double probability = bit ? probabilityQ : probabilityP;
+      boolean responseBit = random.nextFloat() < probability;
       response |= (responseBit ? 1L : 0L) << i;
     }
     return response;
-  }
-
-  /**
-   * @return Encoder ID as a UTF-8 formatted string.
-   */
-  public String getEncoderId() {
-    return new String(encoderIdBytes, StandardCharsets.UTF_8);
   }
 }
