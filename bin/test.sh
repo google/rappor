@@ -53,7 +53,7 @@ write-dist-testdata() {
 
 decode-dist() {
   write-dist-testdata
-  
+
   local output_dir=$DIST_TESTDATA_DIR
 
   local input_dir=$DIST_TESTDATA_DIR/input
@@ -164,7 +164,7 @@ EOF
 # Helper function to run decode-assoc with testdata.
 decode-assoc-helper() {
   write-assoc-testdata
-  
+
   local output_dir=$1
   shift
 
