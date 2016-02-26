@@ -2,6 +2,8 @@ from numpy import arange
 from numpy import log
 from numpy import linspace
 from numpy import floor
+from numpy import ceil
+import math
 
 from mpl_toolkits.mplot3d import Axes3D
 import matplotlib.pyplot as plt
@@ -21,26 +23,26 @@ def delta(x, f, p, q):
 def predictN(prob, delta):
   if delta == 0:
     return float('inf')
-  return prob * (1-prob) * 4 / (delta**2)
+  return max(1, prob * (1-prob) * 4 / (delta**2))
 
 def valueIFPQ(i,f,p,q):
   p_id = pid(i, f, p, q)
   p_other = pother(i,f,p,q)
   return predictN(max(p_id, p_other), abs(p_id - p_other))
 
-def signal(f, p, q, h, k):
+def detetectionThreshold(f, p, q, h, k):
   pStar = .5 * f * q + (1-.5*f) * p # Probability of a bit being 1 from a true value of 0 in the irr
   qStar = (1-.5*f) * q + .5 * f * p # Probability of a bit being 0 from a true value of 1 in the irr
   if k <= 1:
-    return 0
+    return float("inf")
   probCollision = (1.0 * h) / k
   qPrime = qStar*(1-probCollision) + (probCollision*pStar)
   if pStar == qPrime:
-    return 0
+    return float("inf")
   elif pStar < qPrime:
-    return 1.0 / predictN(pStar**h, qPrime**h - pStar**h)
+    return predictN(pStar**h, qPrime**h - pStar**h)
   else:
-    return 1.0 / predictN((1-pStar)**h, (1-qPrime)**h - (1-pStar)**h)
+    return predictN((1-pStar)**h, (1-qPrime)**h - (1-pStar)**h)
 
 def printDelta(x):
   printDelta(x[1], x[0], x[2])
@@ -68,10 +70,11 @@ def getData():
       for p in (.0,.1,.2,.3,.4,.5,.6,.7,.8,.9) :
         for q in (.15,.25,.35,.45,.55,.65,.75,.85,1) :
           maxk = toPow2(valueIFPQ(2,f,p,q))
-          sig = signal(f, p, q, h, maxk)
+          detThres = detetectionThreshold(f, p, q, h, maxk)
           e = eInf(f,h)
-          if sig > 0 and e < 10:
-            yield (f, p, q, h, maxk, e, 1/sig, valueIFPQ(2,f,p,q), valueIFPQ(10000,f,p,q))
+          tradeoff = eInf(f,h) * detThres
+          if not math.isinf(detThres) and e < 10:
+            yield (f, p, q, h, maxk, e, detThres, valueIFPQ(2,f,p,q), valueIFPQ(10000,f,p,q), tradeoff)
 
 def toColor(color):
   x = max(1, min(255, int(round(color * 256.0))))
@@ -80,54 +83,77 @@ def toColor(color):
 def makePlot(pointGenerator):
   fig = plt.figure()
   ax = fig.add_subplot(111, projection='3d')
-  for f, p, q, h, maxk, e, detThres, val2, val10000 in pointGenerator():
-    ax.scatter(e, log(val10000)/log(2), log(detThres)/log(2), s=h*20, c=(0.5*f,p,q), marker='o')
+  for f, p, q, h, maxk, e, detThres, val2, val10000, tradeoff in pointGenerator():
+    ax.scatter(e, log(val10000)/log(2), log(ceil(detThres))/log(2), s=h*h*20, c=(0.5*f,p,q), marker='o')
   ax.view_init(elev=20.,azim=45)
   ax.invert_zaxis()
   ax.set_xlabel('e \n Epsilon of privacy bound')
   ax.set_ylabel('log(val10000) \n Log of number of bits of K needed to form a identifier that could distinguish two users')
   ax.set_zlabel('Detectability theashold \n The log base 2 of the number of repports needed to detect a value')
-  ax.text(1,10,0,"Good")
+  ax.text(1,10,1,"Good")
   ax.text(9,-2,12,"Bad")
   plt.show()
 
 
-def value(f, h, k, p, q):
+def value(f, p, q, h, k):
   maxk = floor(valueIFPQ(2,f,p,q))
   if maxk < k:
-    return -maxk
-  return signal(f, p, q, h, k)
+    return float("inf")
+  return detetectionThreshold(f, p, q, h, k)
 
 
 def getOptimalPQ():
-  for f in (.125,.2,.25,.3,.4,.5,.75):
+  epislons = {}
+  for f in (.75,.5,.4,.333,.25,.2,.15,.125):
     for h in (1,2):
-      if h>1 and f<.4:
-        continue
-      for k in (8,32,64,126,256):
-        bestScore = value(f,h,k,.25,.75)
-        for p in linspace(0.0,1.0,101):
-          for q in linspace(0.0,1.0,101):
-            score = value(f,h,k,p,q)
-            if score > bestScore:
-              bestScore = score
-        for p in linspace(0.0,1.0,101):
-          for q in linspace(0.0,1.0,101):
-            p=round(p,4)
-            q=round(q,4)
-            score = value(f,h,k,p,q)
-            if score * 1.01 > bestScore:
-              yield ( f, p, q, h, k, eInf(f,h), 1/signal(f, p, q, h, k), valueIFPQ(2,f,p,q), valueIFPQ(10000,f,p,q) )
+      e =  eInf(f,h)
+      epislons[e] = (f,h)
+
+  smallestTradeoff = float("inf")
+  for e in sorted(epislons.iterkeys()):
+    f = epislons[e][0]
+    h = epislons[e][1]
+    smallestTradeoffForE = float("inf")
+    if h>1 and f<.4:
+      continue
+    for k in (8,32,64,126,256):       
+      lowest = float("inf")
+      for p in linspace(0.0,1.0,101):
+        for q in linspace(0.0,1.0,101):
+          detThres = value(f, p, q, h, k)
+          if detThres < lowest:
+            lowest = detThres
+      for p in linspace(0.0,1.0,101):
+        for q in linspace(0.0,1.0,101):
+          p=round(p,4)
+          q=round(q,4)
+          detThres = value(f, p, q, h, k)
+          if not math.isinf(detThres) and detThres < lowest * 1.01:
+            tradeoff = e * detThres
+            if tradeoff < smallestTradeoff:
+              yield ( f, p, q, h, k, e, detThres, valueIFPQ(2,f,p,q), valueIFPQ(10000,f,p,q), tradeoff )
+            if tradeoff < smallestTradeoffForE:
+              smallestTradeoffForE = tradeoff
+    if smallestTradeoffForE < smallestTradeoff:
+      smallestTradeoff = smallestTradeoffForE
 
 def printOptimalPQ():
   print("Optimal choices for P and Q for varrious values:")
-  for f, p, q, h, k, e, detThres, val2, val10000 in getOptimalPQ():
-    print( 'h={}, k={:3}, f={:4}, p={:4}, q={:4},  epislon={:5}, signal={:5}'.format(h,k,f,p,q,e,detThres) )
+  for f, p, q, h, k, e, detThres, val2, val10000, tradeoff in getOptimalPQ():
+    print( 'h={}, k={:3}, f={:4}, p={:4}, q={:4},  epislon={:5}, detThres={}'.format(h,k,f,p,q, round(e,4), ceil(detThres)) )
 
 print
 print("Showing a plot shoing various points in the space. (Not nessicarly optimal ones)")
 makePlot(getData)
 print
+print("Computing points on the optimal frontier")
 printOptimalPQ()
 print
+print("Plotting the optimal set")
 makePlot(getOptimalPQ)
+
+print("As you can see the optimal points have a few properties in common:")
+print("h is always 1")
+print("f is never below .2 (Though the exact lower bound of this threashold will require more experimentation)")
+print("P and Q are always some extreme (one of them is either 1 or 0)")
+print("Higher values of K corilate with higher values of F")
