@@ -62,30 +62,34 @@ def eInf(f, h):
   else:
     return 2 * h * log( (.5*f)/(1-.5*f) ) / log(2)
 
-def getData(h):
-  for f in (.125,.2,.25,.3,.4,.5,.75,1,1.25,1.5,1.75) :
-    for p in (.0,.1,.2,.3,.4,.5,.6,.7,.8,.9) :
-      for q in (.15,.25,.35,.45,.55,.65,.75,.85,1) :
-        maxk = toPow2(valueIFPQ(2,f,p,q))
-        yield (f, p, q, h, maxk, 1/(.5*f), eInf(f,h), signal(f, p, q, h, maxk), valueIFPQ(2,f,p,q), valueIFPQ(10000,f,p,q))
+def getData():
+  for h in (1, 2):
+    for f in (.125,.2,.25,.3,.4,.5,.75,1,1.25,1.5,1.75) :
+      for p in (.0,.1,.2,.3,.4,.5,.6,.7,.8,.9) :
+        for q in (.15,.25,.35,.45,.55,.65,.75,.85,1) :
+          maxk = toPow2(valueIFPQ(2,f,p,q))
+          sig = signal(f, p, q, h, maxk)
+          e = eInf(f,h)
+          if sig > 0 and e < 10:
+            yield (f, p, q, h, maxk, e, 1/sig, valueIFPQ(2,f,p,q), valueIFPQ(10000,f,p,q))
 
 def toColor(color):
   x = max(1, min(255, int(round(color * 256.0))))
   return hex(x*256*256 + x*256 + x)[2:]
 
-def makePlot():
+def makePlot(pointGenerator):
   fig = plt.figure()
   ax = fig.add_subplot(111, projection='3d')
-  for f, p, q, h, maxk, s, e, sig, val2, val10000 in getData(1):
-    ax.scatter(e, log(val10000)/log(2), log(sig)/log(2), s=5*log(maxk), c=(0.5*f,p,q), marker='o')
+  for f, p, q, h, maxk, e, detThres, val2, val10000 in pointGenerator():
+    ax.scatter(e, log(val10000)/log(2), log(detThres)/log(2), s=h*20, c=(0.5*f,p,q), marker='o')
+  ax.view_init(elev=20.,azim=45)
+  ax.invert_zaxis()
   ax.set_xlabel('e \n Epsilon of privacy bound')
   ax.set_ylabel('log(val10000) \n Log of number of bits of K needed to form a identifier that could distinguish two users')
-  ax.set_zlabel('log(sig) \n The log scale of the amount of data gained per repport. \n (The inverse of the number of repports needed to distinguish something from nothing)')
-  ax.text(1,9,3,"Good")
-  ax.text(9,-2,-11,"Bad")
+  ax.set_zlabel('Detectability theashold \n The log base 2 of the number of repports needed to detect a value')
+  ax.text(1,10,0,"Good")
+  ax.text(9,-2,12,"Bad")
   plt.show()
-
-makePlot()
 
 
 def value(f, h, k, p, q):
@@ -95,10 +99,11 @@ def value(f, h, k, p, q):
   return signal(f, p, q, h, k)
 
 
-def printOptimalPQ():
-  print("Optimal choices for P and Q for varrious values:")
+def getOptimalPQ():
   for f in (.125,.2,.25,.3,.4,.5,.75):
     for h in (1,2):
+      if h>1 and f<.4:
+        continue
       for k in (8,32,64,126,256):
         bestScore = value(f,h,k,.25,.75)
         for p in linspace(0.0,1.0,101):
@@ -112,7 +117,17 @@ def printOptimalPQ():
             q=round(q,4)
             score = value(f,h,k,p,q)
             if score * 1.01 > bestScore:
-              print( {"h":h,"k":k,"f":f,"p":p,"q":q,"signal":signal(f, p, q, h, k)} )
+              yield ( f, p, q, h, k, eInf(f,h), 1/signal(f, p, q, h, k), valueIFPQ(2,f,p,q), valueIFPQ(10000,f,p,q) )
 
-print()
+def printOptimalPQ():
+  print("Optimal choices for P and Q for varrious values:")
+  for f, p, q, h, k, e, detThres, val2, val10000 in getOptimalPQ():
+    print( 'h={}, k={:3}, f={:4}, p={:4}, q={:4},  epislon={:5}, signal={:5}'.format(h,k,f,p,q,e,detThres) )
+
+print
+print("Showing a plot shoing various points in the space. (Not nessicarly optimal ones)")
+makePlot(getData)
+print
 printOptimalPQ()
+print
+makePlot(getOptimalPQ)
