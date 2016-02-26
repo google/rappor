@@ -92,16 +92,6 @@ count() {
 encoder-demo() {
   make _tmp/encoder_demo && _tmp/encoder_demo
 }
-
-readonly DEST=~/piper/A/google3/third_party/rappor_client
-
-export-google3() {
-  cp -T --recursive . $DEST/cpp
-  cp -T --recursive ../proto $DEST/proto
-
-  cp ../../LICENSE $DEST
-}
-
 cpplint() {
   ../../analysis/cpp/_tmp/cpplint.py "$@"
 }

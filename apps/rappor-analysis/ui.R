@@ -61,7 +61,7 @@ shinyUI(pageWithSidebar(
                                      br(),
                                      br(),
                                      helpText("Version 0.1", align = "center"),
-                                     helpText(a("RAPPOR Paper", href="http://go/rappor-writeup"), align = "center")),
+                                     helpText(a("RAPPOR Paper", href="http://arxiv.org/abs/1407.6981"), align = "center")),
                         mainPanel(
                                   conditionalPanel(
                                                    condition = "!output.countsUploaded || !output.mapUploaded",
