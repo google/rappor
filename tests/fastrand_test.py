@@ -17,7 +17,6 @@
 """
 fastrand_test.py: Tests for _fastrand extension module.
 """
-
 import unittest
 
 import _fastrand  # module under test

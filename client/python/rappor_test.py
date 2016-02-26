@@ -17,7 +17,6 @@
 """
 rappor_test.py: Tests for rappor.py
 """
-
 import cStringIO
 import copy
 import math
@@ -102,14 +101,14 @@ class MockRandom(object):
   def __init__(self, cycle, params):
     self.p_gen = MockRandomCall(params.prob_p, cycle, params.num_bloombits)
     self.q_gen = MockRandomCall(params.prob_q, cycle, params.num_bloombits)
-    
+
 class MockRandomCall:
   def __init__(self, prob, cycle, num_bits):
     self.cycle = cycle
     self.n = len(self.cycle)
     self.prob = prob
     self.num_bits = num_bits
-    
+
   def __call__(self):
     counter = 0
     r = 0
