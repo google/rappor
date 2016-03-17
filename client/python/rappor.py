@@ -104,8 +104,8 @@ class Params(object):
           p.num_hashes = int(row[1])
           p.num_cohorts = int(row[2])
           p.prob_p = float(row[3])
-          p.prob_p = float(row[4])
-          p.prob_q = float(row[5])
+          p.prob_q = float(row[4])
+          p.prob_f = float(row[5])
         except (ValueError, IndexError) as e:
           raise Error('Row is malformed: %s' % e)
         ok = True
