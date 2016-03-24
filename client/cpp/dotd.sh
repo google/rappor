@@ -16,6 +16,7 @@ set -o errexit
 
 # Munge gcc -MM output into .d files.
 main() {
+  if [ ! -d _tmp ]; then mkdir _tmp; fi
   local basename=$1
   local dotd=$2  # .d output name
   shift 2  # rest of args are gcc invocation

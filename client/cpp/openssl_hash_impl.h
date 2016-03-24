@@ -23,6 +23,9 @@ namespace rappor {
 
 bool HmacSha256(const std::string& key, const std::string& value,
                 std::vector<uint8_t>* output);
+// Pass output vector of desired length.
+bool HmacDrbg(const std::string& key, const std::string& value,
+              std::vector<uint8_t>* output);
 bool Md5(const std::string& value, std::vector<uint8_t>* output);
 
 }  // namespace rappor

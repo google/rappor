@@ -4,7 +4,8 @@ default : \
 	_tmp/rappor_sim \
 	_tmp/encoder_demo \
 	_tmp/protobuf_encoder_demo \
-	_tmp/openssl_hash_impl_test
+	_tmp/openssl_hash_impl_test \
+	unittest
 
 # All intermediate files live in _tmp/
 clean :
@@ -142,3 +143,9 @@ _tmp/openssl_hash_impl_test : \
 		$^ \
 		-lcrypto \
 		-g
+
+unittest: _tmp/openssl_hash_impl_unittest
+
+_tmp/openssl_hash_impl_unittest: openssl_hash_impl_unittest.cc openssl_hash_impl.cc
+	$(CXX) -o $@  $^ -lssl -lcrypto -lgtest
+	$@
