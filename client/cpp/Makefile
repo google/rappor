@@ -4,8 +4,7 @@ default : \
 	_tmp/rappor_sim \
 	_tmp/encoder_demo \
 	_tmp/protobuf_encoder_demo \
-	_tmp/openssl_hash_impl_test \
-	unittest
+	_tmp/openssl_hash_impl_test
 
 # All intermediate files live in _tmp/
 clean :
