@@ -142,3 +142,9 @@ _tmp/openssl_hash_impl_test : \
 		$^ \
 		-lcrypto \
 		-g
+
+unittest: _tmp/openssl_hash_impl_unittest
+
+_tmp/openssl_hash_impl_unittest: openssl_hash_impl_unittest.cc openssl_hash_impl.cc
+	$(CXX) -o $@  $^ -lssl -lcrypto -lgtest
+	$@
