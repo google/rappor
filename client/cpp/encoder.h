@@ -94,6 +94,9 @@ class Encoder {
   // Encode a string, setting output parameter irr_out.  Only valid when the
   // return value is 'true' (success).
   bool EncodeString(const std::string& value, Bits* irr_out) const;
+  // For use with HmacDrbg hash function and any num_bits divisible by 8.
+  bool EncodeString(const std::string& value,
+                    std::vector<uint8_t>* irr_out) const;
 
   // For testing/simulation use only.
   bool _EncodeBitsInternal(const Bits bits, Bits* prr_out, Bits* irr_out)
@@ -103,9 +106,13 @@ class Encoder {
 
   // Accessor for the assigned cohort.
   uint32_t cohort() { return cohort_; }
+  // Set a cohort manually, if previously generated.
+  void set_cohort(uint32_t cohort);
 
  private:
   bool MakeBloomFilter(const std::string& value, Bits* bloom_out) const;
+  bool MakeBloomFilter(const std::string& value,
+                       std::vector<uint8_t>* bloom_out) const;
   bool GetPrrMasks(const Bits bits, Bits* uniform, Bits* f_mask) const;
 
   // static helper function for initialization
@@ -114,8 +121,8 @@ class Encoder {
   const std::string encoder_id_;
   const Params& params_;
   const Deps& deps_;
-  const uint32_t cohort_;
-  const std::string cohort_str_;
+  uint32_t cohort_;
+  std::string cohort_str_;
 };
 
 }  // namespace rappor

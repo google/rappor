@@ -59,7 +59,11 @@ bool HmacDrbg(const std::string& key, const std::string& value,
   };
   std::string v;
   std::vector<uint8_t> temp_output;
-  const int num_bytes = output->size();
+  int num_bytes = output->size();
+  if (num_bytes == 0) {
+    // By default return 32 bytes for Uint32 applications.
+    num_bytes = 32;
+  }
 
   v.append(32u, 0x01);
   temp_output.resize(32, 0);
