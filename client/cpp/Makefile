@@ -143,6 +143,10 @@ _tmp/openssl_hash_impl_test : \
 		-lcrypto \
 		-g
 
+# Unittests are currently run manually, and require the Google gtest
+# framework version 1.7.0 or greater, found at
+#   https://github.com/google/googletest/releases
+# TODO(mdeshon-google): Installer script
 unittest: _tmp/openssl_hash_impl_unittest _tmp/encoder_unittest
 	_tmp/openssl_hash_impl_unittest
 	_tmp/encoder_unittest
