@@ -469,7 +469,9 @@ Decode <- function(counts, map, params, alpha = 0.05,
 
   list(fit = fit, summary = res_summary, privacy = privacy, params = params,
        lasso = NULL, residual = as.vector(residual),
-       counts = counts[, -1], resid = NULL, metrics = metrics)
+       counts = counts[, -1], resid = NULL, metrics = metrics,
+       ests = es$estimates  # ests needed by Shiny rappor-sim app      
+  )
 }
 
 ComputeCounts <- function(reports, cohorts, params) {

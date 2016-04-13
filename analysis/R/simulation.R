@@ -259,7 +259,7 @@ GenerateSamples <- function(N = 10^5, params, pop_params, alpha = .05,
   fit$fit$Truth <- table(samp)[fit$fit$string]
   fit$fit$Truth[is.na(fit$fit$Truth)] <- 0
 
-  fit$map <- map$map
+  fit$map <- map$map_by_cohort
   fit$truth <- truth
   fit$strs <- strs
   fit$probs <- probs
