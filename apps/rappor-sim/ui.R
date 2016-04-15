@@ -85,7 +85,7 @@ shinyUI(pageWithSidebar(
                                               tabPanel("True Bits", plotOutput("truth", height = "800px")),
                                               tabPanel("Estimated Bits", plotOutput("ests", height = "800px")),
                                               tabPanel("Estimates vs Truth", plotOutput("ests_truth", height = "600px")),
-                                              tabPanel("Lasso", plotOutput("lasso", height = "600px")),
+                                              # tabPanel("Lasso", plotOutput("lasso", height = "600px")),
                                               tabPanel("Residuals", plotOutput("resid", height = "600px"))
                                               )
                                   )

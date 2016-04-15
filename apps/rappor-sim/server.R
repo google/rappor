@@ -103,7 +103,7 @@ shinyServer(function(input, output) {
   })
 
   output$resid <- renderPlot({
-    resid <- Sample()$resid
+    resid <- Sample()$residual
     params <- Params()
     plot(resid, xlab = "Bloom filter bits", ylab = "Residuals")
     abline(h = c(-1.96, 1.96), lty = 2, col = 2)
