@@ -15,10 +15,9 @@
 #include "encoder.h"
 #include "openssl_hash_impl.h"
 
+#include <assert.h>
 #include <stdio.h>
 #include <stdarg.h>  // va_list, etc.
-
-#include <stdexcept>
 #include <vector>
 
 namespace rappor {
@@ -54,7 +53,7 @@ static void CheckValidProbability(float prob, const char* var_name) {
   if (prob < 0.0f || prob > 1.0f) {
     log("%s should be between 0.0 and 1.0 inclusive (got %.2f)", var_name,
         prob);
-    throw std::out_of_range("prob");
+    assert(false);
   }
 }
 
@@ -84,17 +83,17 @@ uint32_t Encoder::AssignCohort(const Deps& deps, int num_cohorts) {
   std::vector<uint8_t> sha256;
   if (!deps.hmac_func_(deps.client_secret_, kHmacCohortPrefix, &sha256)) {
     log("HMAC failed");
-    throw std::runtime_error("HMAC failed");
+    assert(false);
   }
 
   // Either we are using SHA256 to have exactly 32 bytes,
   // or we're using HmacDrbg for any number of bytes.
   if ((sha256.size() == kMaxBits)
-          || (deps.hmac_func_ == rappor::HmacDrbg)) {
+      || (deps.hmac_func_ == rappor::HmacDrbg)) {
     // Hash size ok.
   } else {
     log("Bad hash size.");
-    throw std::out_of_range("sha256.size()");
+    assert(false);
   }
 
   // Interpret first 4 bytes of sha256 as a uint32_t.
@@ -114,15 +113,15 @@ Encoder::Encoder(const std::string& encoder_id, const Params& params,
 
   if (params_.num_bits_ <= 0) {
     log("num_bits must be positive");
-    throw std::out_of_range("num_bits");
+    assert(false);
   }
   if (params_.num_hashes_ <= 0) {
     log("num_hashes must be positive");
-    throw std::out_of_range("num_hashes");
+    assert(false);
   }
   if (params_.num_cohorts_ <= 0) {
     log("num_cohorts must be positive");
-    throw std::out_of_range("num_cohorts");
+    assert(false);
   }
 
   // Check Maximum values.
@@ -131,26 +130,26 @@ Encoder::Encoder(const std::string& encoder_id, const Params& params,
     if (params_.num_bits_ % 8 != 0) {
       log("num_bits (%d) must be divisible by 8 when using HmacDrbg.",
           params.num_bits_);
-      throw std::out_of_range("num_bits");
+      assert(false);
     }
   } else {
     // Using SHA256
     if (params_.num_bits_ > kMaxBits) {
         log("num_bits (%d) can't be greater than %d", params_.num_bits_,
             kMaxBits);
-        throw std::out_of_range("num_bits");
+        assert(false);
     }
   }
 
   if (params_.num_hashes_ > kMaxHashes) {
     log("num_hashes (%d) can't be greater than %d", params_.num_hashes_,
         kMaxHashes);
-    throw std::out_of_range("num_hashes");
+    assert(false);
   }
   int m = params_.num_cohorts_;
   if ((m & (m - 1)) != 0) {
     log("num_cohorts (%d) must be a power of 2 (and not 0)", m);
-    throw std::out_of_range("num_cohorts");
+    assert(false);
   }
   // TODO: check max cohorts?
 
@@ -254,7 +253,7 @@ bool Encoder::GetPrrMasks(const Bits bits, Bits* uniform_out,
   // We should have already checked this.
   if (params_.num_bits_ > kMaxBits) {
     log("num_bits exceeds maximum.");
-    throw std::out_of_range("num_bits");
+    assert(false);
   }
 
   uint8_t threshold128 = static_cast<uint8_t>(params_.prob_f_ * 128);
@@ -333,12 +332,10 @@ bool Encoder::EncodeString(const std::string& value, Bits* irr_out) const {
 
 static uint8_t shifted(const Bits& bits, const int& index) {
   // For an array of bytes, select the appopriate byte from a 4-byte
-  // integer value.
-  int result = 0;
+  // integer value. Bytes are enumerated in big-endian order, i.e.
+  // index = 0 is the MSB, index = 3 is the LSB.
   int shift = 8 * (3 - (index % 4)); // Byte 0 shifts by 24 bits, 1 by 16, etc.
-  result = bits & (0xFF << shift);  // Select the appropriate byte
-  result = result >> shift;          // Shift to LSB
-  return (uint8_t)result;            // Return only the LSB
+  return (uint8_t)((bits >> shift) & 0xFF);  // Return the correct byte.
 }
 
 bool Encoder::EncodeString(const std::string& value,

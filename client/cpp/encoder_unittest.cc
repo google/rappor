@@ -35,9 +35,7 @@ class EncoderTest : public ::testing::Test {
      delete encoder;
    }
 
-
-   FILE* fp;
-   const char* encoder_id;
+FILE* fp; const char* encoder_id;
    rappor::UnixKernelRand *irr_rand;
    rappor::Deps *deps;
    rappor::Params *params;
@@ -59,7 +57,6 @@ class EncoderUint32Test : public EncoderTest {
                                  0.75,  // probability p for IRR
                                  0.5);  // probability q for IRR
      encoder = new rappor::Encoder(encoder_id, *params, *deps);
-
    }
 };
 
@@ -101,21 +98,116 @@ TEST_F(EncoderUint32Test, EncodeBitsUint32) {
 }
 
 // Negative tests
-// num_cohorts is negative.
-TEST_F(EncoderUint32Test, NumCohortsMustBePositive) {
+// num_bits is negative.
+TEST_F(EncoderUint32Test, NumBitsMustBePositiveDeathTest) {
+  ::testing::FLAGS_gtest_death_test_style = "threadsafe";
   delete params;
-  params = new rappor::Params(32,    // num_bits (k)
+  params = new rappor::Params(-1,    // num_bits (k) [BAD]
                               2,     // num_hashes (h)
-                              -1,   // num_cohorts (m)
+                              128,   // num_cohorts (m)
                               0.25,  // probability f for PRR
                               0.75,  // probability p for IRR
                               0.5);  // probability q for IRR
-  ASSERT_THROW(rappor::Encoder(encoder_id, *params, *deps),
-               std::out_of_range);
+  EXPECT_DEATH(rappor::Encoder(encoder_id, *params, *deps),
+               "Assertion.*failed");
+}
+
+// num_hashes is negative.
+TEST_F(EncoderUint32Test, NumHashesMustBePositiveDeathTest) {
+  ::testing::FLAGS_gtest_death_test_style = "threadsafe";
+  delete params;
+  params = new rappor::Params(32,    // num_bits (k)
+                              -1,    // num_hashes (h) [BAD]
+                              128,   // num_cohorts (m)
+                              0.25,  // probability f for PRR
+                              0.75,  // probability p for IRR
+                              0.5);  // probability q for IRR
+  EXPECT_DEATH(rappor::Encoder(encoder_id, *params, *deps),
+               "Assertion.*failed");
+}
+
+// num_cohorts is negative.
+TEST_F(EncoderUint32Test, NumCohortsMustBePositiveDeathTest) {
+  ::testing::FLAGS_gtest_death_test_style = "threadsafe";
+  delete params;
+  params = new rappor::Params(32,    // num_bits (k)
+                              2,     // num_hashes (h)
+                              -1,   // num_cohorts (m)  [BAD]
+                              0.25,  // probability f for PRR
+                              0.75,  // probability p for IRR
+                              0.5);  // probability q for IRR
+  EXPECT_DEATH(rappor::Encoder(encoder_id, *params, *deps),
+               "Encoder.*Assertion.*failed");
+}
+
+// Invalid probabilities.
+TEST_F(EncoderUint32Test, InvalidProbabilitiesDeathTest) {
+  ::testing::FLAGS_gtest_death_test_style = "threadsafe";
+  // prob_f negative.
+  delete params;
+  params = new rappor::Params(32,    // num_bits (k)
+                              2,     // num_hashes (h)
+                              1,   // num_cohorts (m)
+                              -0.1,  // probability f for PRR [BAD]
+                              0.75,  // probability p for IRR
+                              0.5);  // probability q for IRR
+  EXPECT_DEATH(rappor::Encoder(encoder_id, *params, *deps),
+               "Assertion.*failed");
+  // prob_f > 1.
+  delete params;
+  params = new rappor::Params(32,    // num_bits (k)
+                              2,     // num_hashes (h)
+                              1,   // num_cohorts (m)
+                              1.1,  // probability f for PRR [BAD]
+                              0.75,  // probability p for IRR
+                              0.5);  // probability q for IRR
+  EXPECT_DEATH(rappor::Encoder(encoder_id, *params, *deps),
+               "Assertion.*failed");
+  // prob_p < 0.
+  delete params;
+  params = new rappor::Params(32,    // num_bits (k)
+                              2,     // num_hashes (h)
+                              1,   // num_cohorts (m)
+                              0.25,  // probability f for PRR
+                              -0.1,  // probability p for IRR [BAD]
+                              0.5);  // probability q for IRR
+  EXPECT_DEATH(rappor::Encoder(encoder_id, *params, *deps),
+               "Assertion.*failed");
+  // prob_p > 1.
+  delete params;
+  params = new rappor::Params(32,    // num_bits (k)
+                              2,     // num_hashes (h)
+                              1,   // num_cohorts (m)
+                              0.25,  // probability f for PRR
+                              1.1,  // probability p for IRR [BAD]
+                              0.5);  // probability q for IRR
+  EXPECT_DEATH(rappor::Encoder(encoder_id, *params, *deps),
+               "Assertion.*failed");
+  // prob_q < 0.
+  delete params;
+  params = new rappor::Params(32,    // num_bits (k)
+                              2,     // num_hashes (h)
+                              1,   // num_cohorts (m)
+                              0.25,  // probability f for PRR
+                              0.75,  // probability p for IRR
+                              -0.1);  // probability q for IRR [BAD]
+  EXPECT_DEATH(rappor::Encoder(encoder_id, *params, *deps),
+               "Assertion.*failed");
+  // prob_q > 1.
+  delete params;
+  params = new rappor::Params(32,    // num_bits (k)
+                              2,     // num_hashes (h)
+                              1,   // num_cohorts (m)
+                              0.25,  // probability f for PRR
+                              0.75,  // probability p for IRR
+                              1.1);  // probability q for IRR [BAD]
+  EXPECT_DEATH(rappor::Encoder(encoder_id, *params, *deps),
+               "Assertion.*failed");
 }
 
 // num_bits 64 when only 32 bits are possible.
-TEST_F(EncoderUint32Test, Sha256NoMoreThan32Bits) {
+TEST_F(EncoderUint32Test, Sha256NoMoreThan32BitsDeathTest) {
+  ::testing::FLAGS_gtest_death_test_style = "threadsafe";
   delete params;
   params = new rappor::Params(64,    // num_bits (k)
                               2,     // num_hashes (h)
@@ -123,12 +215,13 @@ TEST_F(EncoderUint32Test, Sha256NoMoreThan32Bits) {
                               0.25,  // probability f for PRR
                               0.75,  // probability p for IRR
                               0.5);  // probability q for IRR
-  ASSERT_THROW(rappor::Encoder(encoder_id, *params, *deps),
-               std::out_of_range);
+  EXPECT_DEATH(rappor::Encoder(encoder_id, *params, *deps),
+               "Assertion.*failed");
 }
 
 // num_hashes too high.
-TEST_F(EncoderUint32Test, NumHashesNoMoreThan16) {
+TEST_F(EncoderUint32Test, NumHashesNoMoreThan16DeathTest) {
+  ::testing::FLAGS_gtest_death_test_style = "threadsafe";
   delete params;
   params = new rappor::Params(32,    // num_bits (k)
                               17,     // num_hashes (h)
@@ -136,8 +229,8 @@ TEST_F(EncoderUint32Test, NumHashesNoMoreThan16) {
                               0.25,  // probability f for PRR
                               0.75,  // probability p for IRR
                               0.5);  // probability q for IRR
-  ASSERT_THROW(rappor::Encoder(encoder_id, *params, *deps),
-               std::out_of_range);
+  EXPECT_DEATH(rappor::Encoder(encoder_id, *params, *deps),
+               "Assertion.*failed");
 }
 
 // EncoderString with 4-byte vector and HMACSHA256 and
@@ -174,6 +267,20 @@ TEST_F(EncoderUnlimTest, EncodeStringUint64) {
   ASSERT_TRUE(encoder->EncodeString("foo", &bits_vector));
   ASSERT_EQ(expected_vector, bits_vector);
   ASSERT_EQ(93, encoder->cohort());
+}
+
+// Negative tests.
+TEST_F(EncoderUnlimTest, NumBitsNotMultipleOf8DeathTest) {
+  ::testing::FLAGS_gtest_death_test_style = "threadsafe";
+  delete params;
+  params = new rappor::Params(63,    // num_bits (k) [BAD]
+                              17,     // num_hashes (h)
+                              128,   // num_cohorts (m)
+                              0.25,  // probability f for PRR
+                              0.75,  // probability p for IRR
+                              0.5);  // probability q for IRR
+  EXPECT_DEATH(rappor::Encoder(encoder_id, *params, *deps),
+               "Assertion.*failed");
 }
 
 int main(int argc, char **argv) {
