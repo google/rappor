@@ -1,7 +1,7 @@
 package com.google.rappor;
 
-import static org.hamcrest.Matchers.equalTo;
-import static org.hamcrest.Matchers.not;
+import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.lessThanOrEqualTo;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertThat;
@@ -13,6 +13,7 @@ import org.junit.runner.RunWith;
 import org.junit.runners.BlockJUnit4ClassRunner;
 
 import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.SecureRandom;
@@ -32,12 +33,23 @@ public class EncoderTest {
    * must be at least 32 bytes of high-quality entropy.
    */
   private static byte[] makeTestingUserSecret(String testingSecret) throws Exception {
-    // We generate the fake user secret by concatenating two copies of the
+    // We generate the fake user secret by concatenating three copies of the
     // 16 byte MD5 hash of the testingSecret string encoded in UTF 8.
     MessageDigest md5 = MessageDigest.getInstance("MD5");
     byte[] digest = md5.digest(testingSecret.getBytes(StandardCharsets.UTF_8));
     assertEquals(16, digest.length);
-    return ByteBuffer.allocate(32).put(digest).put(digest).array();
+    return ByteBuffer.allocate(48).put(digest).put(digest).put(digest).array();
+  }
+
+  private static long toLong(byte[] bytes) {
+    assertThat(bytes.length, is(lessThanOrEqualTo(8)));
+    ByteBuffer buffer = ByteBuffer.allocate(8).order(ByteOrder.LITTLE_ENDIAN).put(bytes);
+    buffer.rewind(); // can't chain rewind() because it returns Buffer, not ByteBuffer.
+    return buffer.getLong();
+  }
+
+  private static byte[] toBytes(long value) {
+    return ByteBuffer.allocate(8).order(ByteOrder.LITTLE_ENDIAN).putLong(value).array();
   }
 
   @Test
@@ -76,7 +88,7 @@ public class EncoderTest {
   @Test
   public void testEncoderConstruction_userSecretTooShort() throws Exception {
     thrown.expect(IllegalArgumentException.class);
-    byte[] tooShortSecret = new byte[31];
+    byte[] tooShortSecret = new byte[47];
     new Encoder(tooShortSecret,  // userSecret
                 "Foo",  // encoderId
                 8,  // numBits,
@@ -89,7 +101,7 @@ public class EncoderTest {
 
   @Test
   public void testEncoderConstruction_userSecretMayBeLong() throws Exception {
-    byte[] tooLongSecret = new byte[33];
+    byte[] tooLongSecret = new byte[49];
     new Encoder(tooLongSecret,  // userSecret
                 "Foo",  // encoderId
                 8,  // numBits,
@@ -116,14 +128,15 @@ public class EncoderTest {
   @Test
   public void testEncoderConstruction_numBitsTooHigh() throws Exception {
     thrown.expect(IllegalArgumentException.class);
-    new Encoder(makeTestingUserSecret("Bar"),  // userSecret
-                "Foo",  // encoderId
-                64,  // numBits,
-                13.0 / 128.0,  // probabilityF
-                0.25,  // probabilityP
-                0.75,  // probabilityQ
-                1,  // numCohorts
-                2);  // numBloomHashes
+    new Encoder(
+        makeTestingUserSecret("Bar"), // userSecret
+        "Foo", // encoderId
+        4097, // numBits,
+        13.0 / 128.0, // probabilityF
+        0.25, // probabilityP
+        0.75, // probabilityQ
+        1, // numCohorts
+        2); // numBloomHashes
   }
 
   @Test
@@ -299,27 +312,29 @@ public class EncoderTest {
 
     // Changing the user secret changes the cohort.
     assertEquals(
-        0,
-        new Encoder(makeTestingUserSecret("Bar1"),  // userSecret
-                    "Foo",  // encoderId
-                    8,  // numBits,
-                    13.0 / 128.0,  // probabilityF
-                    0.25,  // probabilityP
-                    0.75,  // probabilityQ
-                    4,  // numCohorts
-                    2)  // numBloomHashes
+        3,
+        new Encoder(
+                makeTestingUserSecret("Bar"), // userSecret
+                "Foo", // encoderId
+                8, // numBits,
+                13.0 / 128.0, // probabilityF
+                0.25, // probabilityP
+                0.75, // probabilityQ
+                4, // numCohorts
+                2) // numBloomHashes
             .getCohort());
 
     assertEquals(
-        1,
-        new Encoder(makeTestingUserSecret("Bar2"),  // userSecret
-                    "Foo",  // encoderId
-                    8,  // numBits,
-                    13.0 / 128.0,  // probabilityF
-                    0.25,  // probabilityP
-                    0.75,  // probabilityQ
-                    4,  // numCohorts
-                    2)  // numBloomHashes
+        0,
+        new Encoder(
+                makeTestingUserSecret("Bar2"), // userSecret
+                "Foo", // encoderId
+                8, // numBits,
+                13.0 / 128.0, // probabilityF
+                0.25, // probabilityP
+                0.75, // probabilityQ
+                4, // numCohorts
+                2) // numBloomHashes
             .getCohort());
 
     // Changing the encoder id does not changes the cohort.
@@ -361,28 +376,30 @@ public class EncoderTest {
 
     // Cohort assignments are bit-wise subsets
     int cohortAssignmentBig =
-        new Encoder(makeTestingUserSecret("Blotto"),  // userSecret
-                    "Foo",  // encoderId
-                    8,  // numBits,
-                    13.0 / 128.0,  // probabilityF
-                    0.25,  // probabilityP
-                    0.75,  // probabilityQ
-                    Encoder.MAX_COHORTS,  // numCohorts
-                    2)  // numBloomHashes
+        new Encoder(
+                makeTestingUserSecret("Bar"), // userSecret
+                "Foo", // encoderId
+                8, // numBits,
+                13.0 / 128.0, // probabilityF
+                0.25, // probabilityP
+                0.75, // probabilityQ
+                Encoder.MAX_COHORTS, // numCohorts
+                2) // numBloomHashes
             .getCohort();
 
     int numCohortsSmall = Encoder.MAX_COHORTS / 2;
     // Verify that numCohortsSmall is a power of 2.
     assertEquals(0, numCohortsSmall & (numCohortsSmall - 1));
     int cohortAssignmentSmall =
-        new Encoder(makeTestingUserSecret("Blotto"),  // userSecret
-                    "Foo",  // encoderId
-                    8,  // numBits,
-                    13.0 / 128.0,  // probabilityF
-                    0.25,  // probabilityP
-                    0.75,  // probabilityQ
-                    numCohortsSmall,  // numCohorts
-                    2)  // numBloomHashes
+        new Encoder(
+                makeTestingUserSecret("Bar"), // userSecret
+                "Foo", // encoderId
+                8, // numBits,
+                13.0 / 128.0, // probabilityF
+                0.25, // probabilityP
+                0.75, // probabilityQ
+                numCohortsSmall, // numCohorts
+                2) // numBloomHashes
             .getCohort();
 
     // This validates that the test case is well chosen.  If it fails, select a different userSecret
@@ -398,27 +415,31 @@ public class EncoderTest {
   public void testEncoderEncodeBits_identity() throws Exception {
     assertEquals(
         0b11111101L,
-        new Encoder(makeTestingUserSecret("Bar"),  // userSecret
-                    "Foo",  // encoderId
-                    8,  // numBits,
-                    0,  // probabilityF
-                    0,  // probabilityP
-                    1,  // probabilityQ
-                    1,  // numCohorts
-                    2)  // numBloomHashes
-            .encodeBits(0b11111101L));
+        toLong(
+            new Encoder(
+                    makeTestingUserSecret("Bar"), // userSecret
+                    "Foo", // encoderId
+                    8, // numBits,
+                    0, // probabilityF
+                    0, // probabilityP
+                    1, // probabilityQ
+                    1, // numCohorts
+                    2) // numBloomHashes
+                .encodeBits(toBytes(0b11111101L))));
 
     assertEquals(
         0xD56B8119L,
-        new Encoder(makeTestingUserSecret("Bar"),  // userSecret
-                    "Foo",  // encoderId
-                    32,  // numBits,
-                    0,  // probabilityF
-                    0,  // probabilityP
-                    1,  // probabilityQ
-                    1,  // numCohorts
-                    2)  // numBloomHashes
-            .encodeBits(0xD56B8119L));
+        toLong(
+            new Encoder(
+                    makeTestingUserSecret("Bar"), // userSecret
+                    "Foo", // encoderId
+                    32, // numBits,
+                    0, // probabilityF
+                    0, // probabilityP
+                    1, // probabilityQ
+                    1, // numCohorts
+                    2) // numBloomHashes
+                .encodeBits(toBytes(0xD56B8119L))));
   }
 
   @Test
@@ -432,61 +453,69 @@ public class EncoderTest {
                 1,  // numCohorts
                 2);  // numBloomHashes
     thrown.expect(IllegalArgumentException.class);
-    encoder.encodeBits(0x100);  // 9 bits
+    encoder.encodeBits(toBytes(0x100)); // 9 bits
   }
 
   @Test
   public void testEncoderEncodeBoolean_identity() throws Exception {
     assertEquals(
         0x1L,
-        new Encoder(makeTestingUserSecret("Bar"),  // userSecret
-                    "Foo",  // encoderId
-                    1,  // numBits,
-                    0,  // probabilityF
-                    0,  // probabilityP
-                    1,  // probabilityQ
-                    1,  // numCohorts
-                    1)  // numBloomHashes
-            .encodeBoolean(true));
+        toLong(
+            new Encoder(
+                    makeTestingUserSecret("Bar"), // userSecret
+                    "Foo", // encoderId
+                    1, // numBits,
+                    0, // probabilityF
+                    0, // probabilityP
+                    1, // probabilityQ
+                    1, // numCohorts
+                    1) // numBloomHashes
+                .encodeBoolean(true)));
 
     assertEquals(
         0x0L,
-        new Encoder(makeTestingUserSecret("Bar"),  // userSecret
-                    "Foo",  // encoderId
-                    1,  // numBits,
-                    0,  // probabilityF
-                    0,  // probabilityP
-                    1,  // probabilityQ
-                    1,  // numCohorts
-                    1)  // numBloomHashes
-            .encodeBoolean(false));
+        toLong(
+            new Encoder(
+                    makeTestingUserSecret("Bar"), // userSecret
+                    "Foo", // encoderId
+                    1, // numBits,
+                    0, // probabilityF
+                    0, // probabilityP
+                    1, // probabilityQ
+                    1, // numCohorts
+                    1) // numBloomHashes
+                .encodeBoolean(false)));
   }
 
   @Test
   public void testEncoderEncodeOrdinal_identity() throws Exception {
     assertEquals(
         0b000000000001L,
-        new Encoder(makeTestingUserSecret("Bar"),  // userSecret
-                    "Foo",  // encoderId
-                    12,  // numBits,
-                    0,  // probabilityF
-                    0,  // probabilityP
-                    1,  // probabilityQ
-                    1,  // numCohorts
-                    1)  // numBloomHashes
-            .encodeOrdinal(0));
+        toLong(
+            new Encoder(
+                    makeTestingUserSecret("Bar"), // userSecret
+                    "Foo", // encoderId
+                    12, // numBits,
+                    0, // probabilityF
+                    0, // probabilityP
+                    1, // probabilityQ
+                    1, // numCohorts
+                    1) // numBloomHashes
+                .encodeOrdinal(0)));
 
     assertEquals(
         0b100000000000L,
-        new Encoder(makeTestingUserSecret("Bar"),  // userSecret
-                    "Foo",  // encoderId
-                    12,  // numBits,
-                    0,  // probabilityF
-                    0,  // probabilityP
-                    1,  // probabilityQ
-                    1,  // numCohorts
-                    1)  // numBloomHashes
-            .encodeOrdinal(11));
+        toLong(
+            new Encoder(
+                    makeTestingUserSecret("Bar"), // userSecret
+                    "Foo", // encoderId
+                    12, // numBits,
+                    0, // probabilityF
+                    0, // probabilityP
+                    1, // probabilityQ
+                    1, // numCohorts
+                    1) // numBloomHashes
+                .encodeOrdinal(11)));
   }
 
   @Test
@@ -520,30 +549,34 @@ public class EncoderTest {
   @Test
   public void testEncoderEncodeString_identity() throws Exception {
     assertEquals(
-        0b100100000000L,
-        new Encoder(makeTestingUserSecret("Bar"),  // userSecret
-                    "Foo",  // encoderId
-                    12,  // numBits,
-                    0,  // probabilityF
-                    0,  // probabilityP
-                    1,  // probabilityQ
-                    1,  // numCohorts (so must be cohort 0)
-                    2)  // numBloomHashes
-            .encodeString("Whizbang"));
+        0b000010000100L,
+        toLong(
+            new Encoder(
+                    makeTestingUserSecret("Bar"), // userSecret
+                    "Foo", // encoderId
+                    12, // numBits,
+                    0, // probabilityF
+                    0, // probabilityP
+                    1, // probabilityQ
+                    1, // numCohorts (so must be cohort 0)
+                    2) // numBloomHashes
+                .encodeString("Whizbang")));
 
     // Changing the user but keeping the cohort the same (both cohort 0)
     // results in the same encoding.
     assertEquals(
-        0b100100000000L,
-        new Encoder(makeTestingUserSecret("Blotto"),  // userSecret
-                    "Foo",  // encoderId
-                    12,  // numBits,
-                    0,  // probabilityF
-                    0,  // probabilityP
-                    1,  // probabilityQ
-                    1,  // numCohorts (so must be cohort 0)
-                    2)  // numBloomHashes
-            .encodeString("Whizbang"));
+        0b000010000100L,
+        toLong(
+            new Encoder(
+                    makeTestingUserSecret("Blotto"), // userSecret
+                    "Foo", // encoderId
+                    12, // numBits,
+                    0, // probabilityF
+                    0, // probabilityP
+                    1, // probabilityQ
+                    1, // numCohorts (so must be cohort 0)
+                    2) // numBloomHashes
+                .encodeString("Whizbang")));
 
     // When the user is in a different cohort, she gets a different encoding.
     Encoder cohortProbeEncoder =
@@ -556,76 +589,68 @@ public class EncoderTest {
                   4,  // numCohorts
                   2);  // numBloomHashes
     assertEquals(3, cohortProbeEncoder.getCohort());
-    assertEquals(
-        0b010000100000L,
-        cohortProbeEncoder.encodeString("Whizbang"));
+    assertEquals(0b000011000000L, toLong(cohortProbeEncoder.encodeString("Whizbang")));
 
     // Changing the string gets a different encoding.
     assertEquals(
         0b001001000000L,
-        new Encoder(makeTestingUserSecret("Bar"),  // userSecret
-                    "Foo",  // encoderId
-                    12,  // numBits,
-                    0,  // probabilityF
-                    0,  // probabilityP
-                    1,  // probabilityQ
-                    1,  // numCohorts (so must be cohort 0)
-                    2)  // numBloomHashes
-            .encodeString("Xyzzy"));
+        toLong(
+            new Encoder(
+                    makeTestingUserSecret("Bar"), // userSecret
+                    "Foo", // encoderId
+                    12, // numBits,
+                    0, // probabilityF
+                    0, // probabilityP
+                    1, // probabilityQ
+                    1, // numCohorts (so must be cohort 0)
+                    2) // numBloomHashes
+                .encodeString("Xyzzy")));
 
     assertEquals(
-        0b000000000010L,
-        new Encoder(makeTestingUserSecret("Bar"),  // userSecret
-                    "Foo",  // encoderId
-                    12,  // numBits,
-                    0,  // probabilityF
-                    0,  // probabilityP
-                    1,  // probabilityQ
-                    1,  // numCohorts (so must be cohort 0)
-                    2)  // numBloomHashes
-            .encodeString("Thud"));
+        0b000000110000L,
+        toLong(
+            new Encoder(
+                    makeTestingUserSecret("Bar"), // userSecret
+                    "Foo", // encoderId
+                    12, // numBits,
+                    0, // probabilityF
+                    0, // probabilityP
+                    1, // probabilityQ
+                    1, // numCohorts (so must be cohort 0)
+                    2) // numBloomHashes
+                .encodeString("Thud")));
   }
 
-  @Test
-  public void testEncoderGetPseudorandomStream() throws Exception {
-     Encoder encoder = new Encoder(makeTestingUserSecret("Bar"),  // userSecret
-                                   "Foo",  // encoderId
-                                   8,  // numBits,
-                                   0.25,  // probabilityF
-                                   0,  // probabilityP
-                                   1,  // probabilityQ
-                                   1,  // numCohorts
-                                   2);  // numBloomHashes
-    byte[] pseudorandomStream1 = encoder.getPseudorandomStream(1L, 8);
-    byte[] pseudorandomStream2 = encoder.getPseudorandomStream(2L, 8);
-    assertThat(pseudorandomStream1, not(equalTo(pseudorandomStream2)));
-  }
 
   @Test
   public void testEncoderEncodeBits_prrMemoizes() throws Exception {
     assertEquals(
-        0b10011101L,
-        new Encoder(makeTestingUserSecret("Bar"),  // userSecret
-                    "Foo",  // encoderId
-                    8,  // numBits,
-                    0.25,  // probabilityF
-                    0,  // probabilityP
-                    1,  // probabilityQ
-                    1,  // numCohorts
-                    2)  // numBloomHashes
-            .encodeBits(0b11111101L));
+        0b01110101L,
+        toLong(
+            new Encoder(
+                    makeTestingUserSecret("Bar"), // userSecret
+                    "Foo", // encoderId
+                    8, // numBits,
+                    0.25, // probabilityF
+                    0, // probabilityP
+                    1, // probabilityQ
+                    1, // numCohorts
+                    2) // numBloomHashes
+                .encodeBits(toBytes(0b11111101L))));
 
     assertEquals(
-        0b11110101L,
-        new Encoder(makeTestingUserSecret("Baz"),  // userSecret
-                    "Foo",  // encoderId
-                    8,  // numBits,
-                    0.25,  // probabilityF
-                    0,  // probabilityP
-                    1,  // probabilityQ
-                    1,  // numCohorts
-                    2)  // numBloomHashes
-            .encodeBits(0b11111101L));
+        0b11111101L,
+        toLong(
+            new Encoder(
+                    makeTestingUserSecret("Baz"), // userSecret
+                    "Foo", // encoderId
+                    8, // numBits,
+                    0.25, // probabilityF
+                    0, // probabilityP
+                    1, // probabilityQ
+                    1, // numCohorts
+                    2) // numBloomHashes
+                .encodeBits(toBytes(0b11111101L))));
   }
 
   @Test
@@ -646,9 +671,8 @@ public class EncoderTest {
                       1,  // probabilityQ
                       1,  // numCohorts
                       2);  // numBloomHashes
-      long encoded = encoder.encodeBits(inputValue);
-      assertEquals(
-        encoded, encoder.encodeBits(inputValue));
+      long encoded = toLong(encoder.encodeBits(toBytes(inputValue)));
+      assertEquals(encoded, toLong(encoder.encodeBits(toBytes(inputValue))));
 
       for (int iBit = 0; iBit < numBits; iBit++) {
         if ((encoded & (1L << iBit)) != 0) {
@@ -657,14 +681,14 @@ public class EncoderTest {
       }
     }
 
-    assertEquals(9835, counts[0]);  // input = 1, expectation = 9843.75
-    assertEquals(145, counts[1]);  // input = 0, expectation = 156.25
-    assertEquals(9853, counts[2]);  // input = 1, expectation = 9843.75
-    assertEquals(9849, counts[3]);  // input = 1, expectation = 9843.75
-    assertEquals(9842, counts[4]);  // input = 1, expectation = 9843.75
-    assertEquals(9858, counts[5]);  // input = 1, expectation = 9843.75
-    assertEquals(9833, counts[6]);  // input = 1, expectation = 9843.75
-    assertEquals(9852, counts[7]);  // input = 1, expectation = 9843.75
+    assertEquals(9843, counts[0]); // input = 1, expectation = 9843.75
+    assertEquals(173, counts[1]); // input = 0, expectation = 156.25
+    assertEquals(9839, counts[2]); // input = 1, expectation = 9843.75
+    assertEquals(9831, counts[3]); // input = 1, expectation = 9843.75
+    assertEquals(9848, counts[4]); // input = 1, expectation = 9843.75
+    assertEquals(9828, counts[5]); // input = 1, expectation = 9843.75
+    assertEquals(9834, counts[6]); // input = 1, expectation = 9843.75
+    assertEquals(9837, counts[7]); // input = 1, expectation = 9843.75
 
     // Check that no high-order bit past numBits ever got set.
     for (int iBit = numBits; iBit < 64; iBit++) {
@@ -685,18 +709,19 @@ public class EncoderTest {
     int counts[] = new int[64];
     for (int iSample = 0; iSample < 10000; iSample++) {
       Encoder encoder =
-          new Encoder(random,
-                      null,  // hmacSha256
-                      null,  // md5
-                      makeTestingUserSecret("User" + iSample),  // userSecret
-                      "Foo",  // encoderId
-                      numBits,  // numBits,
-                      0,  // probabilityF
-                      probabilityP,  // probabilityP
-                      probabilityQ,  // probabilityQ
-                      1,  // numCohorts
-                      2);  // numBloomHashes
-      long encoded = encoder.encodeBits(inputValue);
+          new Encoder(
+              random,
+              null, // md5
+              null, // sha256
+              makeTestingUserSecret("User" + iSample), // userSecret
+              "Foo", // encoderId
+              numBits, // numBits,
+              0, // probabilityF
+              probabilityP, // probabilityP
+              probabilityQ, // probabilityQ
+              1, // numCohorts
+              2); // numBloomHashes
+      long encoded = toLong(encoder.encodeBits(toBytes(inputValue)));
 
       for (int iBit = 0; iBit < numBits; iBit++) {
         if ((encoded & (1L << iBit)) != 0) {
@@ -725,60 +750,66 @@ public class EncoderTest {
     int numBits = 8;
 
     long inputValue = 0b11111101L;
-    long prrValue = 0b10011101L;
-    long prrAndIrrValue = 0b10011110L;
+    long prrValue = 0b01110101L;
+    long prrAndIrrValue = 0b01110110L;
 
     // Verify that PRR is working as expected.
     assertEquals(
         prrValue,
-        new Encoder(null,
-                    null,  // hmacSha256
-                    null,  // md5
-                    makeTestingUserSecret("Bar"),  // userSecret
-                    "Foo",  // encoderId
-                    numBits,  // numBits,
-                    0.25,  // probabilityF
-                    0,  // probabilityP
-                    1,  // probabilityQ
-                    1,  // numCohorts
-                    2)  // numBloomHashes
-            .encodeBits(inputValue));
+        toLong(
+            new Encoder(
+                    null,
+                    null, // md5
+                    null, // sha256
+                    makeTestingUserSecret("Bar"), // userSecret
+                    "Foo", // encoderId
+                    numBits, // numBits,
+                    0.25, // probabilityF
+                    0, // probabilityP
+                    1, // probabilityQ
+                    1, // numCohorts
+                    2) // numBloomHashes
+                .encodeBits(toBytes(inputValue))));
 
     // Verify that IRR is working as expected.
     SecureRandom random1 = SecureRandom.getInstance("SHA1PRNG");
     random1.setSeed(0x12345678L);
     assertEquals(
         prrAndIrrValue,
-        new Encoder(random1,
-                    null,  // hmacSha256
-                    null,  // md5
-                    makeTestingUserSecret("Bar"),  // userSecret
-                    "Foo",  // encoderId
-                    numBits,  // numBits,
-                    0,  // probabilityF
-                    0.3,  // probabilityP
-                    0.7,  // probabilityQ
-                    1,  // numCohorts
-                    2)  // numBloomHashes
-            .encodeBits(prrValue));
+        toLong(
+            new Encoder(
+                    random1,
+                    null, // md5
+                    null, // sha256
+                    makeTestingUserSecret("Bar"), // userSecret
+                    "Foo", // encoderId
+                    numBits, // numBits,
+                    0, // probabilityF
+                    0.3, // probabilityP
+                    0.7, // probabilityQ
+                    1, // numCohorts
+                    2) // numBloomHashes
+                .encodeBits(toBytes(prrValue))));
 
     // Test that end-to-end is the result of PRR + IRR.
     SecureRandom random2 = SecureRandom.getInstance("SHA1PRNG");
     random2.setSeed(0x12345678L);
     assertEquals(
         prrAndIrrValue,
-        new Encoder(random2,
-                    null,  // hmacSha256
-                    null,  // md5
-                    makeTestingUserSecret("Bar"),  // userSecret
-                    "Foo",  // encoderId
-                    numBits,  // numBits,
-                    0.25,  // probabilityF
-                    0.3,  // probabilityP
-                    0.7,  // probabilityQ
-                    1,  // numCohorts
-                    2)  // numBloomHashes
-            .encodeBits(inputValue));
+        toLong(
+            new Encoder(
+                    random2,
+                    null, // md5
+                    null, // sha256
+                    makeTestingUserSecret("Bar"), // userSecret
+                    "Foo", // encoderId
+                    numBits, // numBits,
+                    0.25, // probabilityF
+                    0.3, // probabilityP
+                    0.7, // probabilityQ
+                    1, // numCohorts
+                    2) // numBloomHashes
+                .encodeBits(toBytes(inputValue))));
   }
 
   @Test
@@ -789,60 +820,65 @@ public class EncoderTest {
 
     // Explicitly spot-check the output for 2^0 and 2^31.
     long inputValue0 = 1L;
-    long outputValue0 = 2737831998L;
+    long outputValue0 = 590349342L;
     SecureRandom random0 = SecureRandom.getInstance("SHA1PRNG");
     random0.setSeed(0x12345678L);
     assertEquals(
         outputValue0,
-        new Encoder(random0,
-                    null,  // hmacSha256
-                    null,  // md5
-                    userSecret,  // userSecret
-                    "MyEncoder",  // encoderId
-                    numBits,  // numBits,
-                    0.25,  // probabilityF
-                    0.3,  // probabilityP
-                    0.7,  // probabilityQ
-                    1,  // numCohorts
-                    2)  // numBloomHashes
-            .encodeBits(inputValue0));
+        toLong(
+            new Encoder(
+                    random0,
+                    null, // md5
+                    null, // sha256
+                    userSecret, // userSecret
+                    "MyEncoder", // encoderId
+                    numBits, // numBits,
+                    0.25, // probabilityF
+                    0.3, // probabilityP
+                    0.7, // probabilityQ
+                    1, // numCohorts
+                    2) // numBloomHashes
+                .encodeBits(toBytes(inputValue0))));
 
     long inputValue31 = 1L << 31;
-    long outputValue31 = 3006267478L;
+    long outputValue31 = 2746482838L;
     SecureRandom random31 = SecureRandom.getInstance("SHA1PRNG");
     random31.setSeed(0x12345678L);
     assertEquals(
         outputValue31,
-        new Encoder(random31,
-                    null,  // hmacSha256
-                    null,  // md5
-                    userSecret,  // userSecret
-                    "MyEncoder",  // encoderId
-                    numBits,  // numBits,
-                    0.25,  // probabilityF
-                    0.3,  // probabilityP
-                    0.7,  // probabilityQ
-                    1,  // numCohorts
-                    2)  // numBloomHashes
-            .encodeBits(inputValue31));
+        toLong(
+            new Encoder(
+                    random31,
+                    null, // md5
+                    null, // sha256
+                    userSecret, // userSecret
+                    "MyEncoder", // encoderId
+                    numBits, // numBits,
+                    0.25, // probabilityF
+                    0.3, // probabilityP
+                    0.7, // probabilityQ
+                    1, // numCohorts
+                    2) // numBloomHashes
+                .encodeBits(toBytes(inputValue31))));
 
     // Check the range 2^1 to 2^30, making sure no values produce exceptions.
     SecureRandom randomRange = SecureRandom.getInstance("SHA1PRNG");
     randomRange.setSeed(0x12345678L);
     for (int i = 1; i <= 30; i++) {
       long inputValue = 1L << (i - 1);
-      new Encoder(randomRange,
-                  null,  // hmacSha256
-                  null,  // md5
-                  userSecret,  // userSecret
-                  "MyEncoder",  // encoderId
-                  numBits,  // numBits,
-                  0.25,  // probabilityF
-                  0.3,  // probabilityP
-                  0.7,  // probabilityQ
-                  1,  // numCohorts
-                  2)  // numBloomHashes
-          .encodeBits(inputValue);
+      new Encoder(
+              randomRange,
+              null, // md5
+              null, // sha256
+              userSecret, // userSecret
+              "MyEncoder", // encoderId
+              numBits, // numBits,
+              0.25, // probabilityF
+              0.3, // probabilityP
+              0.7, // probabilityQ
+              1, // numCohorts
+              2) // numBloomHashes
+          .encodeBits(toBytes(inputValue));
     }
   }
 
@@ -853,60 +889,93 @@ public class EncoderTest {
 
     // Explicitly spot-check the output for 2^0 and 2^63.
     long inputValue0 = 1L;
-    long outputValue0 = 876136553316876350L;
+    long outputValue0 = 867402030798341150L;
     SecureRandom random0 = SecureRandom.getInstance("SHA1PRNG");
     random0.setSeed(0x12345678L);
     assertEquals(
         outputValue0,
-        new Encoder(random0,
-            null,  // hmacSha256
-            null,  // md5
-            userSecret,  // userSecret
-            "MyEncoder",  // encoderId
-            numBits,  // numBits,
-            0.25,  // probabilityF
-            0.3,  // probabilityP
-            0.7,  // probabilityQ
-            1,  // numCohorts
-            2)  // numBloomHashes
-            .encodeBits(inputValue0));
+        toLong(
+            new Encoder(
+                    random0,
+                    null, // md5
+                    null, // sha256
+                    userSecret, // userSecret
+                    "MyEncoder", // encoderId
+                    numBits, // numBits,
+                    0.25, // probabilityF
+                    0.3, // probabilityP
+                    0.7, // probabilityQ
+                    1, // numCohorts
+                    2) // numBloomHashes
+                .encodeBits(toBytes(inputValue0))));
 
     long inputValue63 = 1L << 62;
-    long outputValue63 = 5478808775419756598L;
+    long outputValue63 = 5497102447743615126L;
     SecureRandom random63 = SecureRandom.getInstance("SHA1PRNG");
     random63.setSeed(0x12345678L);
     assertEquals(
         outputValue63,
-        new Encoder(random63,
-            null,  // hmacSha256
-            null,  // md5
-            userSecret,  // userSecret
-            "MyEncoder",  // encoderId
-            numBits,  // numBits,
-            0.25,  // probabilityF
-            0.3,  // probabilityP
-            0.7,  // probabilityQ
-            1,  // numCohorts
-            2)  // numBloomHashes
-            .encodeBits(inputValue63));
+        toLong(
+            new Encoder(
+                    random63,
+                    null, // md5
+                    null, // sha256
+                    userSecret, // userSecret
+                    "MyEncoder", // encoderId
+                    numBits, // numBits,
+                    0.25, // probabilityF
+                    0.3, // probabilityP
+                    0.7, // probabilityQ
+                    1, // numCohorts
+                    2) // numBloomHashes
+                .encodeBits(toBytes(inputValue63))));
 
     // Check the range 2^1 to 2^62, making sure no values produce exceptions.
     SecureRandom randomRange = SecureRandom.getInstance("SHA1PRNG");
     randomRange.setSeed(0x12345678L);
     for (int i = 1; i <= 62; i++) {
       long inputValue = 1L << (i - 1);
-      new Encoder(randomRange,
-          null,  // hmacSha256
-          null,  // md5
-          userSecret,  // userSecret
-          "MyEncoder",  // encoderId
-          numBits,  // numBits,
-          0.25,  // probabilityF
-          0.3,  // probabilityP
-          0.7,  // probabilityQ
-          1,  // numCohorts
-          2)  // numBloomHashes
-          .encodeBits(inputValue);
+      new Encoder(
+              randomRange,
+              null, // md5
+              null, // sha256
+              userSecret, // userSecret
+              "MyEncoder", // encoderId
+              numBits, // numBits,
+              0.25, // probabilityF
+              0.3, // probabilityP
+              0.7, // probabilityQ
+              1, // numCohorts
+              2) // numBloomHashes
+          .encodeBits(toBytes(inputValue));
+    }
+  }
+
+  @Test
+  public void testEncoderEncodeBits_4096BitValuesEncodeSuccessfully() throws Exception {
+    int numBits = 4096;
+    byte[] userSecret = makeTestingUserSecret("Bar");
+
+    // Check the range 2^1 to 2^4095, making sure no values produce exceptions.
+    SecureRandom randomRange = SecureRandom.getInstance("SHA1PRNG");
+    randomRange.setSeed(0x12345678L);
+    // Stride is arbitrary, but chosen to be large enough to not cause too many probes (~40) and
+    // prime to explore well.
+    int stride = 97;
+    for (int i = 1; i < numBits; i += stride) {
+      new Encoder(
+              randomRange,
+              null, // md5
+              null, // sha256
+              userSecret, // userSecret
+              "MyEncoder", // encoderId
+              numBits, // numBits,
+              0.25, // probabilityF
+              0.3, // probabilityP
+              0.7, // probabilityQ
+              1, // numCohorts
+              2) // numBloomHashes
+          .encodeOrdinal(i);
     }
   }
 

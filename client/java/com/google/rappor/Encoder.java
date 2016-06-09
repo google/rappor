@@ -2,21 +2,17 @@ package com.google.rappor;
 
 import static com.google.common.base.Preconditions.checkArgument;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Verify;
 
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
-import java.security.InvalidKeyException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
+import java.util.BitSet;
 
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.GuardedBy;
-import javax.crypto.Mac;
-import javax.crypto.ShortBufferException;
-import javax.crypto.spec.SecretKeySpec;
 
 /**
  * Encodes reports using the RAPPOR differentially-private encoding algorithm.
@@ -34,30 +30,27 @@ public class Encoder {
    * <p>The version number should increase any time the Encoder has a user-visible functional change
    * to any of encoding algorithms or the interpretation of the input parameters.
    */
-  public static final long VERSION = 2;
+  public static final long VERSION = 3;
 
   /**
    * Minimum length required for the user secret, in bytes.
    */
-  public static final int MIN_USER_SECRET_BYTES = 32;
+  public static final int MIN_USER_SECRET_BYTES = HmacDrbg.ENTROPY_INPUT_SIZE_BYTES;
 
   /**
    * Maximum number of bits in the RAPPOR-encoded report.
    *
-   * <p>This is currently limited as the bits are passed in as a signed long.
-   *
-   * <p>This is also constrained by assuming MAX_BITS &lt;= 256, so that we can represent a Bloom
-   * filter hash index in a single byte.
+   * Must be less than HmacDrbg.MAX_BYTES_TOTAL;
    */
-  public static final int MAX_BITS = 63;
+  public static final int MAX_BITS = 4096;
 
   /**
    * Maximum number of Bloom filter hashes used for RAPPOR-encoded strings.
    *
-   * <p>This is constrained in the current implementation by requiring 1 byte from an MD5 value
+   * <p>This is constrained in the current implementation by requiring 2 bytes from an MD5 value
    * (which is 16 bytes long) for each Bloom filter hash.
    */
-  public static final int MAX_BLOOM_HASHES = 16;
+  public static final int MAX_BLOOM_HASHES = 8;
 
   /**
    * Maximum number of cohorts supported.
@@ -65,17 +58,14 @@ public class Encoder {
   public static final int MAX_COHORTS = 128;
 
   /**
-   * First (and only) byte of HMAC messages used to generate the cohort number.
+   * First (and only) byte of HMAC_DRBG personalization strings used to generate the cohort number.
    */
-  private static final byte HMAC_TYPE_COHORT = 0x00;
+  private static final byte HMAC_DRBG_TYPE_COHORT = 0x00;
 
   /**
-   * First byte of HMAC messages used to generate a pseudo-random stream for PRNGs.
-   * First 32 bytes are generated with HMAC_TYPE_PRR_PRNG_INITIAL, then each subsequent 32 bytes
-   * increment this number until it reaches HMAC_TYPE_PRR_PRNG_FINAL (giving a max of 256 bytes).
+   * First byte of HMAC_DRBG personalization strings used to generate the PRR response.
    */
-  private static final int HMAC_TYPE_PRR_PRNG_INITIAL = 0x01;
-  private static final int HMAC_TYPE_PRR_PRNG_FINAL = 0x08;
+  private static final byte HMAC_DRBG_TYPE_PRR = 0x01;
 
   /**
    * A unique identifier for this Encoder, represented in UTF-8.
@@ -85,8 +75,7 @@ public class Encoder {
    * distinct identifier for Permanent Randomized Response to be effective.
    *
    * <p>In practice, "memoization" is achieved by generating deterministic pseudo-random bits using
-   * HMAC-SHA256.  userSecret is used as the HMAC secret key, while the encoderIdBytes is prepended
-   * to each message presented to the HMAC.
+   * HMAC_DRBG.  encoderIdBytes is used as part of the personalization string.
    */
   private final byte[] encoderIdBytes;
 
@@ -164,41 +153,16 @@ public class Encoder {
    *
    * <p>The bitmask has the lowest order numBits set to 1 and the rest 0.
    */
-  private final long inputMask;
+  private final BitSet inputMask;
 
   /**
-   * HMAC-SHA256 utility object, initialized with the userSecret as the secret key.
+   * SHA-256 utility class instance.
    *
    * <p>This object is stateful; access must be synchronized.  The reset method must be
    * called before each use.
-   *
-   * <p><b>HMAC message schema for avoiding input collisions</b>
-   *
-   * <p>We compute the HMAC of two kinds of strings:
-   *
-   * <ul>
-   * <li> In the constructor, to generate a cohort.  Here we HMAC the string consisting of just
-   * HMAC_TYPE_COHORT.
-   * <li> In computePermanentRandomizedResponse, To generate PRR PRNG.  Here we HMAC a string
-   * consisting of HMAC_TYPE_PRR_PRNG + encoderIdBytes + "bytes" (where "bytes" is an 8-byte
-   * representation of the data being Rappor-encoded).
-   * </ul>
-   *
-   * <p>Clearly, there can be no conflicts between these two typs of strings, because they start
-   * with different TYPE constants.  There can also be no conflicts within the cohort type, because
-   * there is exactly one string in that type.
-   *
-   * <p>Thus the only remaining fear is that two PRR PRNG strings might collide.  This can only
-   * happen for two PRR PRNG input strings that are the same length.
-   *
-   * <p>Observe that HMAC_TYPE_PRR_PRNG is exactly one byte, and "bytes" is exactly 8 bytes.  It
-   * follows that if two PRR PRNG input strings are the same length, then their encoderIdBytes must
-   * also be the same length (namely, 9 bytes shorter than the full input string.)  As a result, two
-   * PRR PRNG input strings will only match in the case that they are derived from identical
-   * encoderIdBytes and "bytes" strings -- which is exactly the desired behavior.
    */
   @GuardedBy("this")
-  private final Mac hmacSha256;
+  private final MessageDigest sha256;
 
   /**
    * MD5 utility class instance.
@@ -215,10 +179,9 @@ public class Encoder {
   private final SecureRandom random;
 
   /**
-   * Used internally for encoding longs.
+   * Entropy input for constructing HmacDrbg objects.
    */
-  @GuardedBy("this")
-  private final ByteBuffer byteBuffer8;
+  private final byte[] userSecret;
 
   /**
    * Constructs a new RAPPOR message encoder.
@@ -242,11 +205,18 @@ public class Encoder {
   public Encoder(byte[] userSecret, String encoderId, int numBits,
                  double probabilityF, double probabilityP, double probabilityQ,
                  int numCohorts, int numBloomHashes) {
-    this(null,  // random
-         null,  // hmacSha256,
-         null,  // md5,
-         userSecret, encoderId, numBits, probabilityF, probabilityP, probabilityQ, numCohorts,
-         numBloomHashes);
+    this(
+        null, // random
+        null, // md5,
+        null, // sha256,
+        userSecret,
+        encoderId,
+        numBits,
+        probabilityF,
+        probabilityP,
+        probabilityQ,
+        numCohorts,
+        numBloomHashes);
   }
 
   /**
@@ -254,12 +224,12 @@ public class Encoder {
    *
    * @param random A cryptographically secure random number generator, or null (in which case a
    *     new SecureRandom will be constructed).
-   * @param hmacSha256 A configured HMAC-SHA256 Mac algorithm, or null (in which case a new
-   *     MAC will be constructed).  Note: Mac objects are stateful, and that state must not be
-   *     modified while calls to the Encoder are active.
    * @param md5 A configured MD5 hash algorithm, or null (in which case a new MessageDigest will be
    *     constructed).   Note: MessageDigest objects are stateful, and that state must not be
    *     modified while calls to the Encoder are active.
+   * @param sha256 A configured SHA-256 hash algorithm, or null (in which case a new MessageDigest
+   *     will be constructed).   Note: MessageDigest objects are stateful, and that state must not
+   *     be modified while calls to the Encoder are active.
    * @param userSecret Stable secret randomly selected for this user.  UserSecret must be at least
    *     32 bytes of high-quality entropy.  Changing the user secret clears the memoized cohort
    *     assignments and permanent randomized responses.  Be aware that resetting these memoizations
@@ -275,10 +245,18 @@ public class Encoder {
    * @param numBloomHashes The number of hash functions used forming the Bloom filter encoding of a
    *     string.
    */
-  public Encoder(@Nullable SecureRandom random, @Nullable Mac hmacSha256,
-                 @Nullable MessageDigest md5, byte[] userSecret, String encoderId, int numBits,
-                 double probabilityF, double probabilityP, double probabilityQ,
-                 int numCohorts, int numBloomHashes) {
+  public Encoder(
+      @Nullable SecureRandom random,
+      @Nullable MessageDigest md5,
+      @Nullable MessageDigest sha256,
+      byte[] userSecret,
+      String encoderId,
+      int numBits,
+      double probabilityF,
+      double probabilityP,
+      double probabilityQ,
+      int numCohorts,
+      int numBloomHashes) {
     if (md5 != null) {
       this.md5 = md5;
     } else {
@@ -290,8 +268,21 @@ public class Encoder {
         throw new AssertionError(impossible);
       }
     }
-
     this.md5.reset();
+
+    if (sha256 != null) {
+      this.sha256 = sha256;
+    } else {
+      try {
+        this.sha256 = MessageDigest.getInstance("SHA-256");
+      } catch (NoSuchAlgorithmException impossible) {
+        // This should never happen.  Every implementation of the Java platform
+        // is required to support 256.
+        throw new AssertionError(impossible);
+      }
+    }
+    this.sha256.reset();
+
     this.encoderIdBytes = encoderId.getBytes(StandardCharsets.UTF_8);
 
     if (random != null) {
@@ -301,27 +292,10 @@ public class Encoder {
     }
 
     checkArgument(
-        userSecret.length >= 32, "userSecret must be at least 32 bytes of high-quality entropy.");
-
-    if (hmacSha256 != null) {
-      this.hmacSha256 = hmacSha256;
-    } else {
-      try {
-        this.hmacSha256 = Mac.getInstance("HmacSHA256");
-      } catch (NoSuchAlgorithmException impossible) {
-        // This should never happen.  Every implementation of the Java platform
-        // is required to support HmacSHA256.
-        throw new AssertionError(impossible);
-      }
-    }
-    try {
-      SecretKeySpec hmacKey = new SecretKeySpec(userSecret, "HmacSHA256");
-      this.hmacSha256.init(hmacKey);
-    } catch (InvalidKeyException impossible) {
-      // This should never happen.  HmacSHA256 is expected to work with arbitrary
-      // key strings.
-      throw new AssertionError(impossible);
-    }
+        userSecret.length >= MIN_USER_SECRET_BYTES,
+        "userSecret must be at least %s bytes of high-quality entropy.",
+        MIN_USER_SECRET_BYTES);
+    this.userSecret = userSecret;
 
     checkArgument(
         probabilityF >= 0 && probabilityF <= 1, "probabilityF must be on range [0.0, 1.0]");
@@ -339,7 +313,8 @@ public class Encoder {
         numBits >= 1 && numBits <= MAX_BITS, "numBits must be on range [1, " + MAX_BITS + "].");
     this.numBits = numBits;
     // Make a bitmask with the lowest-order numBits set to 1.
-    this.inputMask = (1L << numBits) - 1;
+    this.inputMask = new BitSet(numBits);
+    this.inputMask.set(0, numBits, true);
 
     checkArgument(
         numBloomHashes >= 1 && numBloomHashes <= numBits,
@@ -362,16 +337,11 @@ public class Encoder {
     checkArgument(numCohortsIsPowerOfTwo, "numCohorts must be a power of 2.");
     this.numCohorts = numCohorts;
 
-    this.hmacSha256.reset();
-    this.hmacSha256.update(HMAC_TYPE_COHORT);
-    ByteBuffer cohortPseudorandomStream = ByteBuffer.wrap(this.hmacSha256.doFinal());
     // cohortMasterAssignment depends only on the userSecret.
-    int cohortMasterAssignment = Math.abs(cohortPseudorandomStream.getInt()) % MAX_COHORTS;
+    HmacDrbg cohortDrbg = new HmacDrbg(userSecret, new byte[] {HMAC_DRBG_TYPE_COHORT});
+    ByteBuffer cohortDrbgBytes = ByteBuffer.wrap(cohortDrbg.nextBytes(4));
+    int cohortMasterAssignment = Math.abs(cohortDrbgBytes.getInt()) % MAX_COHORTS;
     this.cohort = cohortMasterAssignment & (numCohorts - 1);
-
-    // Make sure that the byte buffer has enough space for the data.
-    Verify.verify(MAX_BITS <= 8 * 8); // 8 bits per byte, allocating an 8 byte buffer.
-    this.byteBuffer8 = ByteBuffer.allocate(8);
   }
 
   public double getProbabilityF() {
@@ -416,8 +386,10 @@ public class Encoder {
    *
    * <p>In most cases, numBits should be 1 when using this method.
    */
-  public long encodeBoolean(boolean bool) {
-    return encodeBits(bool ? 1 : 0);
+  public byte[] encodeBoolean(boolean bool) {
+    BitSet input = new BitSet(numBits);
+    input.set(0, bool);
+    return encodeBits(input);
   }
 
   /**
@@ -428,11 +400,12 @@ public class Encoder {
    *
    * @param ordinal A value on the range [0, numBits).
    */
-  public long encodeOrdinal(int ordinal) {
+  public byte[] encodeOrdinal(int ordinal) {
     checkArgument(
         ordinal >= 0 && ordinal < numBits, "Ordinal value must be in range [0, numBits).");
-
-    return encodeBits(1L << ordinal);
+    BitSet input = new BitSet(numBits);
+    input.set(ordinal, true);
+    return encodeBits(input);
   }
 
   /**
@@ -443,7 +416,7 @@ public class Encoder {
    *
    * @param string An arbitrary string.
    */
-  public long encodeString(String string) {
+  public byte[] encodeString(String string) {
     // Implements a Bloom filter by slicing a single MD5 hash into numBloomHashes bit indices.
     byte[] stringInUtf8 = string.getBytes(StandardCharsets.UTF_8);
     byte[] message =
@@ -458,16 +431,18 @@ public class Encoder {
       digest = md5.digest(message);
     }
     Verify.verify(digest.length == 16);
-    Verify.verify(numBloomHashes <= digest.length);
+    Verify.verify(numBloomHashes <= digest.length / 2);
 
-    long bloomBits = 0;
+    BitSet input = new BitSet(numBits);
     for (int i = 0; i < numBloomHashes; i++) {
-      int digestByte = digest[i] & 0xFF;  // Anding with 0xFF converts signed byte to unsigned int.
-      int chosenBit = digestByte % numBits;
-      bloomBits |= (1L << chosenBit);
+      // Convert byte pairs to ints on [0, 65535].
+      // Anding with 0xFF converts signed byte to unsigned int.
+      int digestWord = (digest[i * 2] & 0xFF) * 256 + (digest[i * 2 + 1] & 0xFF);
+      int chosenBit = digestWord % numBits;
+      input.set(chosenBit, true);
     }
 
-    return encodeBits(bloomBits);
+    return encodeBits(input);
   }
 
   /**
@@ -475,9 +450,32 @@ public class Encoder {
    *
    * @param bits A bitstring in which only the least significant numBits bits may be 1.
    */
-  public long encodeBits(long bits) {
-    long permanentRandomizedResponse = computePermanentRandomizedResponse(bits);
-    return computeInstantaneousRandomizedResponse(permanentRandomizedResponse);
+  public byte[] encodeBits(byte[] bits) {
+    return encodeBits(BitSet.valueOf(bits));
+  }
+
+  /**
+   * Encodes an arbitrary bitstring into a RAPPOR report.
+   *
+   * @param bits A bitstring in which only the least significant numBits bits may be 1.
+   */
+  private byte[] encodeBits(BitSet bits) {
+    BitSet permanentRandomizedResponse = computePermanentRandomizedResponse(bits);
+    BitSet encodedBitSet = computeInstantaneousRandomizedResponse(permanentRandomizedResponse);
+
+    // BitSet.toByteArray only returns enough bytes to capture the most significant bit
+    // that is set.  For example, a BitSet with no bits set could return a length-0 array.
+    // In contrast, we guarantee that our output is sized according to numBits.
+    byte[] encodedBytes = encodedBitSet.toByteArray();
+    byte[] output = new byte[(numBits + 7) / 8];
+    Verify.verify(encodedBytes.length <= output.length);
+    System.arraycopy(
+        encodedBytes, // src
+        0, // srcPos
+        output, // dest
+        0, // destPos
+        encodedBytes.length); // length
+    return output;
   }
 
   /**
@@ -486,73 +484,55 @@ public class Encoder {
    * <p>The response for a particular bits input is guaranteed to always be the same for any encoder
    * constructed with the same parameters (including the encoderId and the userSecret).
    */
-  private long computePermanentRandomizedResponse(long bits) {
+  private BitSet computePermanentRandomizedResponse(BitSet bits) {
     // Ensures that the input only has bits set in the lowest
-    checkArgument(
-        (bits & ~inputMask) == 0, "Input bits had bits set past Encoder's numBits limit.");
+    BitSet masked = new BitSet();
+    masked.or(bits);
+    masked.andNot(inputMask);
+    checkArgument(masked.isEmpty(), "Input bits had bits set past Encoder's numBits limit.");
 
     if (probabilityF == 0.0) {
       return bits;
     }
-    byte[] pseudorandomStream = getPseudorandomStream(bits, numBits);
+
+    // Builds a personalization string that contains both the encoderId and input value (bits),
+    // and is no longer than HmacDrbg.MAX_PERSONALIZATION_STRING_LENGTH_BYTES.  The first byte
+    // of the personalization string is always HMAC_DRBG_TYPE_PRR, to avoid collisions with the
+    // cohort-generation personalization string.
+    byte[] personalizationString;
+    synchronized (this) {
+      int personalizationStringLength =
+          Math.min(HmacDrbg.MAX_PERSONALIZATION_STRING_LENGTH_BYTES, 1 + sha256.getDigestLength());
+      personalizationString = new byte[personalizationStringLength];
+      personalizationString[0] = HMAC_DRBG_TYPE_PRR;
+      sha256.reset();
+      sha256.update(encoderIdBytes);
+      sha256.update(new byte[] {0});
+      sha256.update(bits.toByteArray());
+      byte[] digest = sha256.digest(personalizationString);
+      System.arraycopy(digest, 0, personalizationString, 1, personalizationString.length - 1);
+    }
+
+    HmacDrbg drbg = new HmacDrbg(userSecret, personalizationString);
+    byte[] pseudorandomStream = drbg.nextBytes(numBits);
     Verify.verify(numBits <= pseudorandomStream.length);
 
     int probabilityFTimes128 = (int) Math.round(probabilityF * 128);
-    long shouldUseNoiseMask = 0;
-    long noiseBits = 0;
+    BitSet result = new BitSet(numBits);
     for (int i = 0; i < numBits; i++) {
       // Grabs a single byte from the pseudorandom stream.
       // Anding with 0xFF converts a signed byte to an unsigned integer.
       int pseudorandomByte = pseudorandomStream[i] & 0xFF;
 
-      // Uses bit 0 as a flip of a fair coin.
-      long noiseBit = pseudorandomByte & 0x01;
-      noiseBits |= noiseBit << i;
-
       // Uses bits 1-7 to get a random number between 0 and 127.
       int uniform0to127 = pseudorandomByte >> 1;
-      long shouldUseNoiseBit = uniform0to127 < probabilityFTimes128 ? 1 : 0;
-      shouldUseNoiseMask |= shouldUseNoiseBit << i;
-    }
+      boolean shouldUseNoise = uniform0to127 < probabilityFTimes128;
 
-    return (bits & ~shouldUseNoiseMask) | (noiseBits & shouldUseNoiseMask);
-  }
-
-  /**
-   * Get a pseudorandom byte sequence that is at least length bytes (it may be more.)
-   *
-   * <p> We use the HMAC-SHA256 code to generate a stable pseudorandom bitstream -- that is,
-   * every time we see the same combination of (seed, userSecret, encoderId, bits), we'll use the
-   * same pseudorandom bitstream. This effectively implements the memoization required for the
-   * permanent randomized response phase of RAPPOR.
-   *
-   * @param bits A bitstring used to seed the psuedo random stream.
-   * @param length required length (in bytes) of psuedo random stream.
-   * @return the psuedorandom stream used to determine the permanent randomized response.
-   */
-  @VisibleForTesting
-  byte[] getPseudorandomStream(long bits, int length) {
-    int numHMACsRequired = (int) Math.ceil(length / 32.0);
-    int numHMACsAvailable = HMAC_TYPE_PRR_PRNG_FINAL - HMAC_TYPE_PRR_PRNG_INITIAL + 1;
-    Verify.verify(numHMACsRequired > 0 && numHMACsRequired <= numHMACsAvailable);
-
-    byte[] result = new byte[numHMACsRequired * 32];
-    // Each pass through the loop adds 32 bytes to the pseudorandom stream.
-    for (int hmacIndex = 0; hmacIndex < numHMACsRequired; hmacIndex++) {
-      byte hmacSeed = (byte) (HMAC_TYPE_PRR_PRNG_INITIAL + hmacIndex);
-      synchronized (this) {
-        byteBuffer8.clear();  // Note: resets buffer indices, doesn't actually clear data.
-        byteBuffer8.putLong(bits);
-        byteBuffer8.flip();
-        hmacSha256.reset();
-        hmacSha256.update(hmacSeed);
-        hmacSha256.update(encoderIdBytes);
-        hmacSha256.update(byteBuffer8);
-        try {
-          hmacSha256.doFinal(result, hmacIndex * 32);
-        } catch (ShortBufferException e) {
-          throw new RuntimeException("Buffer size mismatch", e);
-        }
+      if (shouldUseNoise) {
+        // Uses bit 0 as a flip of a fair coin.
+        result.set(i, (pseudorandomByte & 0x01) > 0);
+      } else {
+        result.set(i, bits.get(i));
       }
     }
     return result;
@@ -564,20 +544,23 @@ public class Encoder {
    * <p>The instantaneous response is NOT memoized -- it is sampled randomly on
    * every invocation.
    */
-  private long computeInstantaneousRandomizedResponse(long bits) {
-    checkArgument(
-        (bits & ~inputMask) == 0, "Input bits had bits set past Encoder's numBits limit.");
+  private BitSet computeInstantaneousRandomizedResponse(BitSet bits) {
+    // Ensures that the input only has bits set in the lowest
+    BitSet masked = new BitSet();
+    masked.or(bits);
+    masked.andNot(inputMask);
+    checkArgument(masked.isEmpty(), "Input bits had bits set past Encoder's numBits limit.");
 
     if (probabilityP == 0.0 && probabilityQ == 1.0) {
       return bits;
     }
 
-    long response = 0;
+    BitSet response = new BitSet(numBits);
     for (int i = 0; i < numBits; i++) {
-      boolean bit = (bits & (1L << i)) != 0L;
+      boolean bit = bits.get(i);
       double probability = bit ? probabilityQ : probabilityP;
       boolean responseBit = random.nextFloat() < probability;
-      response |= (responseBit ? 1L : 0L) << i;
+      response.set(i, responseBit);
     }
     return response;
   }
