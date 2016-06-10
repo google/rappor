@@ -13,11 +13,11 @@
 // limitations under the License.
 
 #include "encoder.h"
+#include "openssl_hash_impl.h"
 
+#include <assert.h>
 #include <stdio.h>
 #include <stdarg.h>  // va_list, etc.
-
-#include <cassert>  // assert
 #include <vector>
 
 namespace rappor {
@@ -85,7 +85,16 @@ uint32_t Encoder::AssignCohort(const Deps& deps, int num_cohorts) {
     log("HMAC failed");
     assert(false);
   }
-  assert(sha256.size() == kMaxBits);
+
+  // Either we are using SHA256 to have exactly 32 bytes,
+  // or we're using HmacDrbg for any number of bytes.
+  if ((sha256.size() == kMaxBits)
+      || (deps.hmac_func_ == rappor::HmacDrbg)) {
+    // Hash size ok.
+  } else {
+    log("Bad hash size.");
+    assert(false);
+  }
 
   // Interpret first 4 bytes of sha256 as a uint32_t.
   uint32_t c = *(reinterpret_cast<uint32_t*>(sha256.data()));
@@ -114,11 +123,24 @@ Encoder::Encoder(const std::string& encoder_id, const Params& params,
     log("num_cohorts must be positive");
     assert(false);
   }
+
   // Check Maximum values.
-  if (params_.num_bits_ > kMaxBits) {
-    log("num_bits (%d) can't be greater than %d", params_.num_bits_, kMaxBits);
-    assert(false);
+  if (deps_.hmac_func_ == rappor::HmacDrbg) {
+    // Using HmacDrbg
+    if (params_.num_bits_ % 8 != 0) {
+      log("num_bits (%d) must be divisible by 8 when using HmacDrbg.",
+          params.num_bits_);
+      assert(false);
+    }
+  } else {
+    // Using SHA256
+    if (params_.num_bits_ > kMaxBits) {
+        log("num_bits (%d) can't be greater than %d", params_.num_bits_,
+            kMaxBits);
+        assert(false);
+    }
   }
+
   if (params_.num_hashes_ > kMaxHashes) {
     log("num_hashes (%d) can't be greater than %d", params_.num_hashes_,
         kMaxHashes);
@@ -165,6 +187,55 @@ bool Encoder::MakeBloomFilter(const std::string& value, Bits* bloom_out) const {
   return true;
 }
 
+// Write a Bloom filter into a vector of bytes, used for num_bits > 32.
+bool Encoder::MakeBloomFilter(const std::string& value,
+                              std::vector<uint8_t>* bloom_out) const {
+  const int num_bits = params_.num_bits_;
+  const int num_hashes = params_.num_hashes_;
+
+  bloom_out->resize(params_.num_bits_ / 8, 0);
+
+  // Generate the hash.
+  std::vector<uint8_t> hash_output;
+  deps_.hash_func_(std::string(cohort_str_ + value), &hash_output);
+
+  // Check that we have enough bytes of hash available.
+  int exponent = 0;
+  int bytes_needed = 0;
+  while ((1 << exponent) < num_bits) {
+    exponent++;
+  }
+  bytes_needed = ((exponent - 1) / 8) + 1;
+  if (bytes_needed > 4) {
+    log("Can only use 4 bytes of hash at a time, needed %d "
+        "to address %d bits.", bytes_needed, num_bits);
+    return false;
+  }
+  if (hash_output.size() < static_cast<size_t>(bytes_needed * num_hashes)) {
+    log("Hash function returned %d bytes, but we needed "
+        "%d bytes * %d hashes. Choose lower num_hashes or "
+        "a different hash function.",
+        hash_output.size(), bytes_needed, num_hashes);
+    return false;
+  }
+
+  // To determine which bit to set in the Bloom filter, use 1 or more
+  // bytes of the MD5.
+  int hash_byte = 0;
+  for (int i = 0; i < num_hashes; ++i) {
+    int bit_to_set = 0;
+    for (int j = 0; j < bytes_needed; ++j) {
+      bit_to_set |= hash_output[hash_byte] << (j * 8);
+      ++hash_byte;
+    }
+    bit_to_set %= num_bits;
+    // Start at end of array to be consistent with the Bits implementation.
+    int index = (bloom_out->size() - 1) - (bit_to_set / 8);
+    (*bloom_out)[index] |= 1 << (bit_to_set % 8);
+  }
+  return true;
+}
+
 // Helper method for PRR
 bool Encoder::GetPrrMasks(const Bits bits, Bits* uniform_out,
                           Bits* f_mask_out) const {
@@ -180,7 +251,10 @@ bool Encoder::GetPrrMasks(const Bits bits, Bits* uniform_out,
   }
 
   // We should have already checked this.
-  assert(params_.num_bits_ <= kMaxBits);
+  if (params_.num_bits_ > kMaxBits) {
+    log("num_bits exceeds maximum.");
+    assert(false);
+  }
 
   uint8_t threshold128 = static_cast<uint8_t>(params_.prob_f_ * 128);
 
@@ -228,7 +302,7 @@ bool Encoder::_EncodeBitsInternal(const Bits bits, Bits* prr_out,
   if (!deps_.irr_rand_.GetMask(params_.prob_q_, params_.num_bits_, &q_bits)) {
     log("QMask failed");
     return false;
-  }
+  };
 
   Bits irr = (p_bits & ~prr) | (q_bits & prr);
   *irr_out = irr;
@@ -254,6 +328,89 @@ bool Encoder::EncodeString(const std::string& value, Bits* irr_out) const {
   Bits unused_bloom;
   Bits unused_prr;
   return _EncodeStringInternal(value, &unused_bloom, &unused_prr, irr_out);
+}
+
+static uint8_t shifted(const Bits& bits, const int& index) {
+  // For an array of bytes, select the appopriate byte from a 4-byte
+  // integer value. Bytes are enumerated in big-endian order, i.e.
+  // index = 0 is the MSB, index = 3 is the LSB.
+  int shift = 8 * (3 - (index % 4)); // Byte 0 shifts by 24 bits, 1 by 16, etc.
+  return (uint8_t)((bits >> shift) & 0xFF);  // Return the correct byte.
+}
+
+bool Encoder::EncodeString(const std::string& value,
+                           std::vector<uint8_t>* irr_out) const {
+  std::vector<uint8_t> bloom_out;
+  std::vector<uint8_t> hmac_out;
+  std::vector<uint8_t> uniform;
+  std::vector<uint8_t> f_mask;
+  const int num_bits = params_.num_bits_;
+
+  uniform.resize(num_bits / 8, 0);
+  f_mask.resize(num_bits / 8, 0);
+  irr_out->resize(num_bits / 8, 0);
+
+  // Set bloom_out.
+  if (!MakeBloomFilter(value, &bloom_out)) {
+    log("Bloom filter calculation failed");
+    return false;
+  }
+
+  // Set hmac_out.
+  hmac_out.resize(num_bits);  // Signal to HmacDrbg about desired output size.
+  // Call HmacDrbg
+  std::string hmac_value =  kHmacPrrPrefix + encoder_id_;
+  for (int i = 0; i < bloom_out.size(); ++i) {
+    hmac_value.append(reinterpret_cast<char *>(&bloom_out[i]), 1);
+  }
+  deps_.hmac_func_(deps_.client_secret_, hmac_value, &hmac_out);
+  if (hmac_out.size() != num_bits) {
+    log("Needed %d bytes from Hmac function, received %d bytes.",
+        num_bits, hmac_out.size());
+    return false;
+  }
+
+  // We'll be using 7 bits of each byte of the MAC as our random
+  // number for the f_mask.
+  uint8_t threshold128 = static_cast<uint8_t>(params_.prob_f_ * 128);
+
+  // Construct uniform and f_mask bitwise.
+  for (int i = 0; i < num_bits; i++) {
+    uint8_t byte = hmac_out[i];
+    uint8_t u_bit = byte & 0x01;  // 1 bit of entropy.
+    int vector_index = (num_bits - 1 - i) / 8;
+    uint8_t rand128 = byte >> 1;  // 7 bits of entropy.
+    uint8_t noise_bit = (rand128 < threshold128);
+    uniform[vector_index] |= (u_bit << (i % 8));
+    f_mask[vector_index] |= (noise_bit << (i % 8));
+  }
+
+  for (int i = 0; i < bloom_out.size(); i++) {
+    Bits p_bits;
+    Bits q_bits;
+    uint8_t prr;
+    prr = (bloom_out[i] & ~f_mask[i]) | (uniform[i] & f_mask[i]);
+    // GetMask operates on Uint32, so we generate a new p_bits every 4
+    // bytes, and use each of its bytes once.
+    if (i % 4 == 0) {
+      // Need new p_bits, q_bits values to work with.
+      if (!deps_.irr_rand_.GetMask(params_.prob_p_, 32, &p_bits)) {
+        log("PMask failed");
+        return false;
+      }
+      if (!deps_.irr_rand_.GetMask(params_.prob_q_, 32, &q_bits)) {
+        log("QMask failed");
+        return false;
+      }
+    }
+    (*irr_out)[i] = (shifted(p_bits, i) & ~prr)
+        | (shifted(q_bits, i) & prr);
+  }
+}
+
+void Encoder::set_cohort(uint32_t cohort) {
+  cohort_ = cohort;
+  cohort_str_ = ToBigEndian(cohort_);
 }
 
 }  // namespace rappor
