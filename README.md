@@ -46,6 +46,7 @@ Dependencies
 [R](http://r-project.org) analysis (`analysis/R`):
 
 - [glmnet](http://cran.r-project.org/web/packages/glmnet/index.html)
+- [limSolve](https://cran.r-project.org/web/packages/limSolve/index.html)
 
 Demo dependencies (`demo.sh`):
 
