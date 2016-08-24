@@ -10,12 +10,12 @@ Overview
 
 Start with this command:
 
-    $ ./demo.sh run
+    $ ./demo.sh
 
 It takes a minute or so to run.  The dependencies listed in the
 [README][] must be installed.  At the end, it will say:
 
-    Wrote _tmp/report.html.  Open this in your browser.
+    Wrote _tmp/\[cpp and python\]/results.html.  Open this in your browser.
 
 It should look like [this][example].
 
