@@ -1,0 +1,10 @@
+Package: rappor
+Title: R package for Rappor Analysis
+Description: R functions used for analyzing Rappor data.
+Author: Rappor Discuss <rappor-discuss@googlegroups.com>
+Maintainer: Rappor Discuss <rappor-discuss@googlegroups.com>
+Copyright: Copyright (C) 2014 Google, Inc.
+Version: 0.1
+License: Apache License 2.0
+Url: https://github.com/google/rappor
+Depends: Matrix, RUnit, glmnet, limSolve, parallel

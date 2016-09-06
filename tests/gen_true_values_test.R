@@ -2,7 +2,7 @@
 #
 # gen_reports_test.R
 
-source('analysis/R/util.R')  # Log()
+library(rappor)
 
 source('tests/gen_true_values.R')  # module under test
 

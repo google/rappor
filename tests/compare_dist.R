@@ -36,6 +36,7 @@ if (is_main) {
                        positional_arguments = 3)  # input and output
 }
 
+library(rappor)
 library(ggplot2)
 
 # Use CairoPNG if available.  Useful for headless R.
@@ -46,12 +47,6 @@ if (library(Cairo, quietly = TRUE, logical.return = TRUE)) {
   png_func = png
   cat('Using png\n')
 }
-
-source("analysis/R/read_input.R")
-source("analysis/R/decode.R")
-source("analysis/R/util.R")
-
-source("analysis/R/alternative.R")  # temporary
 
 LoadContext <- function(prefix_case) {
   # Creates the context, filling it with privacy parameters

@@ -111,10 +111,16 @@ cpp-client() {
   popd
 }
 
+r-package() {
+  R CMD BUILD analysis/
+  sudo R CMD INSTALL rappor_0.1.tar.gz
+}
+
 if test $# -eq 0 ; then
   cpp-client
   doc
   fastrand
+  r-package
 else
   "$@"
 fi

@@ -17,10 +17,8 @@
 #
 # Run unit tests for RAPPOR R code.
 
-library(RUnit)
-
 run_tests <- function() {
-  dirs <- "analysis/R"  # Run from root
+  dirs <- "tests/RUnit"  # Run from root
   test_suite <- defineTestSuite("rappor", dirs, testFileRegexp = "_test.R$",
                                 testFuncRegexp = "^Test")
   stopifnot(isValidTestSuite(test_suite))

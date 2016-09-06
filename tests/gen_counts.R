@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-source('analysis/R/read_input.R')
+library(rappor)
 
 RandomPartition <- function(total, weights) {
   # Outputs a random partition according to a specified distribution

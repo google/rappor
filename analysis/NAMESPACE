@@ -1,0 +1,6 @@
+import(Matrix)
+import(RUnit)
+import(glmnet)
+import(limSolve)
+import(parallel)
+exportPattern("^[^\\.]")

@@ -49,7 +49,6 @@ FindPairwiseCandidates <- function(report_data, N, ngram_params, params) {
 
   .ComputeDist <- function(i, inds, cohorts, reports, maps, params,
                            num_ngrams_collected) {
-    library(glmnet)
     ind <- inds[[i]]
     cohort_subset <- lapply(1:num_ngrams_collected, function(x)
                             cohorts[ind])
