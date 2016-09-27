@@ -169,7 +169,7 @@ _run-one-instance() {
   local instance_dir=$case_dir/$test_instance
   mkdir --verbose -p $instance_dir
 
-  banner "Generating reports (gen_reports.R)"
+  banner "Generating reports (gen_true_values.R)"  # gen_true_values.R instead ?
 
   # the TRUE_VALUES_PATH environment variable can be used to avoid
   # generating new values every time.  NOTE: You are responsible for making

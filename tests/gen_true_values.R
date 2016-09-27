@@ -18,13 +18,14 @@ source('tests/gen_counts.R')
 
 # Usage:
 #
-# $ ./gen_true_values.R exp 100 10000 1 foo.csv
+# $ ./gen_true_values.R exp 100 10000 1 32 foo.csv
 #
 # Inputs:
 #   distribution name
 #   size of the distribution's support
 #   number of clients
 #   reports per client
+#   number of cohorts
 #   name of the output file
 # Output:
 #   csv file with reports sampled according to the specified distribution. 
