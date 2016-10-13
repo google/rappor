@@ -1,3 +1,4 @@
+# Maybe this need to be embedded to setup.sh
 sudo apt-get update;
 sudo apt-get install build-essential g++ python-dev graphviz libssl-dev r-base r-base-dev r-cran-ggplot2 r-cran-gplots 
 # Cairo package
