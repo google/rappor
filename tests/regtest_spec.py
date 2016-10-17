@@ -18,7 +18,7 @@ DEMO = (
     # (case_name distr num_unique_values num_clients values_per_client)
     # (num_bits num_hashes num_cohorts)
     # (p q f) (num_additional regexp_to_remove)
-    ('demo1 unif    100 100000 10', '32 1 64', '0.25 0.75 0.5', '100 v[0-9]*9$'),
+    ('demo1 unif    100 100000 10', '32 1 64', '0.25 0.75 0.5', '100 v[0-9]*9$'), # regex v[0-9]*9$ removes 9,19,29,...,99 and NOT 109, 119, ... Is it desirable or a mistake? 
     ('demo2 gauss   100 100000 10', '32 1 64', '0.25 0.75 0.5', '100 v[0-9]*9$'),
     ('demo3 exp     100 100000 10', '32 1 64', '0.25 0.75 0.5', '100 v[0-9]*9$'),
     ('demo4 zipf1   100 100000 10', '32 1 64', '0.25 0.75 0.5', '100 v[0-9]*9$'),
