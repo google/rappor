@@ -164,7 +164,7 @@ So, in general, the "counts" file is a `(k+1) * m` matrix.
 
 In the simulation, we assume that the analyst will come up with a *superset* of
 the candidate strings.  This is done in the `more-candidates` /
-`print-candidates` functions in `demo.sh`.
+`print-candidates` functions in `regtest.sh`.
 
 You can also test what happens if you omit true strings from the candidates, by
 editing the invocation of `print-candidates` in `run-dist`:
