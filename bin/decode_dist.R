@@ -89,11 +89,16 @@ main <- function(opts) {
   counts <- ReadCountsFile(opts$counts, params, adjust_counts = opts$adjust_counts_hack)
   counts <- AdjustCounts(counts, params)
 
-
   # The left-most column has totals.
   num_reports <- sum(counts[, 1])
 
   map <- LoadMapFile(opts$map, params)
+
+  val <- ValidateInput(params, counts, map$map)  # NOTE: using global map
+  if (val != "valid") {
+    Log("ERROR: Invalid input: %s", val)
+    quit(status = 1)
+  }
 
   Log("Decoding %d reports", num_reports)
   res <- Decode(counts, map$map, params, correction = opts$correction,

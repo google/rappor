@@ -345,6 +345,7 @@ Decode <- function(counts, map, params, alpha = 0.05,
     stop(error_msg)
   }
 
+  counts = as.matrix(counts) # Make sure we are using a matrix
   k <- params$k
   p <- params$p
   q <- params$q
