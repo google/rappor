@@ -15,16 +15,6 @@
 #
 # Read parameter, counts and map files.
 
-library(Matrix)
-
-source.rappor <- function(rel_path)  {
-  abs_path <- paste0(Sys.getenv("RAPPOR_REPO", ""), rel_path)
-  source(abs_path)
-}
-
-source.rappor("analysis/R/util.R")  # for Log
-
-
 ReadParameterFile <- function(params_file) {
   # Read parameter file. Format:
   # k, h, m, p, q, f

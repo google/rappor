@@ -18,15 +18,6 @@
 #     dictionary of terms over which we want to learn a distribution. This
 #     mostly contains functions that aid in the generation of synthetic data.
 
-library(RUnit)
-library(parallel)
-
-source("analysis/R/encode.R")
-source("analysis/R/decode.R")
-source("analysis/R/simulation.R")
-source("analysis/R/association.R")
-source("analysis/R/decode_ngrams.R")
-
 # The alphabet is the set of all possible characters that will appear in a
 #     string. Here we use the English alphabet, but one might want to include
 #     numbers or punctuation marks.
@@ -240,11 +231,6 @@ EstimateDictionaryTrial <- function(N, str_len, num_strs,
   #
   # Returns:
   #   List with recovered and true marginals.
-
-  # We call the needed libraries here in order to make them available when this
-  #     function gets called by BorgApply. Otherwise, they do not get included.
-  library(glmnet)
-  library(parallel)
   sim <- SimulateNGrams(N, ngram_params, str_len, num_strs = num_strs,
                         alphabet, params, distribution)
 

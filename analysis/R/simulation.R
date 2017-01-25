@@ -16,9 +16,6 @@
 # RAPPOR simulation library. Contains code for encoding simulated data and
 #     creating the map used to encode and decode reports.
 
-library(glmnet)
-library(parallel)  # mclapply
-
 SetOfStrings <- function(num_strings = 100) {
   # Generates a set of strings for simulation purposes.
   strs <- paste0("V_", as.character(1:num_strings))

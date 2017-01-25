@@ -15,9 +15,9 @@
 
 library(RUnit)
 library(abind)
-
-source('analysis/R/decode.R')
+library(rappor)
 source('tests/gen_counts.R')
+
 
 L1Distance <- function(X, Y) {
   # Computes the L1 distance between two named vectors

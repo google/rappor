@@ -49,11 +49,7 @@ if(!interactive()) {
   opts <- parse_args(OptionParser(option_list = option_list))
 }    
 
-source("../analysis/R/encode.R")
-source("../analysis/R/decode.R")
-source("../analysis/R/simulation.R")
-source("../analysis/R/read_input.R")
-source("../analysis/R/association.R")
+library(rappor)
 
 # This function processes the maps loaded using ReadMapFile
 # Association analysis requires a map object with a map

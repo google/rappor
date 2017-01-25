@@ -56,25 +56,10 @@ if (!interactive()) {
   opts <- ParseOptions()
 }
 
-#
-# Load libraries and source our own code.
-#
+options(stringsAsFactors = FALSE)
 
 library(RJSONIO)
-
-# So we don't have to change pwd
-source.rappor <- function(rel_path)  {
-  abs_path <- paste0(Sys.getenv("RAPPOR_REPO", ""), rel_path)
-  source(abs_path)
-}
-
-source.rappor("analysis/R/read_input.R")
-source.rappor("analysis/R/decode.R")
-source.rappor("analysis/R/util.R")
-
-source.rappor("analysis/R/alternative.R")
-
-options(stringsAsFactors = FALSE)
+library(rappor)
 
 
 main <- function(opts) {

@@ -15,12 +15,7 @@
 # Authors: vpihur@google.com (Vasyl Pihur), fanti@google.com (Giulia Fanti)
 
 library(RUnit)
-source("analysis/R/encode.R")
-source("analysis/R/decode.R")
-source("analysis/R/simulation.R")
-source("analysis/R/association.R")
-source("analysis/R/fast_em.R")
-source("analysis/R/util.R")
+library(rappor)
 
 SamplePopulations <- function(N, num_variables = 1, params,
                               variable_opts) {

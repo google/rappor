@@ -49,13 +49,9 @@ if(!interactive()) {
                 help = "Run simulation with uniform distribution")
   )
   opts <- parse_args(OptionParser(option_list = option_list))
-}    
+}
 
-source("../analysis/R/encode.R")
-source("../analysis/R/decode.R")
-source("../analysis/R/simulation.R")
-source("../analysis/R/read_input.R")
-source("../analysis/R/association.R")
+library(rappor)
 
 # Read unique values of reports from a csv file
 # Inputs: filename. The file is expected to contain two rows of strings

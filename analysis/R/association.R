@@ -12,16 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-library(parallel)  # mclapply
-
-source.rappor <- function(rel_path)  {
-  abs_path <- paste0(Sys.getenv("RAPPOR_REPO", ""), rel_path)
-  source(abs_path)
-}
-
-source.rappor("analysis/R/util.R")  # for Log
-source.rappor("analysis/R/decode.R")  # for ComputeCounts
-
 #
 # Tools used to estimate variable distributions of up to three variables
 #     in RAPPOR. This contains the functions relevant to estimating joint

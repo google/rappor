@@ -12,9 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-library(limSolve)
-library(Matrix)
-
 # The next two functions create a matrix (G) and a vector (H) encoding
 # linear inequality constraints that a solution vector (x) must satisfy:
 #                       G * x >= H

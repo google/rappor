@@ -27,12 +27,8 @@
 #     Both tests generate their own data.
 
 library(parallel)
-source("analysis/R/encode.R")
-source("analysis/R/decode.R")
-source("analysis/R/simulation.R")
-source("analysis/R/association.R")
-source("analysis/R/decode_ngrams.R")
-source("analysis/R/ngrams_simulation.R")
+library(rappor)
+
 alphabet <- letters
 options(warn = -1)
 
