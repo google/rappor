@@ -49,38 +49,40 @@ parameters and application dependencies.  It has a method `EncodeString()` that
 takes an input string (no other types), sets an output parameter of type
 `rappor::Bits`, and returns success or failure.
 
-    #include <cassert>
+```cpp
+#include <cassert>
 
-    #include "encoder.h"
-    #include "openssl_hash_impl.h"
-    #include "unix_kernel_rand_impl.h"
+#include "encoder.h"
+#include "openssl_hash_impl.h"
+#include "unix_kernel_rand_impl.h"
 
-    int main(int argc, char** argv) {
-      FILE* fp = fopen("/dev/urandom", "r");
-      rappor::UnixKernelRand irr_rand(fp);
+int main(int argc, char** argv) {
+  FILE* fp = fopen("/dev/urandom", "r");
+  rappor::UnixKernelRand irr_rand(fp);
 
-      rappor::Deps deps(rappor::Md5, "client-secret", rappor::HmacSha256,
-                        irr_rand);
-      rappor::Params params(32,    // num_bits (k)
-                            2,     // num_hashes (h)
-                            128,   // num_cohorts (m)
-                            0.25,  // probability f for PRR
-                            0.75,  // probability p for IRR
-                            0.5);  // probability q for IRR
+  rappor::Deps deps(rappor::Md5, "client-secret", rappor::HmacSha256,
+                    irr_rand);
+  rappor::Params params(32,    // num_bits (k)
+                        2,     // num_hashes (h)
+                        128,   // num_cohorts (m)
+                        0.25,  // probability f for PRR
+                        0.75,  // probability p for IRR
+                        0.5);  // probability q for IRR
 
-      const char* encoder_id = "metric-name";
-      rappor::Encoder encoder(encoder_id, params, deps);
+  const char* encoder_id = "metric-name";
+  rappor::Encoder encoder(encoder_id, params, deps);
 
-      // Now use it to encode values.  The 'out' value can be sent over the
-      // network.
-      rappor::Bits out;
-      assert(encoder.EncodeString("foo", &out));  // returns false on error
-      printf("'foo' encoded with RAPPOR: %0x, cohort %d\n", out, encoder.cohort());
+  // Now use it to encode values.  The 'out' value can be sent over the
+  // network.
+  rappor::Bits out;
+  assert(encoder.EncodeString("foo", &out));  // returns false on error
+  printf("'foo' encoded with RAPPOR: %0x, cohort %d\n", out, encoder.cohort());
 
-      // Raw bits
-      assert(encoder.EncodeBits(0x123, &out));  // returns false on error
-      printf("0x123 encoded with RAPPOR: %0x, cohort %d\n", out, encoder.cohort());
-    }
+  // Raw bits
+  assert(encoder.EncodeBits(0x123, &out));  // returns false on error
+  printf("0x123 encoded with RAPPOR: %0x, cohort %d\n", out, encoder.cohort());
+}
+```
 
 Dependencies
 ------------
