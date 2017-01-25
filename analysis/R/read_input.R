@@ -67,9 +67,17 @@ ReadCountsFile <- function(counts_file, params, adjust_counts = FALSE) {
                  nrow(counts), params$m))
   }
 
-  if ((ncol(counts) - 1) != params$k) {
-    stop(paste0("Counts file: number of columns should equal to k + 1: ",
-                ncol(counts)))
+  # Tolerate extra empty columns
+  if (ncol(counts) > (params$k + 1)) {
+    extra <- counts[,(params$k + 2):ncol(counts)]
+    if (all(extra == 0)) {
+      counts <- counts[,1:(params$k + 1)]
+    }
+  }
+
+  if (ncol(counts) != params$k + 1) {
+    stop(sprintf("Counts file: Got %d columns, expected k + 1 = %d",
+                 ncol(counts), params$k + 1))
   }
 
   if (any(counts < 0)) {
