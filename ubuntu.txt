@@ -8,7 +8,8 @@ sudo apt-get install libxt-dev
 
 
 R #run R in terminal
->install.packages('Cairo')
+> install.packages('Cairo')
+install.packages('limSolve')
 
 ./setup.sh
 ./build.sh
@@ -20,4 +21,4 @@ You may need to upgrade the "R" package on Ubuntu if you get the following error
 "ERROR: names(x) must be a character vector of the same length as x"
 https://www.biostars.org/p/88651/
 
-install.packages('shiny')
+> install.packages('shiny')
