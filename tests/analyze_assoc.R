@@ -49,11 +49,11 @@ if(!interactive()) {
   opts <- parse_args(OptionParser(option_list = option_list))
 }    
 
-source("../analysis/R/encode.R")
-source("../analysis/R/decode.R")
-source("../analysis/R/simulation.R")
-source("../analysis/R/read_input.R")
-source("../analysis/R/association.R")
+source("analysis/R/encode.R")
+source("analysis/R/decode.R")
+source("analysis/R/simulation.R")
+source("analysis/R/read_input.R")
+source("analysis/R/association.R")
 
 # This function processes the maps loaded using ReadMapFile
 # Association analysis requires a map object with a map
@@ -66,16 +66,18 @@ source("../analysis/R/association.R")
 #       params = data field with parameters
 # TODO(pseudorandom): move this functionality to ReadMapFile
 ProcessMap <- function(map, params) {
-  map$rmap <- map$map
+  map$all_cohorts_map <- map$map
   split_map <- function(i, map_struct) {
     numbits <- params$k
     indices <- which(as.matrix(
       map_struct[((i - 1) * numbits + 1):(i * numbits),]) == TRUE,
       arr.ind = TRUE)
-    sparseMatrix(indices[, "row"], indices[, "col"],
+    map_by_cohort <- sparseMatrix(indices[, "row"], indices[, "col"],
                  dims = c(numbits, max(indices[, "col"])))
+    colnames(map_by_cohort) <- colnames(map_struct)
+    map_by_cohort
   }
-  map$map <- lapply(1:params$m, function(i) split_map(i, map$rmap))
+  map$map_by_cohort <- lapply(1:params$m, function(i) split_map(i, map$all_cohorts_map))
   map
 }
 

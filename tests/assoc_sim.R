@@ -51,11 +51,11 @@ if(!interactive()) {
   opts <- parse_args(OptionParser(option_list = option_list))
 }    
 
-source("../analysis/R/encode.R")
-source("../analysis/R/decode.R")
-source("../analysis/R/simulation.R")
-source("../analysis/R/read_input.R")
-source("../analysis/R/association.R")
+source("analysis/R/encode.R")
+source("analysis/R/decode.R")
+source("analysis/R/simulation.R")
+source("analysis/R/read_input.R")
+source("analysis/R/association.R")
 
 # Read unique values of reports from a csv file
 # Inputs: filename. The file is expected to contain two rows of strings
@@ -144,7 +144,7 @@ SimulateReports <- function(N, uvals, params, unif,
   # Format:
   #     cohort, bloom filter var1, bloom filter var2
   reports <- lapply(1:2, function(i)
-    EncodeAll(samples[[i]], cohorts, map[[i]]$map, params))
+    EncodeAll(samples[[i]], cohorts, map[[i]]$all_cohorts_map, params))
   # Organize cohorts and reports into format
   write_matrix <- cbind(as.matrix(cohorts),
                         as.matrix(lapply(reports[[1]], 
