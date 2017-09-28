@@ -144,7 +144,7 @@ SimulateReports <- function(N, uvals, params, unif,
   # Format:
   #     cohort, bloom filter var1, bloom filter var2
   reports <- lapply(1:2, function(i)
-    EncodeAll(samples[[i]], cohorts, map[[i]]$all_cohorts_map, params))
+    EncodeAll(samples[[i]], cohorts, map[[i]]$map_by_cohort, params))
   # Organize cohorts and reports into format
   write_matrix <- cbind(as.matrix(cohorts),
                         as.matrix(lapply(reports[[1]], 
