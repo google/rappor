@@ -18,9 +18,9 @@
 # an EM algorithm to estimate joint distribution over two or more variables
 # 
 # Usage:
-#       $ ./analyze_assoc.R -map1 map_1.csv -map2 map_2.csv \
+#       $ ./analyze_assoc.R -map map_1.csv map_2.csv ... map_n.csv \
 #                                 -reports reports.csv \
-# Inputs: map1, map2, reports, params
+# Inputs: map1, map2,... mapn, reports, params
 #         see how options are parsed below for more information
 # Outputs:
 #         prints a table with estimated joint probability masses
@@ -30,36 +30,36 @@
 #         intel   0.1   0.3
 #         google  0.5   0.1
 
-library("optparse")
+library("argparse")
+library("glmnet")
 
 options(stringsAsFactors = FALSE)
 
 if(!interactive()) {
-  option_list <- list(
+  parser <- ArgumentParser()
     # Flags
-    make_option(c("--map1", "-m1"), default = "map_1.csv",
-                help = "Hashed candidates for 1st variable"),
-    make_option(c("--map2", "-m2"), default = "map_2.csv",
-                help = "Hashed candidates for 2nd variable"),
-    make_option(c("--reports", "-r"), default = "reports.csv",
-                help = "File with raw reports as <cohort, report1, report2>"),
-    make_option(c("--params", "-p"), default = "params.csv",
+  parser$add_argument("-m", "--map", metavar='N', nargs='+',
+                help = "Hashed candidates 1..N")
+  parser$add_argument("-r", "--reports", default = "reports.csv",
+                help = "File with raw reports as <cohort, report1 .. reportN>")
+  parser$add_argument("-p", "--params", default = "params.csv",
                 help = "Filename for RAPPOR parameters")
-  )
-  opts <- parse_args(OptionParser(option_list = option_list))
-}    
+
+#  opts <- parse_args(OptionParser(option_list = option_list))
+#  opts <- commandArgs(trailingOnly = TRUE)
+  opts <- parser$parse_args()
+}
 
 source("analysis/R/encode.R")
 source("analysis/R/decode.R")
 source("analysis/R/simulation.R")
 source("analysis/R/read_input.R")
 source("analysis/R/association.R")
-
 # This function processes the maps loaded using ReadMapFile
 # Association analysis requires a map object with a map
 # field that has the map split into cohorts and an rmap field
 # that has all the cohorts combined
-# Arguments: 
+# Arguments:
 #       map = map object with cohorts as sparse matrix in
 #             object map$map
 #             This is the expected object from ReadMapFile
@@ -83,42 +83,53 @@ ProcessMap <- function(map, params) {
 
 main <- function(opts) {
   ptm <- proc.time()
-  
+
   params <- ReadParameterFile(opts$params)
-  opts_map <- list(opts$map1, opts$map2)
-  map <- lapply(opts_map, function(o)
+  map <- lapply(opts$map, function(o)
                   ProcessMap(ReadMapFile(o, params = params),
                              params = params))
+  N <- length(opts$map)
   # Reports must be of the format
-  #     cohort no, rappor bitstring 1, rappor bitstring 2
-  reportsObj <- read.csv(opts$reports, 
-                         colClasses = c("integer", "character", "character"),
+  #     cohort no, rappor bitstring 1.. rappor bitstring N
+  reportsObj <- read.csv(opts$reports,
+                         colClasses = c("integer", rep("character", 2*N)),
                          header = FALSE)
-  
+
   # Parsing reportsObj
   # ComputeDistributionEM allows for different sets of cohorts
   # for each variable. Here, both sets of cohorts are identical
   co <- as.list(reportsObj[1])[[1]]
-  cohorts <- list(co, co)
+  cohorts <- rep(list(co), N)
   # Parse reports from reportObj cols 2 and 3
-  reports <- lapply(1:2, function(x) as.list(reportsObj[x + 1]))
-  
+  reports <- lapply(2:(N+1), function(x) as.list(reportsObj[x]))
+
   # Split strings into bit arrays (as required by assoc analysis)
-  reports <- lapply(1:2, function(i) {
+  reports <- lapply(1:N, function(i) {
     # apply the following function to each of reports[[1]] and reports[[2]]
     lapply(reports[[i]][[1]], function(x) {
-      # function splits strings and converts them to numeric values  
+      # function splits strings and converts them to numeric values
       as.numeric(strsplit(x, split = "")[[1]])
     })
   })
-  
-  joint_dist <- ComputeDistributionEM(reports, cohorts, map, 
+
+  joint_dist <- ComputeDistributionEM(reports, cohorts, map,
                                       ignore_other = TRUE,
                                       params, marginals = NULL,
-                                      estimate_var = FALSE)
+                                      estimate_var = TRUE)
   # TODO(pseudorandom): Export the results to a file for further analysis
   print("JOINT_DIST$FIT")
   print(joint_dist$fit)
+  print("JOINT_DIST$SUM")
+  x <- joint_dist$fit
+  y <- cbind(x, rowSums(x))
+  z <- rbind(y, colSums(y))
+  print(rowSums(joint_dist$fit))
+  print(colSums(joint_dist$fit))
+  print(z[length(z)])
+  print("JOINT_DIST$SD")
+  print(joint_dist$sd)
+  print("JOINT_DIST$VAR-COV")
+  print(joint_dist$var_cov)
   print("PROC.TIME")
   print(proc.time() - ptm)
 }

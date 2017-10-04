@@ -15,8 +15,7 @@
 # limitations under the License.
 
 # Simulates inputs on which association analysis can be run.
-# Currently assoc_sim.R only supports 2 variables but can
-# be easily extended to support more.
+# Currently assoc_sim_n.R has been extended from assoc_sim.R to support N variables.
 # 
 # Usage:
 #       $ ./assoc_sim.R -n 1000
@@ -62,21 +61,16 @@ source("analysis/R/association.R")
 #         (one for each variable):
 #         "google.com", "apple.com", ...
 #         "ssl", "nossl", ...
+#         "uk", "usa", "china", ...
 # Returns: a list containing strings
 GetUniqueValsFromFile <- function(filename) {
   contents <- read.csv(filename, header = FALSE)
-  # Expect 2 rows of unique vals
-  if(nrow(contents) != 2) {
-    stop(paste("Unique vals file", filename, "expected to have
-               two rows of strings."))
-  }
   # Removes superfluous "" entries if the lists of unique values
   # differ in length
   strip_empty <- function(vec) {
     vec[!vec %in% c("")]
   }
-  list(var1 = strip_empty(as.vector(t(contents[1,]))),
-       var2 = strip_empty(as.vector(t(contents[2,]))))
+  lapply(1:nrow(contents), function(i) strip_empty(as.vector(t(contents[i,]))))
 }
 
 # Simulate correlated reports and write into reportsfile
@@ -101,10 +95,15 @@ SimulateReports <- function(N, uvals, params, unif,
   
   # Pr[var2 = N + 1 | var1 = N] = 0.5
   # Pr[var2 = N     | var1 = N] = 0.5
-  v2_samples <- v1_samples + sample(c(0, 1), N, replace = TRUE)
-  
-  tmp_samples <- list(v1_samples, v2_samples)
-  
+  M <- length(uvals)
+  Resample <- function(samples){
+    N <- length(samples)
+    vals <- sample(c(-1, 0, 1), N, replace = TRUE)
+    unlist(lapply(1:N, function(i) if (samples[i] == 1 && vals[i] == -1) samples[i] else samples[i] + vals[i]))
+  }
+  v1_samples <- rpois(N, 1) + rep(1, N)
+  tmp_samples <- lapply(rep(list(v1_samples), M), Resample)
+
   # Function to pad strings to uval_vec if sample_vec has
   # larger support than the number of strings in uval_vec
   # For e.g., if samples have support {1, 2, 3, 4, ...} and uvals
@@ -124,33 +123,34 @@ SimulateReports <- function(N, uvals, params, unif,
   }
   
   # Pad and update uvals
-  uvals <- lapply(1:2, function(i) PadStrings(tmp_samples[[i]],
+  uvals <- lapply(1:M, function(i) PadStrings(tmp_samples[[i]],
                                               uvals[[i]]))
 
   # Replace integers in tmp_samples with actual sample strings
-  samples <- lapply(1:2, function(i) uvals[[i]][tmp_samples[[i]]])
+  samples <- lapply(1:M, function(i) uvals[[i]][tmp_samples[[i]]])
 
   # Randomly assign cohorts in each dimension
   cohorts <- sample(1:m, N, replace = TRUE)
   
   # Create and write map into mapfile_1.csv and mapfile_2.csv
   map <- lapply(uvals, function(u) CreateMap(u, params))
-  write.table(map[[1]]$map_pos, file = paste(mapfile, "_1.csv", sep = ""),
-              sep = ",", col.names = FALSE, na = "", quote = FALSE)
-  write.table(map[[2]]$map_pos, file = paste(mapfile, "_2.csv", sep = ""),
-              sep = ",", col.names = FALSE, na = "", quote = FALSE)
-  
+  res <- lapply(1:M, function(i)
+        write.table(map[[i]]$map_pos, file = paste(mapfile, "_", i, ".csv", sep = ""),
+                sep = ",", col.names = FALSE, na = "", quote = FALSE))
+
   # Write reports into a csv file
   # Format:
   #     cohort, bloom filter var1, bloom filter var2
-  reports <- lapply(1:2, function(i)
-    EncodeAll(samples[[i]], cohorts, map[[i]]$map_by_cohort, params))
+
+  reports <- lapply(1:M, function(i) EncodeAll(samples[[i]], cohorts, map[[i]]$map_by_cohort, params))
+
   # Organize cohorts and reports into format
-  write_matrix <- cbind(as.matrix(cohorts),
-                        as.matrix(lapply(reports[[1]], 
-                            function(x) paste(x, collapse = ""))),
-                        as.matrix(lapply(reports[[2]],
-                            function(x) paste(x, collapse = ""))))
+  write_matrix <- do.call(cbind,
+                        c(list(cohorts),
+                        lapply(reports, function(r)
+                            unlist(lapply(r, function(x)
+                                paste(x, collapse = "")))),
+                        samples))
   write.table(write_matrix, file = reportsfile, quote = FALSE,
               row.names = FALSE, col.names = FALSE, sep = ",")
 }
