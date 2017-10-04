@@ -18,9 +18,9 @@
 # an EM algorithm to estimate joint distribution over two or more variables
 # 
 # Usage:
-#       $ ./analyze_assoc.R -map1 map_1.csv -map2 map_2.csv \
+#       $ ./analyze_assoc.R -map map_1.csv map_2.csv ... map_n.csv \
 #                                 -reports reports.csv \
-# Inputs: map1, map2, reports, params
+# Inputs: map1, map2,... mapn, reports, params
 #         see how options are parsed below for more information
 # Outputs:
 #         prints a table with estimated joint probability masses
