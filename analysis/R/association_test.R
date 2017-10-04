@@ -282,7 +282,7 @@ TestCppImplementation <- function() {
   fit1 <- RunEmFunction(cond_prob, max_em_iters)
 
   # Assume we're in the repo root
-  em_cpp <- file.path(getwd(), "analysis/cpp/_tmp/fast_em")
+  em_cpp <- file.path(getwd(), "analysis/cpp/fast_em")
   fit2 <- RunEmExecutable(em_cpp, cond_prob, max_em_iters)
 
   cpp_diff <- abs(fit1 - fit2)

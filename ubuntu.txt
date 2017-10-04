@@ -1,0 +1,24 @@
+# Maybe this need to be embedded to setup.sh
+sudo apt-get update;
+sudo apt-get install build-essential g++ python-dev graphviz libssl-dev r-base r-base-dev r-cran-ggplot2 r-cran-gplots 
+# Cairo package
+sudo apt-get install libcairo2-dev
+sudo apt-get install libxt-dev
+
+
+
+R #run R in terminal
+> install.packages('Cairo')
+install.packages('limSolve')
+
+./setup.sh
+./build.sh
+
+
+Issues with the web app
+----
+You may need to upgrade the "R" package on Ubuntu if you get the following error message:
+"ERROR: names(x) must be a character vector of the same length as x"
+https://www.biostars.org/p/88651/
+
+> install.packages('shiny')

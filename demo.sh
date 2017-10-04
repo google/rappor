@@ -44,14 +44,14 @@ rappor-sim-profile() {
 }
 
 quick-python() {  
-  ./regtest.sh run-seq '^demo3' python
+  ./regtest.sh run-seq '^demo2' python
 }
 
 quick-cpp() {
   # For now we build it first.  Don't want to build it in parallel.
   ./build.sh cpp-client
 
-  ./regtest.sh run-seq '^demo3' cpp
+  ./regtest.sh run-seq '^demo2' cpp
 }
 
 quick() {

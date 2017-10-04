@@ -1,7 +1,9 @@
 library(shiny)
 
-source("../../analysis/R/read_input.R")
-source("../../analysis/R/decode.R")
+setwd("../../") # makes it possible to call libraries analysis/R/util.R and analysis/R/alternative.R from analysis/R/read_input.R and analysis/R/decode.R
+source("analysis/R/read_input.R")  
+source("analysis/R/decode.R")
+setwd("apps/rappor-analysis") # go back to the current directory to use *.csv files
 
 # Random number associated with the session used in exported file names.
 seed <- sample(10^6, 1)
@@ -192,7 +194,8 @@ shinyServer(function(input, output, session) {
                                 include.rownames = FALSE)
 
   output$example_counts <- renderTable({
-    counts <- ReadCountsFile("counts.csv")[, 1:15]
+    params <- Params()
+    counts <- ReadCountsFile("counts.csv", params)[, 1:15]
     cbind(counts, rep("...", nrow(counts)))
   },
                                 include.rownames = FALSE, include.colnames = FALSE)

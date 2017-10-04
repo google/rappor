@@ -37,7 +37,7 @@ The demo strings together the Python and R code.  It:
 2. Runs it through the RAPPOR privacy-preserving reporting mechanisms
 3. Analyzes and plots the aggregated reports against the true input
 
-The output is written to `_tmp/regtest/results.html`, and can be opened with a
+The output is written to `_tmp/cpp/results.html` and `_tmp/python/results.html`, and can be opened with a
 browser.
 
 Dependencies

@@ -34,7 +34,7 @@ r-packages() {
   # RUnit: for unit tests
   # abind: for decode_test only
   sudo R -e \
-    'install.packages(c("glmnet", "optparse", "limSolve", "RUnit", "abind", "RJSONIO"), repos="http://cran.rstudio.com/")'
+    'install.packages(c("glmnet", "Cairo",  "optparse", "limSolve", "RUnit", "abind", "RJSONIO"), repos="http://cran.rstudio.com/")'
 }
 
 # R 3.0.2 on Trusty is out of date with CRAN, so we need this workaround.

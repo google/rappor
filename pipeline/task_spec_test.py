@@ -24,10 +24,6 @@ class TaskSpecTest(unittest.TestCase):
     # NOTE: These files are opened, in order to count the reports.  Maybe skip
     # that step.
     f = cStringIO.StringIO("""\
-_tmp/counts/2015-12-01/exp_counts.csv
-_tmp/counts/2015-12-01/gauss_counts.csv
-_tmp/counts/2015-12-02/exp_counts.csv
-_tmp/counts/2015-12-02/gauss_counts.csv
 """)
     input_iter = task_spec.DistInputIter(f)
     #for row in input_iter:
