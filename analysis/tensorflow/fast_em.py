@@ -137,7 +137,7 @@ def RunEm(pij_in, entry_size, em_iter_expr, max_em_iters, epsilon=1e-6):
       pij = new_pij
 
       if dif < epsilon:
-        log('Early EM termination: %e < %e', max_dif, epsilon)
+        log('Early EM termination: %e < %e', dif, epsilon)
         break
 
   # If i = 9, then we did 10 iteratinos.
